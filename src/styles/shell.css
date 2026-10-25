@@ -44,12 +44,23 @@ main {
     font-size: var(--step-small);
 }
 
-.footer p {
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--line);
+.noscript,
+.route-note {
+    margin-block: 0 1.25rem;
+    color: var(--muted);
+    font-size: var(--step-small);
 }
 
 .noscript {
     margin-top: 1.5rem;
-    color: var(--muted);
+}
+
+.view--enter {
+    animation: view-enter calc(var(--duration) * 0.75) var(--ease);
+}
+
+@keyframes view-enter {
+    from {
+        opacity: 0;
+    }
 }

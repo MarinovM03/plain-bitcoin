@@ -1,17 +1,8 @@
 import { hrefFor } from '../app/routes.ts';
 import { TOOL_IDS } from '../tools/index.ts';
-import { HERO, HOME, TOOLS } from './copy.ts';
+import { HOME, TOOLS } from './copy.ts';
+import { renderHero } from './hero.ts';
 import { html, type SafeHtml } from './html.ts';
-
-function renderHero(): SafeHtml {
-    return html`<section class="hero" aria-labelledby="hero-heading">
-    <div id="hero-canvas" class="hero__canvas" aria-hidden="true"></div>
-    <div class="hero__text">
-        <h1 id="hero-heading" class="hero__heading" tabindex="-1">${HERO.heading}</h1>
-        <p class="hero__note">${HERO.note}</p>
-    </div>
-</section>`;
-}
 
 function renderToolList(): SafeHtml {
     const rows = TOOL_IDS.map(
@@ -19,6 +10,7 @@ function renderToolList(): SafeHtml {
         <a class="tool-row" href="${hrefFor(id)}">
             <span class="tool-row__name">${TOOLS[id].name}</span>
             <span class="tool-row__question">${TOOLS[id].question}</span>
+            <span class="tool-row__preview">${TOOLS[id].preview}</span>
             <span class="tool-row__arrow" aria-hidden="true">→</span>
         </a>
     </li>`,

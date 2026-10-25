@@ -19,7 +19,7 @@ export const TOKENS = {
     stepFigure: 'clamp(2.5rem, 1.6rem + 4.5vw, 4rem)',
 
     gutter: '1rem',
-    measure: '40rem',
+    measure: '56rem',
     tap: '2.75rem',
     radius: '6px',
     duration: '160ms',
