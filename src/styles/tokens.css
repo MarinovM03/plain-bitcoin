@@ -1,0 +1,27 @@
+:root {
+    --ink: #17140f;
+    --ink-raised: #201c16;
+    --line: #3b342b;
+    --paper: #efe6d4;
+    --muted: #ab9f8b;
+    --btc: #f7931a;
+    --fiat: #7db7e8;
+
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+    --step-small: 0.875rem;
+    --step-body: 1rem;
+    --step-lead: 1.125rem;
+    --step-title: clamp(1.25rem, 1.05rem + 0.9vw, 1.5rem);
+    --step-heading: clamp(1.875rem, 1.35rem + 2.4vw, 2.75rem);
+    --step-figure: clamp(2.5rem, 1.6rem + 4.5vw, 4rem);
+
+    --gutter: 1rem;
+    --measure: 40rem;
+    --tap: 2.75rem;
+    --radius: 6px;
+    --duration: 160ms;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
