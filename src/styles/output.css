@@ -1,0 +1,98 @@
+.result {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.result__label {
+    color: var(--muted);
+    font-size: var(--step-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.result__figure {
+    display: flex;
+    align-items: center;
+    min-height: 1.15em;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: var(--step-figure);
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.result__empty {
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--step-lead);
+}
+
+.result__detail:empty {
+    display: none;
+}
+
+.result__detail {
+    color: var(--muted);
+    font-size: var(--step-small);
+}
+
+.source-line,
+.note-line,
+.privacy-line {
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.45;
+}
+
+.note-line {
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--line);
+}
+
+.share-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.button {
+    min-height: var(--tap);
+    padding: 0 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--paper);
+    font: 600 var(--step-small) / 1.2 var(--font-body);
+    cursor: pointer;
+    transition:
+        background-color var(--duration) var(--ease),
+        border-color var(--duration) var(--ease);
+}
+
+.button--primary {
+    border-color: var(--btc);
+    background: var(--btc);
+    color: var(--ink);
+}
+
+.button--block {
+    width: 100%;
+    min-height: 3.25rem;
+    font-size: var(--step-body);
+}
+
+.button:disabled {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
+@media (hover: hover) {
+    .button:not(:disabled):hover {
+        border-color: var(--muted);
+    }
+}
