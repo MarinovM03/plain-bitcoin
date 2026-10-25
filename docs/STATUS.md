@@ -5,8 +5,8 @@ HUB_BASELINE = `df56ceed2cfa35a813677c3a1e6de632393c7eac` (last commit of the ol
 | Session | Scope                                                         | State |
 | ------- | ------------------------------------------------------------- | ----- |
 | 0       | Wipe old hub, scaffold, tokens, phone-first shell             | Done  |
-| 1       | Home and shell polish, routes                                 | Next  |
-| 2       | Purchasing power (bundled CPI), first share card              |       |
+| 1       | Home and shell polish, routes                                 | Done  |
+| 2       | Purchasing power (bundled CPI), first share card              | Next  |
 | 3       | Bitcoin-left Three.js hero                                    |       |
 | 4       | Converter and DCA                                             |       |
 | 5       | Address lookup                                                |       |
@@ -14,12 +14,15 @@ HUB_BASELINE = `df56ceed2cfa35a813677c3a1e6de632393c7eac` (last commit of the ol
 
 ## Now
 
-- Shell, hash routes and placeholder tool pages are live; no tool logic yet.
-- Budgets: JS 1.81 kB gzip, CSS 1.84 kB gzip, fonts 33 kB. Lighthouse mobile: performance 100, FCP 0.96 s, CLS 0.
+- Ledger layout: full-bleed hero band with a reserved figure slot, ruled tool rows with preview lines, shared tool frame with a docked result and share bar on phones.
+- All six routes wired; shared input primitives built and tested; no tool math yet.
+- Hero lifecycle ready: Session 3 only fills `createScene` in `src/hero/scene.ts`.
+- Budgets: JS 5.54 kB gzip, CSS 3.00 kB gzip, fonts 33 kB. Lighthouse mobile: performance 100 and accessibility 100 on home and `#/power`.
 - External requests at runtime: none.
 
-## Blocked on Martin
+## Domain and hosting
 
-- Domain and hosting for https://plainbitcoin.org (needed for the deploy path in Session 6).
+- The domain plainbitcoin.org is bought.
+- Hosting and the deploy path wait for Session 6. Nothing is blocked on Martin today.
 
-Latest note: [sessions/00-recreate.md](sessions/00-recreate.md)
+Latest note: [sessions/01-home-shell.md](sessions/01-home-shell.md)
