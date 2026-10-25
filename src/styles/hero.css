@@ -1,0 +1,54 @@
+.hero {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: var(--ink-raised);
+    background-image: radial-gradient(var(--line) 1px, transparent 1.5px);
+    background-size: 1.25rem 1.25rem;
+    background-position: center;
+}
+
+.hero__canvas {
+    position: absolute;
+    inset: 0;
+}
+
+.hero__text {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    padding: 1.25rem;
+    background: linear-gradient(to top, var(--ink-raised) 40%, transparent);
+}
+
+.hero__heading {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-heading);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+}
+
+.hero__note {
+    margin-top: 0.5rem;
+    color: var(--muted);
+    font-size: var(--step-small);
+}
+
+@media (min-width: 40rem) {
+    .hero {
+        aspect-ratio: 16 / 9;
+    }
+
+    .hero__text {
+        padding: 1.75rem;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 32rem) {
+    .hero {
+        aspect-ratio: 12 / 5;
+    }
+}

@@ -1,0 +1,44 @@
+.tool-page {
+    padding-top: 0.5rem;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--tap);
+    margin-inline-start: -0.5rem;
+    padding-inline: 0.5rem;
+    color: var(--muted);
+    transition: color var(--duration) var(--ease);
+}
+
+@media (hover: hover) {
+    .back-link:hover {
+        color: var(--paper);
+    }
+}
+
+.tool-page__title {
+    margin-top: 1.5rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-heading);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+}
+
+.tool-page__question {
+    margin-top: 0.75rem;
+    max-width: 32ch;
+    font-size: var(--step-lead);
+    line-height: 1.4;
+}
+
+.tool-page__pending {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: var(--step-small);
+}
