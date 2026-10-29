@@ -11,16 +11,24 @@ import { byId, whenIdle } from './util/dom.ts';
 const main = byId('main');
 const announcer = byId('announcer');
 let leaveView = () => {};
+let viewCount = 0;
 
 startRouter(({ route, initial, notFound }) => {
     leaveView();
     leaveView = () => {};
+    const view = ++viewCount;
 
-    const view = route === 'home' ? renderHome() : renderToolPage(route);
+    const page = route === 'home' ? renderHome() : renderToolPage(route);
     const note = notFound ? html`<p class="route-note">${ROUTE.notFound}</p>` : '';
-    main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${view}</div>`.value;
+    main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${page}</div>`.value;
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
     bindFields(main);
+
+    if (route === 'power') {
+        import('./tools/power/index.ts').then(({ mountPower }) => {
+            if (view === viewCount) leaveView = mountPower(main, import.meta.env.VITE_SITE_URL);
+        });
+    }
 
     const stage = document.getElementById('hero-stage');
     if (stage) {
