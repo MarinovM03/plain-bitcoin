@@ -54,7 +54,10 @@ for (const id of TOOL_IDS) {
         await expect(page.getByText(TOOLS[id].question)).toBeVisible();
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
         await expect(page.locator('.share-bar button')).toHaveCount(3);
-        for (const button of await page.locator('.share-bar button').all()) await expect(button).toBeDisabled();
+        for (const button of await page.locator('.share-bar button').all()) {
+            if (id === 'power') await expect(button).toBeEnabled();
+            else await expect(button).toBeDisabled();
+        }
         if (id === 'left') await expect(page.locator('#hero-stage')).toHaveCount(1);
         else await expect(page.locator('.result__figure')).toBeVisible();
 
@@ -107,8 +110,10 @@ test('an unknown route goes home with one quiet note', async ({ page }) => {
 
 test('amount fields group thousands without moving the caret', async ({ page }) => {
     await page.goto('/#/power');
-    const amount = page.getByLabel('Amount');
+    const amount = page.getByLabel('Amount', { exact: true });
+    await expect(amount).toHaveValue('1,000');
 
+    await amount.fill('');
     await amount.pressSequentially('1234567.891');
     await expect(amount).toHaveValue('1,234,567.89');
 
@@ -148,5 +153,5 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
 
     await page.keyboard.press('Tab');
-    await expect(page.getByLabel('Amount')).toBeFocused();
+    await expect(page.getByLabel('Amount', { exact: true })).toBeFocused();
 });
