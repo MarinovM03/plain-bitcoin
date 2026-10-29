@@ -7,11 +7,17 @@ export interface Choice {
     label: string;
 }
 
-export function amountField(options: { id: string; label: string; decimals: number; placeholder?: string }): SafeHtml {
+export function amountField(options: {
+    id: string;
+    label: string;
+    decimals: number;
+    placeholder?: string;
+    value?: string;
+}): SafeHtml {
     return html`<div class="field">
     <label class="field__label" for="${options.id}">${options.label}</label>
     <div class="field__control">
-        <input id="${options.id}" class="field__input field__input--amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" enterkeyhint="done" data-decimals="${options.decimals}" placeholder="${options.placeholder ?? ''}" />
+        <input id="${options.id}" class="field__input field__input--amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" enterkeyhint="done" data-decimals="${options.decimals}" placeholder="${options.placeholder ?? ''}" value="${options.value ?? ''}" />
     </div>
 </div>`;
 }

@@ -6,15 +6,13 @@ import { amountField, monthField, segmentedControl, selectField, textField } fro
 import { renderHero } from './hero.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine, resultBlock, shareBar, sourceLine } from './output.ts';
+import { renderPowerDetail, renderPowerInputs } from './power-view.ts';
 
 type CalculatorId = Exclude<ToolId, 'left'>;
 
 const EARLIEST_MONTH: Month = { year: 2010, month: 7 };
 
-const CURRENCIES = [
-    { value: 'GBP', label: FIELDS.pounds },
-    { value: 'USD', label: FIELDS.dollars },
-] as const;
+const LIVE_TOOLS: ReadonlySet<CalculatorId> = new Set(['power']);
 
 function thisMonth(): Month {
     const now = new Date();
@@ -24,9 +22,7 @@ function thisMonth(): Month {
 function renderInputs(id: CalculatorId): SafeHtml {
     switch (id) {
         case 'power':
-            return html`${amountField({ id: 'power-amount', label: FIELDS.amount, decimals: 2, placeholder: FIELDS.examples.power })}
-${segmentedControl({ name: 'power-currency', legend: FIELDS.currency, choices: CURRENCIES, selected: 'GBP' })}
-${monthField({ id: 'power-when', legend: FIELDS.when, min: EARLIEST_MONTH, max: thisMonth(), value: { year: 2015, month: 1 } })}`;
+            return renderPowerInputs(EARLIEST_MONTH, thisMonth());
         case 'convert':
             return html`${amountField({ id: 'convert-amount', label: FIELDS.amount, decimals: 8, placeholder: FIELDS.examples.convert })}
 ${selectField({
@@ -62,19 +58,21 @@ ${heading}
 
 function renderCalculator(id: CalculatorId): SafeHtml {
     const title = html`<h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>`;
-    return html`<article class="tool">
+    const live = LIVE_TOOLS.has(id);
+    return html`<article class="tool tool--${id}">
     ${renderHead(id, title)}
     <div class="tool__body">
         <form class="tool__inputs" aria-label="${TOOL_PAGE.inputsLabel}" novalidate>
-            ${noteLine(TOOL_PAGE.pending)}
+            ${live ? '' : noteLine(TOOL_PAGE.pending)}
             ${renderInputs(id)}
         </form>
         <section class="tool__output" aria-labelledby="tool-result-label">
             <div class="tool__dock">
-                ${resultBlock({ id: 'tool-result', label: TOOL_PAGE.resultLabel, empty: TOOL_PAGE.resultEmpty })}
+                ${resultBlock({ id: 'tool-result', label: TOOL_PAGE.resultLabel, empty: TOOL_PAGE.resultEmpty, sentence: live })}
                 ${shareBar()}
             </div>
-            ${sourceLine()}
+            ${id === 'power' ? renderPowerDetail() : ''}
+            ${sourceLine(TOOL_PAGE.sourcePending, 'tool-source')}
             <p class="privacy-line">${TOOLS[id].privacy}</p>
         </section>
     </div>

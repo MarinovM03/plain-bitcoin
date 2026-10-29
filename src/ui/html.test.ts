@@ -38,14 +38,14 @@ describe('renderToolPage', () => {
     it('gives every calculator the shared frame', () => {
         for (const id of TOOL_IDS.filter((tool) => tool !== 'left')) {
             const markup = renderToolPage(id).value;
-            for (const part of ['class="tool__inputs"', 'class="result"', 'class="share-bar"', 'class="source-line"']) {
+            for (const part of ['class="tool__inputs"', 'class="result', 'class="share-bar"', 'class="source-line"']) {
                 expect(markup).toContain(part);
             }
             expect(markup).toContain(escapeHtml(TOOLS[id].privacy));
         }
     });
 
-    it('keeps share actions disabled until sharing exists', () => {
+    it('renders share actions disabled until there is an answer to share', () => {
         const buttons = [...renderToolPage('power').value.matchAll(/<button[^>]*data-share[^>]*>/g)];
         expect(buttons).toHaveLength(3);
         for (const [button] of buttons) expect(button).toContain('disabled');

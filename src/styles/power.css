@@ -1,0 +1,171 @@
+.field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 11rem);
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.presets__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.chip {
+    min-height: var(--tap);
+    padding: 0 0.875rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--paper);
+    font: 500 var(--step-small) / 1.2 var(--font-body);
+    cursor: pointer;
+    transition:
+        background-color var(--duration) var(--ease),
+        border-color var(--duration) var(--ease);
+}
+
+.chip[aria-pressed="true"] {
+    border-color: var(--paper);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+@media (hover: hover) {
+    .chip[aria-pressed="false"]:hover {
+        border-color: var(--muted);
+    }
+}
+
+.result--sentence .result__figure {
+    display: block;
+    min-height: 2.4em;
+    font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
+    line-height: 1.2;
+    overflow-wrap: break-word;
+}
+
+.result--sentence .result__detail {
+    color: var(--btc);
+    font-size: var(--step-body);
+}
+
+.power-detail {
+    display: grid;
+    gap: 1.5rem;
+    padding-block: 0.5rem 0.75rem;
+}
+
+.power-detail[hidden] {
+    display: none;
+}
+
+.power-detail__part {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.power-detail__label {
+    color: var(--muted);
+    font-size: var(--step-small);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bar {
+    display: grid;
+    gap: 0.375rem;
+}
+
+.bar__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0 0.75rem;
+}
+
+.bar__value {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.bar__track {
+    --decade: 0;
+    height: 0.75rem;
+    border-radius: 2px;
+    background: var(--ink-raised);
+    overflow: hidden;
+}
+
+.power-detail--log .bar__track {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0 calc(100% * var(--decade) - 1px),
+            var(--line) calc(100% * var(--decade) - 1px) calc(100% * var(--decade))
+        ),
+        var(--ink-raised);
+}
+
+.bar__fill {
+    --fill: 0;
+    height: 100%;
+    transform: scaleX(var(--fill));
+    transform-origin: left;
+    transition: transform var(--duration) var(--ease);
+}
+
+.bar--cash .bar__fill {
+    background: var(--fiat);
+}
+
+.bar--btc .bar__fill {
+    background: var(--btc);
+}
+
+.bar__note,
+.power-detail__scale,
+.power-detail__formula {
+    color: var(--muted);
+    font-size: var(--step-small);
+}
+
+.power-detail__formula {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.spark {
+    display: block;
+    width: 100%;
+    height: 3rem;
+    overflow: visible;
+}
+
+.spark--empty {
+    display: none;
+}
+
+.spark__base {
+    stroke: var(--fiat);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+}
+
+.spark__line {
+    fill: none;
+    stroke: var(--btc);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.source-line a {
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 0.2em;
+}
