@@ -21,7 +21,6 @@
 - **Reduced motion** sets `--duration: 0ms` instead of `!important` overrides, so every transition built on the token obeys it.
 - **`.ts` import extensions.** Vite 8 warns about extensionless imports in the config chain, and its native config loader will require them; Biome now enforces them.
 - **Playwright pinned to 1.63.0** to match the browsers already installed for the labs (no 180 MB download). CI installs its own.
-- **CLAUDE.md stays gitignored**, as in the old repo.
 - `src/app/state.ts` was not created: there is no state yet. `src/model`, `src/data` and `scripts` hold a one-line README until code lands.
 
 ## Budgets (production build, measured)

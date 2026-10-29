@@ -2,7 +2,7 @@
 
 ## What shipped
 
-- Housekeeping: CLAUDE.md is committed (removed from `.gitignore`, local paths taken out), the Elon report rule is in it, `docs/ELON_REPORT.md` exists, and STATUS no longer lists the domain as blocked.
+- Housekeeping: STATUS no longer lists the domain as blocked.
 - Layout direction A, "Ledger", chosen by Martin.
 - Router: all six routes. An unknown route goes home with one quiet note, announced once. On every change: scroll to top, focus the h1, set the title, announce. Back and forward work. Views fade in over 120 ms, 0 ms under reduced motion; the first paint never animates.
 - Home: the hero is now the final reserved mount. It is a full-bleed band on phones (`clamp(20rem, 58svh, 34rem)`), 21:9 from 640 px, 62svh on short landscape screens. It holds the DOM headline, a figure slot showing "Not counted yet" (never a fake number) and a note. The tool list is ruled ledger rows in the agreed order, each with name, question and an orange mono preview line; on desktop the preview sits in a right column.
