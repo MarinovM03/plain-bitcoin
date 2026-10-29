@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { clampMonth, monthLabel, monthsIn, monthValue, parseMonth, yearsBetween } from './month.ts';
+import {
+    clampMonth,
+    monthKeyLabel,
+    monthLabel,
+    monthsIn,
+    monthValue,
+    parseMonth,
+    shiftMonth,
+    yearsBetween,
+} from './month.ts';
 
 const MIN = { year: 2010, month: 7 };
 const MAX = { year: 2026, month: 9 };
@@ -45,5 +54,25 @@ describe('monthLabel', () => {
     it('names the month in English', () => {
         expect(monthLabel(1)).toBe('January');
         expect(monthLabel(12)).toBe('December');
+    });
+});
+
+describe('monthKeyLabel', () => {
+    it('names a YYYY-MM month in full or short', () => {
+        expect(monthKeyLabel('2015-01')).toBe('January 2015');
+        expect(monthKeyLabel('2026-09', 'short')).toBe('Sept 2026');
+    });
+
+    it('rejects anything that is not a month', () => {
+        expect(() => monthKeyLabel('2015-13')).toThrow(RangeError);
+    });
+});
+
+describe('shiftMonth', () => {
+    it('moves across year boundaries both ways', () => {
+        expect(shiftMonth({ year: 2026, month: 9 }, -12)).toEqual({ year: 2025, month: 9 });
+        expect(shiftMonth({ year: 2026, month: 9 }, -60)).toEqual({ year: 2021, month: 9 });
+        expect(shiftMonth({ year: 2015, month: 1 }, -1)).toEqual({ year: 2014, month: 12 });
+        expect(shiftMonth({ year: 2014, month: 12 }, 1)).toEqual({ year: 2015, month: 1 });
     });
 });

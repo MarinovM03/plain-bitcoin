@@ -43,3 +43,17 @@ export function monthsIn(year: number, min: Month, max: Month): number[] {
 export function monthLabel(month: number): string {
     return monthName.format(new Date(Date.UTC(2000, month - 1, 1)));
 }
+
+const longMonth = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const shortMonth = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+export function monthKeyLabel(value: string, style: 'long' | 'short' = 'long'): string {
+    const month = parseMonth(value);
+    if (!month) throw new RangeError(`Not a YYYY-MM month: ${value}`);
+    return (style === 'long' ? longMonth : shortMonth).format(new Date(Date.UTC(month.year, month.month - 1, 1)));
+}
+
+export function shiftMonth({ year, month }: Month, months: number): Month {
+    const shifted = index({ year, month }) + months;
+    return { year: Math.floor(shifted / 12), month: (shifted % 12) + 1 };
+}

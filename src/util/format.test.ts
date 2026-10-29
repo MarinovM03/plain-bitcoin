@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatBtc, formatFiat, formatSats } from './format.ts';
+import {
+    formatAmount,
+    formatBtc,
+    formatBtcAmount,
+    formatFiat,
+    formatMoney,
+    formatPercent,
+    formatSats,
+} from './format.ts';
 
 describe('formatSats', () => {
     it('groups thousands and names the unit', () => {
@@ -41,5 +49,42 @@ describe('formatFiat', () => {
 
     it('rejects non-finite amounts', () => {
         expect(() => formatFiat(Number.POSITIVE_INFINITY, 'GBP')).toThrow(RangeError);
+    });
+});
+
+describe('formatMoney', () => {
+    it('rounds to whole units from 100 up and keeps pence below', () => {
+        expect(formatMoney(1435.5, 'GBP')).toBe('£1,436');
+        expect(formatMoney(100, 'USD')).toBe('$100');
+        expect(formatMoney(69.574, 'GBP')).toBe('£69.57');
+        expect(formatMoney(0.004, 'USD')).toBe('$0.00');
+    });
+
+    it('names millions, billions and trillions with three significant digits', () => {
+        expect(formatMoney(1_234_567, 'GBP')).toBe('£1.23 million');
+        expect(formatMoney(987_654_321, 'USD')).toBe('$988 million');
+        expect(formatMoney(1_134_000_000, 'GBP')).toBe('£1.13 billion');
+        expect(formatMoney(2.5e12, 'USD')).toBe('$2.5 trillion');
+    });
+});
+
+describe('formatAmount', () => {
+    it('shows a whole amount without pence and a fractional one with two decimals', () => {
+        expect(formatAmount(1000, 'GBP')).toBe('£1,000');
+        expect(formatAmount(1234.5, 'USD')).toBe('$1,234.50');
+    });
+});
+
+describe('formatBtcAmount', () => {
+    it('shows eight decimals below 1,000 BTC and whole coins above', () => {
+        expect(formatBtcAmount(0.0119646)).toBe('0.01196460 BTC');
+        expect(formatBtcAmount(14_804.7)).toBe('14,805 BTC');
+    });
+});
+
+describe('formatPercent', () => {
+    it('rounds to a whole percent', () => {
+        expect(formatPercent(0.7749)).toBe('77%');
+        expect(formatPercent(0)).toBe('0%');
     });
 });
