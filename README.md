@@ -12,7 +12,7 @@ Everything runs in your browser. No accounts, no tracking, no cookies, no third-
 
 ## Status
 
-Early build. The shell and routes are live; the tools arrive one at a time. See [docs/STATUS.md](docs/STATUS.md).
+Early build. Purchasing power works; the other tools arrive one at a time. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Develop
 
@@ -34,6 +34,17 @@ npm run dev
 | `npm run test:e2e`  | Playwright on a phone and a desktop viewport |
 
 `VITE_SITE_URL` sets the canonical URL at build time (default `https://plainbitcoin.org/`).
+
+## Monthly data update
+
+Purchasing power reads bundled CPI and bitcoin price files. Once a month, after the CPI releases:
+
+```
+node scripts/update-cpi.mjs
+node scripts/update-prices.mjs
+```
+
+Check the diff in `src/data/` (new months at the end, no surprise changes to old ones, any gap warnings explained), run `npm test`, then commit. Sources and licences are in [docs/SOURCES.md](docs/SOURCES.md).
 
 ## Layout
 
