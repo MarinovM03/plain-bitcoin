@@ -124,6 +124,9 @@ test('calculator routes never load three.js or call the height API', async ({ pa
     await expect(page.locator('#dca-detail')).toBeVisible();
     await page.goto('/#/power');
     await expect(page.locator('#power-detail')).toBeVisible();
+    await page.goto('/#/address');
+    await page.getByLabel('Bitcoin address').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
+    await expect(page.locator('#address-parts')).toBeVisible();
     await page.waitForTimeout(1500);
 
     expect(scripts.filter((path) => /\/(three|scene|post|plain|worker)-/.test(path))).toEqual([]);

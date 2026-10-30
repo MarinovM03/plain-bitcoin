@@ -6,13 +6,13 @@ A few honest Bitcoin tools, fast and plain, at [plainbitcoin.org](https://plainb
 - **Purchasing power**: what an old amount of money is worth today, and what it would be in bitcoin.
 - **Converter**: sats, BTC, GBP and USD at the live price, with whole-sat math.
 - **Buying on a schedule**: weekly, fortnightly or monthly buys since any month from July 2010, compared with one lump sum, from bundled daily closes.
-- **Address lookup**: decode an address offline; anything sent to a public API only after a clear note and a tap.
+- **Address lookup**: tells the address type, checks the Base58Check, Bech32 or Bech32m checksum and points at a likely typo, all offline. The public balance comes from mempool.space only after a clear note and a tap.
 
-Everything runs in your browser. The only live requests are the latest block height, from mempool.space (Esplora as fallback), and the bitcoin price while the converter is open, from mempool.space (CoinGecko as fallback, the last bundled close when offline). No accounts, no tracking, no cookies, no third-party scripts. The site never asks for keys, seeds or signatures.
+Everything runs in your browser. The only live requests are the latest block height, from mempool.space (Esplora as fallback), the bitcoin price while the converter is open, from mempool.space (CoinGecko as fallback, the last bundled close when offline), and an address balance from mempool.space when you tap Look up. No accounts, no tracking, no cookies, no third-party scripts. The site never asks for keys, seeds or signatures.
 
 ## Status
 
-Early build. Bitcoin left to mine, purchasing power, the converter and buying on a schedule work; address lookup is next.
+Early build. All five tools work; polish and the deploy path come next.
 
 ## Develop
 
