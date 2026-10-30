@@ -72,3 +72,43 @@ export function formatPercent(fraction: number): string {
 export function formatWhole(value: number): string {
     return whole.format(Math.round(value));
 }
+
+export function btcParts(sats: number): { whole: string; fraction: string } {
+    assertSats(sats);
+    if (sats < 0) throw new RangeError(`Sats must not be negative, got ${sats}`);
+    return {
+        whole: whole.format(Math.trunc(sats / SATS_PER_BTC)),
+        fraction: String(sats % SATS_PER_BTC)
+            .padStart(8, '0')
+            .replace(/0+$/, ''),
+    };
+}
+
+export function formatBtcExact(sats: number): string {
+    const parts = btcParts(sats);
+    return `${parts.whole}${parts.fraction ? `.${parts.fraction}` : ''} BTC`;
+}
+
+export function formatPpm(ppm: number): string {
+    if (!Number.isSafeInteger(ppm) || ppm < 0) throw new RangeError(`Parts per million must be whole, got ${ppm}`);
+    return `${Math.trunc(ppm / 10_000)}.${String(ppm % 10_000).padStart(4, '0')}%`;
+}
+
+export function formatAge(seconds: number): string {
+    const s = Math.max(0, Math.floor(seconds));
+    if (s < 60) return `${s} s`;
+    if (s < 3_600) return `${Math.floor(s / 60)} min ${s % 60} s`;
+    return `${Math.floor(s / 3_600)} h ${Math.floor((s % 3_600) / 60)} min`;
+}
+
+const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' });
+const STAMP = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+export function formatDay(ms: number): string {
+    return DAY.format(ms);
+}
+
+export function formatUtcStamp(ms: number): string {
+    return `${STAMP.format(ms)}, ${CLOCK.format(ms)} UTC`;
+}

@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+    btcParts,
+    formatAge,
     formatAmount,
     formatBtc,
     formatBtcAmount,
+    formatBtcExact,
+    formatDay,
     formatFiat,
     formatMoney,
     formatPercent,
+    formatPpm,
     formatSats,
+    formatUtcStamp,
 } from './format.ts';
 
 describe('formatSats', () => {
@@ -86,5 +92,43 @@ describe('formatPercent', () => {
     it('rounds to a whole percent', () => {
         expect(formatPercent(0.7749)).toBe('77%');
         expect(formatPercent(0)).toBe('0%');
+    });
+});
+
+describe('exact bitcoin', () => {
+    it('splits whole coins from the fraction and drops trailing zeros', () => {
+        expect(btcParts(89_420_310_190_000)).toEqual({ whole: '894,203', fraction: '1019' });
+        expect(btcParts(5_000_000_000)).toEqual({ whole: '50', fraction: '' });
+        expect(formatBtcExact(312_500_000)).toBe('3.125 BTC');
+        expect(formatBtcExact(2_099_999_997_690_000)).toBe('20,999,999.9769 BTC');
+        expect(formatBtcExact(1)).toBe('0.00000001 BTC');
+    });
+
+    it('rejects negative or fractional sats', () => {
+        expect(() => btcParts(-1)).toThrow(RangeError);
+        expect(() => btcParts(0.5)).toThrow(RangeError);
+    });
+});
+
+describe('formatPpm', () => {
+    it('shows parts per million as a percent with four decimals', () => {
+        expect(formatPpm(957_418)).toBe('95.7418%');
+        expect(formatPpm(5)).toBe('0.0005%');
+        expect(formatPpm(1_000_000)).toBe('100.0000%');
+    });
+});
+
+describe('time', () => {
+    it('says how long ago in plain units', () => {
+        expect(formatAge(0)).toBe('0 s');
+        expect(formatAge(-5)).toBe('0 s');
+        expect(formatAge(252)).toBe('4 min 12 s');
+        expect(formatAge(3_780)).toBe('1 h 3 min');
+    });
+
+    it('formats days and UTC stamps', () => {
+        const ms = Date.UTC(2028, 3, 9, 7, 5);
+        expect(formatDay(ms)).toBe('9 April 2028');
+        expect(formatUtcStamp(ms)).toBe('9 Apr 2028, 07:05 UTC');
     });
 });
