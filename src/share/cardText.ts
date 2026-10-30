@@ -1,6 +1,16 @@
 import type { PowerResult } from '../model/power.ts';
-import { POWER } from '../ui/copy.ts';
-import { type Fiat, formatAmount, formatBtcAmount, formatMoney, formatPercent } from '../util/format.ts';
+import type { Supply } from '../model/supply.ts';
+import { LEFT_PAGE, POWER } from '../ui/copy.ts';
+import {
+    type Fiat,
+    formatAmount,
+    formatBtcAmount,
+    formatBtcExact,
+    formatMoney,
+    formatPercent,
+    formatUtcStamp,
+    formatWhole,
+} from '../util/format.ts';
 import { monthKeyLabel } from '../util/month.ts';
 import type { ShareCard } from './index.ts';
 
@@ -65,5 +75,19 @@ export function powerText(result: PowerResult, currency: Fiat, site: string): Po
             copy: `${headline} ${detail}\n${site}`,
             fileName: `plain-bitcoin-${fileAmount}-${currency.toLowerCase()}-${result.start}.png`,
         },
+    };
+}
+
+export function leftCard(supply: Supply, api: string, checkedAt: number, site: string): ShareCard {
+    const headline = LEFT_PAGE.cardHeadline(formatBtcExact(supply.left), formatWhole(supply.height));
+    const detail = LEFT_PAGE.cardDetail(formatBtcExact(supply.issued), formatWhole(supply.nextHalving));
+    return {
+        headline,
+        detail,
+        source: LEFT_PAGE.cardSource(api, formatUtcStamp(checkedAt)),
+        alt: `${headline} ${detail}`,
+        copy: `${headline} ${detail}
+${site}`,
+        fileName: `plain-bitcoin-left-${supply.height}.png`,
     };
 }

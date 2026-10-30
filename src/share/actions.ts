@@ -1,5 +1,5 @@
 import { type CardShape, renderCard } from './card.ts';
-import type { ShareCard } from './index.ts';
+import type { CardArt, ShareCard } from './index.ts';
 
 const PHONE_PORTRAIT = '(max-width: 40rem) and (orientation: portrait)';
 
@@ -13,12 +13,12 @@ export class CardFiles {
 
     constructor(private readonly site: string) {}
 
-    get(card: ShareCard): Promise<File> {
+    get(card: ShareCard, art?: CardArt): Promise<File> {
         const shape = preferredShape();
         const key = `${shape}|${card.fileName}|${card.headline}|${card.detail}|${card.source}`;
         if (key !== this.key || !this.file) {
             this.key = key;
-            this.file = renderCard(card, shape, this.site).then(
+            this.file = renderCard(card, shape, this.site, art).then(
                 (blob) => new File([blob], card.fileName, { type: 'image/png' }),
             );
             this.file.catch(() => {

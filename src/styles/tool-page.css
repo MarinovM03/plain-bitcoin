@@ -83,13 +83,45 @@
 }
 
 .numbers__panel {
-    min-height: 10rem;
-    padding-block: 1rem;
+    display: grid;
     border-block: 1px solid var(--line);
 }
 
-.numbers__empty {
+.numbers__row {
+    display: grid;
+    gap: 0.125rem;
+    padding-block: 0.625rem;
+    border-top: 1px solid var(--line);
+}
+
+.numbers__row:first-child {
+    border-top: 0;
+}
+
+.numbers__row dt {
     color: var(--muted);
+    font-size: var(--step-small);
+}
+
+.numbers__row dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.numbers__row:first-child dd {
+    color: var(--btc);
+    font-size: var(--step-title);
+}
+
+@media (min-width: 40rem) {
+    .numbers__row {
+        grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: baseline;
+    }
 }
 
 @media (min-width: 52rem) {

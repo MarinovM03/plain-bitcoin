@@ -79,16 +79,36 @@ function renderCalculator(id: CalculatorId): SafeHtml {
 </article>`;
 }
 
+const LEFT_ROWS = [
+    ['left', LEFT_PAGE.left],
+    ['issued', LEFT_PAGE.issued],
+    ['share', LEFT_PAGE.share],
+    ['reward', LEFT_PAGE.reward],
+    ['height', LEFT_PAGE.height],
+    ['last', LEFT_PAGE.lastBlock],
+    ['halving', LEFT_PAGE.nextHalving],
+    ['next-reward', LEFT_PAGE.nextReward],
+    ['halving-date', LEFT_PAGE.halvingDate],
+    ['max', LEFT_PAGE.max],
+] as const;
+
 function renderLeft(): SafeHtml {
+    const rows = LEFT_ROWS.map(
+        ([id, label]) => html`<div class="numbers__row">
+            <dt>${label}</dt>
+            <dd id="left-${id}">${LEFT_PAGE.pending}</dd>
+        </div>`,
+    );
     return html`<article class="tool tool--left">
-    ${renderHead('left', renderHero())}
+    ${renderHead('left', renderHero({ link: false }))}
     <section class="numbers" aria-labelledby="numbers-heading">
         <h2 id="numbers-heading" class="numbers__heading">${LEFT_PAGE.numbersHeading}</h2>
-        <div id="numbers-panel" class="numbers__panel">
-            <p class="numbers__empty">${LEFT_PAGE.numbersEmpty}</p>
-        </div>
+        <dl id="numbers-panel" class="numbers__panel">${rows}</dl>
+        ${noteLine(LEFT_PAGE.steps)}
+        ${noteLine(LEFT_PAGE.honesty)}
         ${shareBar()}
-        ${sourceLine()}
+        <p id="left-status" class="visually-hidden" aria-live="polite"></p>
+        ${sourceLine(TOOL_PAGE.sourcePending, 'tool-source')}
         <p class="privacy-line">${TOOLS.left.privacy}</p>
     </section>
 </article>`;

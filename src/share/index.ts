@@ -7,6 +7,8 @@ export interface ShareCard {
     fileName: string;
 }
 
+export type CardArt = (context: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }) => void;
+
 export function siteAddress(siteUrl: string): string {
     return siteUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 }

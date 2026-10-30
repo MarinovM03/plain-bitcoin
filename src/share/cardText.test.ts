@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PowerResult } from '../model/power.ts';
-import { powerText } from './cardText.ts';
+import { supplyAt } from '../model/supply.ts';
+import { leftCard, powerText } from './cardText.ts';
 import { siteAddress } from './index.ts';
 
 const BASE: PowerResult = {
@@ -85,5 +86,17 @@ describe('powerText', () => {
 describe('siteAddress', () => {
     it('drops the scheme and trailing slash', () => {
         expect(siteAddress('https://plainbitcoin.org/')).toBe('plainbitcoin.org');
+    });
+});
+
+describe('leftCard', () => {
+    it('states what is left and the block, with the source and when it was checked', () => {
+        const card = leftCard(supplyAt(973_854), 'mempool.space', Date.UTC(2026, 9, 30, 18, 6), 'plainbitcoin.org');
+        expect(card.headline).toBe('894,203.1019 BTC left to mine. Block 973,854.');
+        expect(card.detail).toBe('20,105,796.875 BTC issued by the schedule. Next halving at block 1,050,000.');
+        expect(card.source).toBe('Block height: mempool.space, 30 Oct 2026, 18:06 UTC · Supply: the issuance schedule');
+        expect(card.copy).toBe(`${card.headline} ${card.detail}
+plainbitcoin.org`);
+        expect(card.fileName).toBe('plain-bitcoin-left-973854.png');
     });
 });

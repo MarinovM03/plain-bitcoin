@@ -1,6 +1,6 @@
 import { TOKENS } from '../styles/tokens.ts';
 import { SHARE, SITE_NAME } from '../ui/copy.ts';
-import type { ShareCard } from './index.ts';
+import type { CardArt, ShareCard } from './index.ts';
 
 export type CardShape = 'wide' | 'tall';
 
@@ -75,9 +75,11 @@ async function fontsReady(layout: Layout): Promise<void> {
     await document.fonts.ready;
 }
 
-function draw(context: CanvasRenderingContext2D, card: ShareCard, layout: Layout, site: string): void {
+function draw(context: CanvasRenderingContext2D, card: ShareCard, layout: Layout, site: string, art?: CardArt): void {
     const { width, height, pad } = layout;
     const inner = width - pad * 2;
+    const wide = width > height;
+    const textWidth = art && wide ? inner * 0.56 : inner;
     context.fillStyle = TOKENS.ink;
     context.fillRect(0, 0, width, height);
     context.textBaseline = 'alphabetic';
@@ -92,14 +94,15 @@ function draw(context: CanvasRenderingContext2D, card: ShareCard, layout: Layout
     context.fillText(SITE_NAME, pad + dot * 2 + layout.wordmark * 0.3, pad + layout.wordmark * 0.9);
 
     const footerTop = height - pad - layout.small * 2.9;
-    const headline = fitHeadline(context, card.headline, layout, inner);
+    const headline = fitHeadline(context, card.headline, layout, textWidth);
     const lineHeight = headline.size * 1.2;
     context.font = `400 ${layout.detail}px ${TOKENS.fontBody}`;
-    const detailLines = wrap(context, card.detail, inner);
+    const detailLines = wrap(context, card.detail, textWidth);
     const detailHeight = detailLines.length * layout.detail * 1.35;
     const blockHeight = headline.lines.length * lineHeight + layout.detail * 0.9 + detailHeight;
     const top = pad + layout.wordmark * 1.4;
-    let y = top + Math.max(0, (footerTop - top - blockHeight) / 2);
+    const centred = !art || wide;
+    let y = top + (centred ? Math.max(0, (footerTop - top - blockHeight) / 2) : layout.detail * 0.6);
 
     context.fillStyle = TOKENS.paper;
     context.font = `500 ${headline.size}px ${TOKENS.fontMono}`;
@@ -114,6 +117,13 @@ function draw(context: CanvasRenderingContext2D, card: ShareCard, layout: Layout
         y += layout.detail * 1.35;
         context.fillText(line, pad, y - layout.detail * 0.3);
     }
+    if (art) {
+        const gap = layout.detail * 1.2;
+        const box = wide
+            ? { x: pad + inner * 0.6, y: top + gap, w: inner * 0.4, h: footerTop - top - gap * 2 }
+            : { x: pad, y: y + gap, w: inner, h: footerTop - y - gap * 2 };
+        art(context, box);
+    }
 
     context.fillStyle = TOKENS.line;
     context.fillRect(pad, footerTop, inner, 2);
@@ -124,7 +134,7 @@ function draw(context: CanvasRenderingContext2D, card: ShareCard, layout: Layout
     context.fillText(`${SHARE.handle} · ${site}`, pad, footerTop + layout.small * 2.9, inner);
 }
 
-export async function renderCard(card: ShareCard, shape: CardShape, site: string): Promise<Blob> {
+export async function renderCard(card: ShareCard, shape: CardShape, site: string, art?: CardArt): Promise<Blob> {
     const layout = CARD_LAYOUTS[shape];
     await fontsReady(layout);
     const canvas = document.createElement('canvas');
@@ -132,7 +142,7 @@ export async function renderCard(card: ShareCard, shape: CardShape, site: string
     canvas.height = layout.height;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('2D canvas is not available');
-    draw(context, card, layout, site);
+    draw(context, card, layout, site, art);
     return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Card export failed'))), 'image/png');
     });

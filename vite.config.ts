@@ -8,13 +8,15 @@ import { renderAnnouncer, renderFooter, renderHeader, renderNoscript } from './s
 
 const DEFAULT_SITE_URL = 'https://plainbitcoin.org';
 
+const API_ORIGINS = ['https://mempool.space', 'https://blockstream.info'];
+
 const CSP = [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data: blob:",
-    "connect-src 'self'",
+    `connect-src 'self' ${API_ORIGINS.join(' ')}`,
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -60,7 +62,18 @@ export default defineConfig(({ mode }) => {
         base: '/',
         define: { 'import.meta.env.VITE_SITE_URL': JSON.stringify(siteUrl) },
         plugins: [contentSecurityPolicy(), shell(siteUrl)],
-        build: { target: 'es2022' },
+        worker: { format: 'es' },
+        build: {
+            target: 'es2022',
+            // three.js alone is about 565 kB minified; it loads lazily for the hero and nowhere else.
+            chunkSizeWarningLimit: 600,
+            rolldownOptions: {
+                output: {
+                    // three.js changes far less often than the hero, so it caches in its own chunk across releases.
+                    codeSplitting: { groups: [{ name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/ }] },
+                },
+            },
+        },
         preview: { port: 4173, strictPort: true },
         test: { include: ['src/**/*.test.ts'] },
     };

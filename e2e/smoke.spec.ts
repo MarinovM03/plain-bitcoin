@@ -1,6 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
 import { FOOTER, HERO, pageTitle, ROUTE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { fakeHeightApi, isApiRequest } from './height-api.ts';
+
+test.beforeEach(async ({ page }) => {
+    await fakeHeightApi(page);
+});
 
 function watchPage(page: Page) {
     const problems: string[] = [];
@@ -10,7 +15,8 @@ function watchPage(page: Page) {
     page.on('pageerror', (error) => problems.push(error.message));
     page.on('request', (request) => {
         const { hostname } = new URL(request.url());
-        if (hostname !== 'localhost') problems.push(`external request: ${request.url()}`);
+        if (hostname !== 'localhost' && !isApiRequest(request.url()))
+            problems.push(`external request: ${request.url()}`);
     });
     return problems;
 }
@@ -19,14 +25,14 @@ async function horizontalOverflow(page: Page): Promise<number> {
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-test('home shows the shell, the reserved hero and every tool in order', async ({ page }) => {
+test('home shows the shell, the live hero and every tool in order', async ({ page }) => {
     const problems = watchPage(page);
     await page.goto('/');
 
     await expect(page).toHaveTitle(SITE_NAME);
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(HERO.heading);
-    await expect(page.locator('#hero-figure')).toHaveText(HERO.figureEmpty);
+    await expect(page.locator('#hero-figure')).toHaveText('894,203.1019 BTC');
     await expect(page.locator('.tool-row__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
     await expect(page.locator('.tool-row__preview')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].preview));
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
@@ -55,7 +61,7 @@ for (const id of TOOL_IDS) {
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
         await expect(page.locator('.share-bar button')).toHaveCount(3);
         for (const button of await page.locator('.share-bar button').all()) {
-            if (id === 'power') await expect(button).toBeEnabled();
+            if (id === 'power' || id === 'left') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
         if (id === 'left') await expect(page.locator('#hero-stage')).toHaveCount(1);

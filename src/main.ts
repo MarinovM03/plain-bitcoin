@@ -1,21 +1,28 @@
 import './styles/main.css';
 import { startRouter } from './app/router.ts';
-import { mountHero } from './hero/index.ts';
+import { mountCounter } from './tools/left/counter.ts';
 import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
 import { bindFields } from './ui/field-behaviour.ts';
 import { renderHome } from './ui/home.ts';
 import { html } from './ui/html.ts';
 import { renderToolPage } from './ui/tool-page.ts';
-import { byId, whenIdle } from './util/dom.ts';
+import { byId } from './util/dom.ts';
 
 const main = byId('main');
 const announcer = byId('announcer');
-let leaveView = () => {};
+const announce = (message: string) => {
+    announcer.textContent = message;
+};
+let cleanups: (() => void)[] = [];
 let viewCount = 0;
 
+function whileCurrent(view: number, mount: () => () => void): void {
+    if (view === viewCount) cleanups.push(mount());
+}
+
 startRouter(({ route, initial, notFound }) => {
-    leaveView();
-    leaveView = () => {};
+    for (const cleanup of cleanups) cleanup();
+    cleanups = [];
     const view = ++viewCount;
 
     const page = route === 'home' ? renderHome() : renderToolPage(route);
@@ -24,22 +31,23 @@ startRouter(({ route, initial, notFound }) => {
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
     bindFields(main);
 
-    if (route === 'power') {
-        import('./tools/power/index.ts').then(({ mountPower }) => {
-            if (view === viewCount) leaveView = mountPower(main, import.meta.env.VITE_SITE_URL);
+    if (route === 'home' || route === 'left') {
+        cleanups.push(mountCounter(main, route === 'left' ? 'field' : 'edge', announce));
+    }
+    if (route === 'left') {
+        import('./tools/left/index.ts').then(({ mountLeft }) => {
+            whileCurrent(view, () => mountLeft(main, import.meta.env.VITE_SITE_URL));
         });
     }
-
-    const stage = document.getElementById('hero-stage');
-    if (stage) {
-        whenIdle(() => {
-            if (stage.isConnected) leaveView = mountHero(stage);
+    if (route === 'power') {
+        import('./tools/power/index.ts').then(({ mountPower }) => {
+            whileCurrent(view, () => mountPower(main, import.meta.env.VITE_SITE_URL));
         });
     }
 
     if (!initial) {
         window.scrollTo(0, 0);
         main.querySelector<HTMLElement>('h1')?.focus();
-        announcer.textContent = notFound ? ROUTE.notFound : document.title;
+        announce(notFound ? ROUTE.notFound : document.title);
     }
 });

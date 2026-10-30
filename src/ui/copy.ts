@@ -12,16 +12,22 @@ export const HOME = {
 
 export const HERO = {
     heading: 'Bitcoin left to mine',
-    figureEmpty: 'Not counted yet',
-    note: 'The live counter arrives in a later session.',
-    sceneLabel: 'A picture of the bitcoin still to be mined.',
+    figureEmpty: 'Counting',
+    link: 'Issued so far and the next halving',
+    sceneLabel:
+        'A field of 21,000 tokens of 1,000 BTC each, one terrace per halving. Issued tokens are solid, the rest are outlines, and the token being filled now glows.',
+    live: (height: string, reward: string) => `Block ${height}: ${reward} issued.`,
+    liveMany: (first: string, last: string, reward: string) => `Blocks ${first} to ${last}: ${reward} issued.`,
+    liveAgo: (height: string, reward: string, age: string) => `Block ${height}: ${reward} issued, ${age} ago.`,
+    checking: (height: string) => `Estimated block ${height}. Checking the latest block.`,
+    offline: (height: string) => `Estimated, offline: block ${height}, assuming a block every 10 minutes.`,
 } as const;
 
 export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
     left: {
         name: 'Bitcoin left to mine',
         question: 'How much bitcoin is still to be mined?',
-        preview: '21 million BTC cap, counted live',
+        preview: 'Counted from the latest block',
         privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
     },
     power: {
@@ -143,7 +149,37 @@ export const POWER = {
 
 export const LEFT_PAGE = {
     numbersHeading: 'The numbers',
-    numbersEmpty: 'The numbers fill in here when the live counter is switched on.',
+    left: 'Left to mine',
+    issued: 'Issued by the schedule',
+    share: 'Share issued',
+    reward: 'Each block adds',
+    height: 'Block height',
+    lastBlock: 'Last block',
+    nextHalving: 'Next halving',
+    nextReward: 'Then each block adds',
+    halvingDate: 'Estimated date',
+    max: 'Most there will ever be',
+    pending: 'Counting',
+    ago: (age: string) => `${age} ago`,
+    unknownTime: 'Time not known',
+    estimatedTime: (age: string) => `About ${age} ago (estimated)`,
+    halvingAt: (height: string, blocks: string) => `Block ${height}, in ${blocks} blocks`,
+    halvingDay: (day: string) => `About ${day}, assuming 10-minute blocks`,
+    steps: 'Supply grows in steps: once per block, never in between.',
+    honesty:
+        'This counts what the schedule has issued. Some coins were never claimed or can never be spent, and many are lost. Nobody can count lost coins precisely, so this tool does not try.',
+    heightLabel: 'Block height: ',
+    heightLive: (stamp: string) => `, checked ${stamp}. `,
+    heightFallback: 'mempool.space, with blockstream.info if it does not answer',
+    heightOffline: (height: string, stamp: string) =>
+        `estimated offline from block ${height} (${stamp}) at one block every 10 minutes. `,
+    supplyLabel: 'Supply: ',
+    supplySource: "worked out from Bitcoin's issuance schedule, 50 BTC a block halving every 210,000 blocks.",
+    shareOffline: 'Sharing waits for a live block height.',
+    cardHeadline: (left: string, height: string) => `${left} left to mine. Block ${height}.`,
+    cardDetail: (issued: string, halving: string) =>
+        `${issued} issued by the schedule. Next halving at block ${halving}.`,
+    cardSource: (api: string, stamp: string) => `Block height: ${api}, ${stamp} · Supply: the issuance schedule`,
 } as const;
 
 export const ROUTE = {
