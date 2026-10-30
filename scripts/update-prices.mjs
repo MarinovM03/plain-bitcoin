@@ -1,4 +1,4 @@
-import { download, lastDayOf, today, writeDataFile } from './lib/data-file.mjs';
+import { download, lastDayOf, nextDay, today, writeDailyFile, writeDataFile, writeJsonFile } from './lib/data-file.mjs';
 
 const PRICE_URL =
     'https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD&frequency=1d&page_size=10000&paging_from=start&start_time=2010-01-01';
@@ -42,6 +42,30 @@ function monthEndRate(rates, month) {
     return last === undefined ? undefined : rates[last];
 }
 
+// Six significant figures keep every daily close within 0.001% and the DCA download small.
+function daily(value) {
+    return Number(value.toPrecision(6));
+}
+
+function dailySeries(usdDays, fx) {
+    const days = Object.keys(usdDays).sort();
+    const rateDays = Object.keys(fx).sort();
+    const start = days[0];
+    const usd = [];
+    const gbp = [];
+    let rateIndex = 0;
+    let rate;
+    for (let day = start; day <= days.at(-1); day = nextDay(day)) {
+        const close = usdDays[day];
+        if (close === undefined || !(close > 0)) throw new Error(`No USD close for ${day}`);
+        while (rateIndex < rateDays.length && rateDays[rateIndex] <= day) rate = fx[rateDays[rateIndex++]];
+        if (rate === undefined) throw new Error(`No USD per GBP rate on or before ${day}`);
+        usd.push(daily(close));
+        gbp.push(daily(close / rate));
+    }
+    return { start, end: days.at(-1), usd, gbp };
+}
+
 const usdDays = await dailyUsd();
 const fx = await dailyUsdPerGbp();
 const usd = {};
@@ -66,4 +90,28 @@ await writeDataFile('src/data/prices/gbp.json', {
     ...PRICE_META,
     asOf,
     months: gbp,
+});
+
+const days = dailySeries(usdDays, fx);
+await writeDailyFile('src/data/prices/daily-usd.json', {
+    series: 'BTC daily close in US dollars: PriceUSD for each UTC day',
+    ...PRICE_META,
+    asOf,
+    start: days.start,
+    closes: days.usd,
+});
+await writeDailyFile('src/data/prices/daily-gbp.json', {
+    series: 'BTC daily close in pounds: PriceUSD for each UTC day, divided by DEXUSUK (USD per GBP, the last rate published on or before that day, Federal Reserve H.10 via FRED, public domain)',
+    ...PRICE_META,
+    asOf,
+    start: days.start,
+    closes: days.gbp,
+});
+await writeJsonFile('src/data/prices/latest.json', {
+    series: 'Latest BTC daily close in pounds and US dollars, the offline fallback for live prices',
+    ...PRICE_META,
+    asOf,
+    day: days.end,
+    GBP: days.gbp.at(-1),
+    USD: days.usd.at(-1),
 });

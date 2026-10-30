@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barScale, sparkline } from './scale.ts';
+import { barScale, lineChart, sampleIndices, sparkline } from './scale.ts';
 
 describe('barScale', () => {
     it('stays linear up to ten times', () => {
@@ -41,5 +41,28 @@ describe('sparkline', () => {
 
     it('draws a single point at the left edge', () => {
         expect(sparkline([100], 100, 100, 40).points).toBe('0,40');
+    });
+});
+
+describe('lineChart', () => {
+    it('samples evenly and always keeps the first and last day', () => {
+        expect(sampleIndices(5, 240)).toEqual([0, 1, 2, 3, 4]);
+        expect(sampleIndices(1_000, 3)).toEqual([0, 500, 999]);
+        expect(sampleIndices(1, 240)).toEqual([0]);
+        expect(sampleIndices(0, 240)).toEqual([]);
+    });
+
+    it('draws every series on one scale from zero', () => {
+        const chart = lineChart(
+            [
+                [0, 50, 100],
+                [0, 100, 200],
+            ],
+            100,
+            40,
+            240,
+        );
+        expect(chart.max).toBe(200);
+        expect(chart.lines).toEqual(['0,40 50,30 100,20', '0,40 50,20 100,0']);
     });
 });

@@ -31,6 +31,26 @@ export function reportGaps(name, months) {
     }
 }
 
+export function nextDay(day) {
+    const date = new Date(`${day}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+}
+
+export async function writeJsonFile(path, data) {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, `${JSON.stringify(data, null, 4)}\n`, 'utf8');
+}
+
+export async function writeDailyFile(path, data) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data.start)) throw new Error(`${path}: bad start ${data.start}`);
+    for (const [i, value] of data.closes.entries()) {
+        if (!Number.isFinite(value) || value <= 0) throw new Error(`${path}: bad value ${value} at day ${i}`);
+    }
+    await writeJsonFile(path, data);
+    console.log(`${path}: ${data.closes.length} days from ${data.start}`);
+}
+
 export async function writeDataFile(path, data) {
     const months = Object.fromEntries(Object.entries(data.months).sort(([a], [b]) => a.localeCompare(b)));
     for (const [month, value] of Object.entries(months)) {

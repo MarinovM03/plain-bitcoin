@@ -43,6 +43,23 @@ export function sparkline(values: readonly number[], base: number, width: number
     return { points, baseY: y(base), log };
 }
 
+export function sampleIndices(length: number, samples: number): number[] {
+    const count = Math.min(length, samples);
+    if (count <= 1) return count === 1 ? [0] : [];
+    return Array.from({ length: count }, (_, k) => Math.round((k * (length - 1)) / (count - 1)));
+}
+
+export function lineChart(series: readonly (readonly number[])[], width: number, height: number, samples: number) {
+    const length = Math.min(...series.map((values) => values.length));
+    const indices = sampleIndices(length, samples);
+    const max = Math.max(0, ...series.flatMap((values) => indices.map((i) => values[i] ?? 0))) || 1;
+    const step = indices.length > 1 ? width / (indices.length - 1) : 0;
+    const lines = series.map((values) =>
+        indices.map((i, k) => `${round(k * step)},${round(height - ((values[i] ?? 0) / max) * height)}`).join(' '),
+    );
+    return { lines, max };
+}
+
 function round(value: number): number {
     return Math.round(value * 10) / 10;
 }

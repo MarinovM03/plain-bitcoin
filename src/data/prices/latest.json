@@ -1,0 +1,10 @@
+{
+    "series": "Latest BTC daily close in pounds and US dollars, the offline fallback for live prices",
+    "source": "Coin Metrics Community Data (PriceUSD, daily reference price)",
+    "url": "https://docs.coinmetrics.io/api/v4/",
+    "licence": "CC BY-NC 4.0, attribution to Coin Metrics",
+    "asOf": "2026-10-30",
+    "day": "2026-10-29",
+    "GBP": 58462.4,
+    "USD": 78193.4
+}
