@@ -8,11 +8,11 @@ A few honest Bitcoin tools, fast and plain, at [plainbitcoin.org](https://plainb
 - **Buying on a schedule**: buying a little at a time compared with one lump sum.
 - **Address lookup**: decode an address offline; anything sent to a public API only after a clear note and a tap.
 
-Everything runs in your browser. No accounts, no tracking, no cookies, no third-party scripts. The site never asks for keys, seeds or signatures.
+Everything runs in your browser. The only live request is the latest block height, from mempool.space (Esplora as fallback). No accounts, no tracking, no cookies, no third-party scripts. The site never asks for keys, seeds or signatures.
 
 ## Status
 
-Early build. Purchasing power works; the other tools arrive one at a time. See [docs/STATUS.md](docs/STATUS.md).
+Early build. Bitcoin left to mine and purchasing power work; the other tools arrive one at a time.
 
 ## Develop
 
@@ -44,13 +44,13 @@ node scripts/update-cpi.mjs
 node scripts/update-prices.mjs
 ```
 
-Check the diff in `src/data/` (new months at the end, no surprise changes to old ones, any gap warnings explained), run `npm test`, then commit. Sources and licences are in [docs/SOURCES.md](docs/SOURCES.md).
+Check the diff in `src/data/` (new months at the end, no surprise changes to old ones, any gap warnings explained), run `npm test`, then commit. Each data file carries its source, URL, licence and as-of date, and the site shows the source next to every number.
 
 ## Layout
 
 ```
 src/app      hash router
-src/hero     the Bitcoin-left hero (the only code that may use WebGL)
+src/hero     the Bitcoin-left hero (the only code that may use WebGL; renders in a worker)
 src/tools    one folder per tool
 src/model    pure, unit-tested math
 src/data     public API clients and bundled data snapshots
@@ -59,7 +59,6 @@ src/ui       shell, views and all user-facing copy
 src/styles   design tokens and one stylesheet per UI part
 src/util     formatting, motion and DOM helpers
 scripts      data update scripts, run by hand
-docs         status, sources and session notes
 ```
 
 ## Licence
