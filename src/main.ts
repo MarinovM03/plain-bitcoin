@@ -49,6 +49,11 @@ startRouter(({ route, initial, notFound }) => {
             whileCurrent(view, () => mountConvert(main, import.meta.env.VITE_SITE_URL));
         });
     }
+    if (route === 'address') {
+        import('./tools/address/index.ts').then(({ mountAddress }) => {
+            whileCurrent(view, () => mountAddress(main, import.meta.env.VITE_SITE_URL));
+        });
+    }
     if (route === 'dca') {
         import('./tools/dca/index.ts').then(({ mountDca }) => {
             whileCurrent(view, () => mountDca(main, import.meta.env.VITE_SITE_URL));

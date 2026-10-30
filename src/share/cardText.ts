@@ -1,9 +1,10 @@
 import type { PriceQuote } from '../data/price.ts';
+import type { Address } from '../model/address.ts';
 import { btcText, type Conversion, type Unit } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
 import type { Supply } from '../model/supply.ts';
-import { CONVERT, DCA, LEFT_PAGE, POWER } from '../ui/copy.ts';
+import { ADDRESS, CONVERT, DCA, LEFT_PAGE, POWER } from '../ui/copy.ts';
 import {
     type Fiat,
     formatAmount,
@@ -216,5 +217,33 @@ export function leftCard(supply: Supply, api: string, checkedAt: number, site: s
         copy: `${headline} ${detail}
 ${site}`,
         fileName: `plain-bitcoin-left-${supply.height}.png`,
+    };
+}
+
+export interface AddressText {
+    headline: string;
+    detail: string;
+    card: ShareCard;
+}
+
+function groupsOfFour(text: string): string {
+    return text.match(/.{1,4}/g)?.join(' ') ?? text;
+}
+
+export function addressText(address: Address, showAddress: boolean, site: string): AddressText {
+    const headline = ADDRESS.headline(ADDRESS.types[address.type]);
+    const detail = ADDRESS.detail(ADDRESS.networks[address.network], ADDRESS.encodings[address.encoding]);
+    const cardDetail = showAddress ? groupsOfFour(address.text) : detail;
+    return {
+        headline,
+        detail,
+        card: {
+            headline,
+            detail: cardDetail,
+            source: ADDRESS.cardSource(ADDRESS.specs[address.encoding]),
+            alt: `${headline} ${cardDetail}`,
+            copy: showAddress ? `${headline}\n${address.text}\n${site}` : `${headline} ${detail}\n${site}`,
+            fileName: `plain-bitcoin-address-${address.type}.png`,
+        },
     };
 }

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { LAST_CLOSE, type PriceQuote } from '../data/price.ts';
+import { analyseAddress } from '../model/address.ts';
 import { convert } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
 import { supplyAt } from '../model/supply.ts';
-import { convertText, dcaText, leftCard, powerText, priceLabel, rateLine } from './cardText.ts';
+import { addressText, convertText, dcaText, leftCard, powerText, priceLabel, rateLine } from './cardText.ts';
 import { siteAddress } from './index.ts';
 
 const BASE: PowerResult = {
@@ -216,5 +217,34 @@ plainbitcoin.org`);
         ]);
         expect(text.rows.fall).toBe('None: it closed every day at a new high');
         expect(dcaText({ ...DCA_RESULT, frequency: 'monthly' }, 'GBP', 'x').headline).toMatch(/^£50 a month since/);
+    });
+});
+
+describe('addressText', () => {
+    const taproot = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
+
+    async function taprootAddress() {
+        const analysis = await analyseAddress(taproot);
+        if (analysis.kind !== 'address') throw new Error('Expected an address');
+        return analysis;
+    }
+
+    it('shares the type only by default', async () => {
+        const text = addressText(await taprootAddress(), false, 'plainbitcoin.org');
+        expect(text.headline).toBe('This is a Taproot address (P2TR).');
+        expect(text.detail).toBe('Bitcoin mainnet. The Bech32m checksum is valid.');
+        expect(text.card.detail).toBe(text.detail);
+        expect(text.card.source).toBe('Checked in the browser, nothing sent · Bech32m, BIP 350');
+        expect(text.card.fileName).toBe('plain-bitcoin-address-p2tr.png');
+        for (const field of [text.card.headline, text.card.detail, text.card.alt, text.card.copy, text.card.fileName]) {
+            expect(field).not.toContain(taproot.slice(4, 20));
+        }
+    });
+
+    it('puts the full address on the card only when asked', async () => {
+        const text = addressText(await taprootAddress(), true, 'plainbitcoin.org');
+        expect(text.card.detail.replaceAll(' ', '')).toBe(taproot);
+        expect(text.card.detail.startsWith('bc1p 0xlx vlhe')).toBe(true);
+        expect(text.card.copy).toBe(`This is a Taproot address (P2TR).\n${taproot}\nplainbitcoin.org`);
     });
 });

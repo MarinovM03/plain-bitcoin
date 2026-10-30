@@ -50,15 +50,14 @@ export const TOOLS: Record<ToolId, { name: string; question: string; preview: st
     },
     address: {
         name: 'Address lookup',
-        question: 'What can anyone see about a bitcoin address?',
-        preview: 'Public balance and history',
-        privacy: 'Only asks mempool.space, a public API, after you tap Look up. Never asks for keys or seeds.',
+        question: 'What kind of bitcoin address is this, and is it typed right?',
+        preview: 'Type, typo check, public balance',
+        privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
     },
 };
 
 export const TOOL_PAGE = {
     back: 'All tools',
-    pending: 'This tool opens in a later session.',
     inputsLabel: 'Your numbers',
     resultLabel: 'Answer',
     resultEmpty: 'Your answer shows here.',
@@ -88,10 +87,7 @@ export const FIELDS = {
     starting: 'Starting',
     month: 'Month',
     year: 'Year',
-    examples: { power: '1,000', dca: '50', address: 'bc1q…' },
-    address: 'Bitcoin address',
-    lookUp: 'Look up',
-    lookUpNote: 'Look up asks mempool.space, a public API, about this address. Nothing is sent before you tap it.',
+    examples: { power: '1,000', dca: '50' },
 } as const;
 
 const CPI_PLACE: Record<Fiat, string> = { GBP: 'UK', USD: 'US' };
@@ -223,6 +219,126 @@ export const DCA = {
     cardSource: (day: string, fees: string) => `Bitcoin: Coin Metrics daily closes to ${day} · ${fees}`,
     cardFees: (percent: string) => `${percent} fee per buy`,
     cardNoFees: 'fees not included',
+} as const;
+
+export const ADDRESS = {
+    field: 'Bitcoin address',
+    placeholder: 'bc1q…',
+    paste: 'Paste',
+    pasteBlocked: 'Paste was blocked. Press and hold the field, then choose Paste.',
+    offline: 'The check runs in your browser. Nothing you paste leaves this page.',
+    empty: 'Paste or type an address to check it.',
+    resultLabel: 'Answer · checked in your browser',
+    secret: 'That looks like a private key or seed. This site never needs it, and nobody honest will ask for it.',
+    extendedPublic:
+        'That is an extended public key. It reveals every address and the whole history of a wallet, so this page will not look it up.',
+    extendedPublicHeadline: 'Extended public key, not looked up.',
+    lightningHeadline: 'This is a Lightning invoice, not an address.',
+    lightningDetail:
+        'It asks for a payment on the Lightning Network. Pay it from a Lightning wallet; it has no balance to look up.',
+    headline: (type: string) => `This is a ${type}.`,
+    detail: (network: string, encoding: string) => `${network}. The ${encoding} checksum is valid.`,
+    types: {
+        p2pkh: 'Legacy address (P2PKH)',
+        p2sh: 'script address (P2SH)',
+        p2wpkh: 'Native SegWit address (P2WPKH)',
+        p2wsh: 'SegWit script address (P2WSH)',
+        p2tr: 'Taproot address (P2TR)',
+        future: 'future SegWit version address',
+    },
+    about: {
+        p2pkh: 'The original format, in use since 2009. Every wallet can send to it. Spending from it costs more in fees than from the newer types.',
+        p2sh: 'Pays to a script, in use since 2012 (BIP 16). Often a SegWit address wrapped for older wallets, or a multisig wallet. The address alone does not say which.',
+        p2wpkh: 'A single-key SegWit address, in use since 2017. Cheaper to spend from than Legacy, and its Bech32 checksum catches typos.',
+        p2wsh: 'Pays to the hash of a script, in use since 2017. Often a multisig wallet, but the script stays hidden until the coins are spent.',
+        p2tr: 'The newest type, in use since November 2021. One key or many can sit behind it, and a simple spend looks the same either way.',
+        future: 'A valid format for a SegWit version that has no rules yet. Do not send coins to it.',
+    },
+    multisig:
+        'A P2SH, P2WSH or P2TR address may or may not be multisig; the script is only revealed when the coins are spent.',
+    networks: { mainnet: 'Bitcoin mainnet', testnet: 'Test network', regtest: 'Regtest, a local test network' },
+    encodings: { base58check: 'Base58Check', bech32: 'Bech32', bech32m: 'Bech32m' },
+    specs: { base58check: 'Base58Check', bech32: 'Bech32, BIP 173', bech32m: 'Bech32m, BIP 350' },
+    invalid: {
+        checksum: 'The checksum does not match.',
+        characters: 'Not a valid address.',
+        'mixed-case': 'Not a valid address.',
+        short: 'Too short for an address.',
+        long: 'Too long for an address.',
+        'other-coin': 'Not a bitcoin address.',
+        version: 'Not a valid address.',
+        program: 'Not a valid address.',
+        unknown: 'Not a bitcoin address.',
+    },
+    why: {
+        checksumAt: (position: number) =>
+            `So there is a typo, most likely the marked character (number ${position}). Do not send to it; copy the address again from whoever gave it.`,
+        checksumBech32:
+            'The last 6 characters are a checksum, and they do not match the rest. So there is a typo. Do not send to it.',
+        checksumBase58:
+            'In Base58 the 4 check bytes are mixed into every character, so the typo can be anywhere. Do not send to it.',
+        characters: (position: number, encoding: 'base58check' | 'bech32' | null) =>
+            encoding === 'bech32'
+                ? `Character ${position} is never used after the 1 in a bc1 address (b, i, o and 1 are left out).`
+                : `Character ${position} is never used in this kind of address (0, O, I and l are left out).`,
+        'mixed-case': 'It mixes capital and small letters. A bc1 address is all one case.',
+        short: 'Keep typing, or paste the whole address.',
+        long: 'Check that only one address was pasted.',
+        'other-coin': 'The checksum is valid, but the prefix is not bitcoin. It may belong to another coin.',
+        version: 'The checksum is valid, but the SegWit version is out of range. No wallet should send to it.',
+        program: 'The checksum is valid, but the length inside is wrong for its version. No wallet should send to it.',
+        unknown: 'It does not match any bitcoin address format.',
+    },
+    partsHeading: 'The parts',
+    parts: {
+        hrp: (network: string) => `Network: ${network}`,
+        hrpUnknown: 'Prefix',
+        separator: 'Separator: always the last 1',
+        version: (version: number) => `SegWit version ${version}`,
+        versionUnknown: 'Version',
+        program: (bytes: number, what: string) => `Program, ${bytes} bytes: ${what}`,
+        programUnknown: 'Program',
+        checksum: (encoding: string) => `Checksum, 6 characters, ${encoding}: valid`,
+        checksumBad: 'Checksum: does not match',
+        prefix: (type: string, network: string) => `Set by the version byte: ${type}, ${network}`,
+        prefixUnknown: 'First character',
+        body: 'The rest: the 20-byte hash and the 4-byte checksum, mixed together by Base58',
+        bytesVersion: 'Version byte',
+        bytesHash: (what: string) => `Hash of ${what}, 20 bytes`,
+        bytesHashUnknown: 'Hash, 20 bytes',
+        bytesChecksum: 'Checksum, 4 bytes: valid',
+        bytesChecksumBad: 'Checksum, 4 bytes: does not match',
+        suspect: (position: number) => `Character ${position}: likely typo`,
+    },
+    programs: {
+        p2wpkh: 'the hash of one public key',
+        p2wsh: 'the hash of a script',
+        p2tr: 'the Taproot output key',
+        future: 'not defined yet',
+    },
+    hashes: { p2pkh: 'one public key', p2sh: 'a script' },
+    lookupHeading: 'On chain',
+    apiNote: 'This asks a public API (mempool.space). It will see this address and your IP address.',
+    lookUp: 'Look up balance',
+    lookingUp: 'Asking mempool.space…',
+    lookupFailed: 'mempool.space did not answer. Try again in a minute.',
+    lookupMainnet: 'Only mainnet addresses can be looked up. Test network coins have no value.',
+    lookupChecked: (stamp: string) => `mempool.space, checked ${stamp}. Anyone can see these numbers.`,
+    explorer: 'Open this address on mempool.space',
+    rows: {
+        balance: 'Balance',
+        received: 'Received in total',
+        sent: 'Sent in total',
+        txs: 'Transactions',
+        pending: 'Waiting to confirm',
+    },
+    txs: (count: number) => `${count.toLocaleString('en-GB')} confirmed`,
+    pending: (count: number, change: string) =>
+        `${count.toLocaleString('en-GB')} ${count === 1 ? 'transaction' : 'transactions'}, ${change}`,
+    source: (spec: string) => `Checked in your browser with the ${spec} checksum. Nothing was sent.`,
+    sourceIdle: 'Decoded in your browser: Base58Check, Bech32 (BIP 173) and Bech32m (BIP 350).',
+    cardToggle: 'Show the full address on the card',
+    cardSource: (spec: string) => `Checked in the browser, nothing sent · ${spec}`,
 } as const;
 
 export const LEFT_PAGE = {

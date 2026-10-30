@@ -28,15 +28,6 @@ export function amountField(options: {
 </div>`;
 }
 
-export function textField(options: { id: string; label: string; placeholder?: string }): SafeHtml {
-    return html`<div class="field">
-    <label class="field__label" for="${options.id}">${options.label}</label>
-    <div class="field__control">
-        <input id="${options.id}" class="field__input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="${options.placeholder ?? ''}" />
-    </div>
-</div>`;
-}
-
 export function segmentedControl(options: {
     name: string;
     legend: string;

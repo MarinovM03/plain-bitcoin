@@ -1,10 +1,10 @@
 import { hrefFor } from '../app/routes.ts';
 import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
+import { renderAddressCardToggle, renderAddressDetail, renderAddressInputs } from './address-view.ts';
 import { renderConvertInputs } from './convert-view.ts';
-import { FIELDS, LEFT_PAGE, TOOL_PAGE, TOOLS } from './copy.ts';
+import { ADDRESS, LEFT_PAGE, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs } from './dca-view.ts';
-import { textField } from './fields.ts';
 import { renderHero } from './hero.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine, resultBlock, shareBar, sourceLine } from './output.ts';
@@ -13,8 +13,6 @@ import { renderPowerDetail, renderPowerInputs } from './power-view.ts';
 type CalculatorId = Exclude<ToolId, 'left'>;
 
 const EARLIEST_MONTH: Month = { year: 2010, month: 7 };
-
-const LIVE_TOOLS: ReadonlySet<CalculatorId> = new Set(['power', 'convert', 'dca']);
 
 function thisMonth(): Month {
     const now = new Date();
@@ -30,10 +28,15 @@ function renderInputs(id: CalculatorId): SafeHtml {
         case 'dca':
             return renderDcaInputs(EARLIEST_MONTH, thisMonth());
         case 'address':
-            return html`${textField({ id: 'address-input', label: FIELDS.address, placeholder: FIELDS.examples.address })}
-<button class="button button--block" type="submit" disabled>${FIELDS.lookUp}</button>
-${noteLine(FIELDS.lookUpNote)}`;
+            return renderAddressInputs();
     }
+}
+
+function renderDetail(id: CalculatorId): SafeHtml | '' {
+    if (id === 'power') return renderPowerDetail();
+    if (id === 'dca') return renderDcaDetail();
+    if (id === 'address') return renderAddressDetail();
+    return '';
 }
 
 function renderHead(id: ToolId, heading: SafeHtml): SafeHtml {
@@ -44,21 +47,25 @@ ${heading}
 
 function renderCalculator(id: CalculatorId): SafeHtml {
     const title = html`<h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>`;
-    const live = LIVE_TOOLS.has(id);
     return html`<article class="tool tool--${id}">
     ${renderHead(id, title)}
     <div class="tool__body">
         <form class="tool__inputs" aria-label="${TOOL_PAGE.inputsLabel}" novalidate>
-            ${live ? '' : noteLine(TOOL_PAGE.pending)}
             ${renderInputs(id)}
         </form>
         <section class="tool__output" aria-labelledby="tool-result-label">
             <div class="tool__dock">
-                ${resultBlock({ id: 'tool-result', label: TOOL_PAGE.resultLabel, empty: TOOL_PAGE.resultEmpty, sentence: live })}
+                ${resultBlock({
+                    id: 'tool-result',
+                    label: id === 'address' ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
+                    empty: id === 'address' ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
+                    sentence: true,
+                })}
                 ${shareBar()}
+                ${id === 'address' ? renderAddressCardToggle() : ''}
             </div>
-            ${id === 'power' ? renderPowerDetail() : id === 'dca' ? renderDcaDetail() : ''}
-            ${sourceLine(TOOL_PAGE.sourcePending, 'tool-source')}
+            ${renderDetail(id)}
+            ${sourceLine(id === 'address' ? ADDRESS.sourceIdle : TOOL_PAGE.sourcePending, 'tool-source')}
             <p class="privacy-line">${TOOLS[id].privacy}</p>
         </section>
     </div>
