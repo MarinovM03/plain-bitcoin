@@ -1,15 +1,23 @@
+import type { PriceQuote } from '../data/price.ts';
+import { btcText, type Conversion, type Unit } from '../model/convert.ts';
+import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
 import type { Supply } from '../model/supply.ts';
-import { LEFT_PAGE, POWER } from '../ui/copy.ts';
+import { CONVERT, DCA, LEFT_PAGE, POWER } from '../ui/copy.ts';
 import {
     type Fiat,
     formatAmount,
     formatBtcAmount,
     formatBtcExact,
+    formatDay,
+    formatFiatPrecise,
     formatMoney,
     formatPercent,
+    formatSats,
+    formatShortDay,
     formatUtcStamp,
     formatWhole,
+    isoDayMs,
 } from '../util/format.ts';
 import { monthKeyLabel } from '../util/month.ts';
 import type { ShareCard } from './index.ts';
@@ -74,6 +82,125 @@ export function powerText(result: PowerResult, currency: Fiat, site: string): Po
             alt: `${headline} ${detail}`,
             copy: `${headline} ${detail}\n${site}`,
             fileName: `plain-bitcoin-${fileAmount}-${currency.toLowerCase()}-${result.start}.png`,
+        },
+    };
+}
+
+export function priceLabel(quote: PriceQuote): string {
+    if (quote.source === 'last close') return CONVERT.lastClose(formatShortDay(quote.asOf));
+    const stamp = formatUtcStamp(quote.asOf);
+    return quote.stale ? CONVERT.notUpdating(quote.source, stamp) : CONVERT.live(quote.source, stamp);
+}
+
+export function rateLine(quote: PriceQuote): string {
+    return CONVERT.rate(formatMoney(quote.value.gbp, 'GBP'), formatMoney(quote.value.usd, 'USD'));
+}
+
+export interface ConvertText {
+    headline: string;
+    detail: string;
+    card: ShareCard;
+}
+
+export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuote, site: string): ConvertText {
+    const { sats, fiat } = conversion;
+    const words: Record<Unit, string> = {
+        sats: formatSats(sats),
+        btc: `${btcText(sats)} BTC`,
+        gbp: formatFiatPrecise(fiat.gbp, 'GBP'),
+        usd: formatFiatPrecise(fiat.usd, 'USD'),
+    };
+    const target: Unit = unit === 'gbp' || unit === 'usd' ? 'sats' : 'gbp';
+    const [first = '', second = ''] = (['sats', 'btc', 'gbp', 'usd'] as const)
+        .filter((other) => other !== unit && other !== target)
+        .map((other) => words[other]);
+    const headline = CONVERT.headline(words[unit], words[target]);
+    const detail = CONVERT.detail(first, second);
+    return {
+        headline,
+        detail,
+        card: {
+            headline,
+            detail,
+            source: CONVERT.cardSource(priceLabel(quote)),
+            alt: `${headline}. ${detail}`,
+            copy: `${headline}. ${detail}\n${site}`,
+            fileName: `plain-bitcoin-${sats}-sats.png`,
+        },
+    };
+}
+
+export interface DcaText {
+    headline: string;
+    detail: string;
+    asOf: string;
+    rows: Record<keyof typeof DCA.rows, string>;
+    notes: string[];
+    chartAlt: string;
+    card: ShareCard;
+}
+
+function fallPercent(result: DcaResult): string | null {
+    const percent = formatPercent(result.drawdown);
+    return result.fall === null || percent === '0%' ? null : percent;
+}
+
+export function dcaText(result: DcaResult, currency: Fiat, site: string): DcaText {
+    const money = (value: number) => formatMoney(value, currency);
+    const day = (iso: string) => formatDay(isoDayMs(iso));
+    const shortDay = (iso: string) => formatShortDay(isoDayMs(iso));
+    const amount = formatAmount(result.amount, currency);
+    const invested = money(result.invested);
+    const worth = money(result.valueNow);
+    const lump = money(result.lumpSum.valueNow);
+    const buys = DCA.buys(result.buys);
+    const headline = DCA.headline(
+        amount,
+        DCA.every[result.frequency],
+        monthKeyLabel(result.start.slice(0, 7), 'short'),
+        worth,
+        lump,
+    );
+    const fall = fallPercent(result);
+    const percent = `${result.feePercent}%`;
+    const fees = result.feePercent > 0 ? DCA.feesPaid(percent, money(result.fees)) : DCA.feesNone;
+    const notes = [fees, ...(result.clamped ? [DCA.clamped(day(result.start))] : []), DCA.lumpNote];
+    const detail = fall === null ? DCA.cardDetailNoFall(invested, buys) : DCA.cardDetail(invested, buys, fall);
+    const fileAmount = String(result.amount).replace(/[^\d]/g, '-');
+    return {
+        headline,
+        detail: DCA.detail(invested, buys, formatBtcExact(result.sats)),
+        asOf: DCA.asOf(day(result.end)),
+        rows: {
+            invested,
+            bought: formatBtcExact(result.sats),
+            worth,
+            average: DCA.perBtc(money(result.averageCost)),
+            buys: DCA.buysRange(buys, shortDay(result.start), shortDay(result.lastBuy)),
+            fall:
+                fall === null || result.fall === null
+                    ? DCA.noFall
+                    : DCA.fall(
+                          fall,
+                          money(result.fall.peak.value),
+                          shortDay(result.fall.peak.day),
+                          money(result.fall.trough.value),
+                          shortDay(result.fall.trough.day),
+                      ),
+            lump: DCA.lump(lump, formatBtcExact(result.lumpSum.sats), shortDay(result.start)),
+        },
+        notes,
+        chartAlt: DCA.chartAlt(worth, invested, lump),
+        card: {
+            headline,
+            detail,
+            source: DCA.cardSource(
+                shortDay(result.end),
+                result.feePercent > 0 ? DCA.cardFees(percent) : DCA.cardNoFees,
+            ),
+            alt: `${headline} ${detail}`,
+            copy: `${headline} ${detail}\n${site}`,
+            fileName: `plain-bitcoin-dca-${fileAmount}-${currency.toLowerCase()}-${result.frequency}-${result.start}.png`,
         },
     };
 }

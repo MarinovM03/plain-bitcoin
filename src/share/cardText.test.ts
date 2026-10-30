@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { LAST_CLOSE, type PriceQuote } from '../data/price.ts';
+import { convert } from '../model/convert.ts';
+import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
 import { supplyAt } from '../model/supply.ts';
-import { leftCard, powerText } from './cardText.ts';
+import { convertText, dcaText, leftCard, powerText, priceLabel, rateLine } from './cardText.ts';
 import { siteAddress } from './index.ts';
 
 const BASE: PowerResult = {
@@ -98,5 +101,120 @@ describe('leftCard', () => {
         expect(card.copy).toBe(`${card.headline} ${card.detail}
 plainbitcoin.org`);
         expect(card.fileName).toBe('plain-bitcoin-left-973854.png');
+    });
+});
+
+const LIVE: PriceQuote = {
+    value: { gbp: 57_329, usd: 76_777 },
+    source: 'mempool.space',
+    asOf: Date.UTC(2026, 9, 30, 19, 20),
+    stale: false,
+};
+
+describe('convertText', () => {
+    it('states 100,000 sats in pounds with the price source and time on the card', () => {
+        const text = convertText('sats', convert(100_000, LIVE.value), LIVE, 'plainbitcoin.org');
+        expect(text.headline).toBe('100,000 sats = £57.33');
+        expect(text.detail).toBe('Also 0.001 BTC or $76.78.');
+        expect(text.card.source).toBe('Price: mempool.space, 30 Oct 2026, 19:20 UTC');
+        expect(text.card.copy).toBe('100,000 sats = £57.33. Also 0.001 BTC or $76.78.\nplainbitcoin.org');
+        expect(text.card.fileName).toBe('plain-bitcoin-100000-sats.png');
+    });
+
+    it('keeps tiny amounts visible and answers money in sats', () => {
+        expect(convertText('sats', convert(1, LIVE.value), LIVE, 'x').headline).toBe('1 sat = £0.00057');
+        expect(convertText('btc', convert(1_000_000, LIVE.value), LIVE, 'x').headline).toBe('0.01 BTC = £573.29');
+        const pounds = convertText('gbp', convert(87_216, LIVE.value), LIVE, 'x');
+        expect(pounds.headline).toBe('£50.00 = 87,216 sats');
+        expect(pounds.detail).toBe('Also 0.00087216 BTC or $66.96.');
+        expect(convertText('usd', convert(87_216, LIVE.value), LIVE, 'x').detail).toBe(
+            'Also 0.00087216 BTC or £50.00.',
+        );
+    });
+
+    it('labels the offline price as the last close, and an old live price as not updating', () => {
+        expect(priceLabel(LAST_CLOSE)).toMatch(/^last close, \d{1,2} \w{3,4} \d{4}$/);
+        expect(convertText('sats', convert(100_000, LAST_CLOSE.value), LAST_CLOSE, 'x').card.source).toBe(
+            `Price: ${priceLabel(LAST_CLOSE)}`,
+        );
+        expect(priceLabel({ ...LIVE, stale: true })).toBe('mempool.space, 30 Oct 2026, 19:20 UTC, not updating');
+        expect(rateLine(LIVE)).toBe('1 BTC = £57,329 = $76,777');
+    });
+});
+
+const DCA_RESULT: DcaResult = {
+    amount: 50,
+    frequency: 'weekly',
+    feePercent: 0,
+    requestedStart: '2020-01-01',
+    start: '2020-01-01',
+    clamped: false,
+    end: '2026-10-29',
+    lastBuy: '2026-10-27',
+    buys: 357,
+    invested: 17_850,
+    fees: 0,
+    sats: 123_456_789,
+    priceNow: 58_462.4,
+    valueNow: 72_175.4,
+    averageCost: 14_458.5,
+    drawdown: 0.6012,
+    fall: {
+        peak: { day: '2021-11-08', value: 30_512.2 },
+        trough: { day: '2022-11-21', value: 12_168.4 },
+    },
+    lumpSum: { sats: 333_000_000, price: 5_360.1, valueNow: 194_680 },
+    points: [],
+};
+
+describe('dcaText', () => {
+    it('writes the answer and the card as one sentence with the lump sum', () => {
+        const text = dcaText(DCA_RESULT, 'GBP', 'plainbitcoin.org');
+        expect(text.headline).toBe('£50 a week since Jan 2020 is worth £72,175 today (one lump sum: £194,680).');
+        expect(text.card.headline).toBe(text.headline);
+        expect(text.card.detail).toBe('£17,850 put in over 357 buys. Worst fall on the way: 60%.');
+        expect(text.card.source).toBe('Bitcoin: Coin Metrics daily closes to 29 Oct 2026 · fees not included');
+        expect(text.card.copy).toBe(`${text.headline} ${text.card.detail}
+plainbitcoin.org`);
+        expect(text.card.fileName).toBe('plain-bitcoin-dca-50-gbp-weekly-2020-01-01.png');
+        expect(text.asOf).toBe('today = close, 29 October 2026');
+    });
+
+    it('fills every row in plain words', () => {
+        const { rows, detail, notes } = dcaText(DCA_RESULT, 'GBP', 'x');
+        expect(detail).toBe('£17,850 put in over 357 buys, buying 1.23456789 BTC.');
+        expect(rows.average).toBe('£14,459 per bitcoin');
+        expect(rows.buys).toBe('357 buys, 1 Jan 2020 to 27 Oct 2026');
+        expect(rows.fall).toBe('60%, from £30,512 on 8 Nov 2021 to £12,168 on 21 Nov 2022');
+        expect(rows.lump).toBe('Worth £194,680 today: 3.33 BTC bought on 1 Jan 2020');
+        expect(notes[0]).toBe('Fees not included.');
+    });
+
+    it('names other cadences, fees, dollars, a clamped start and no fall', () => {
+        const text = dcaText(
+            {
+                ...DCA_RESULT,
+                frequency: 'fortnightly',
+                feePercent: 1.5,
+                fees: 267.75,
+                clamped: true,
+                start: '2010-07-18',
+                drawdown: 0,
+                fall: null,
+                buys: 1,
+            },
+            'USD',
+            'x',
+        );
+        expect(text.headline).toMatch(/^\$50 every two weeks since Jul 2010 is worth \$72,175 today/);
+        expect(text.card.detail).toBe('$17,850 put in over 1 buy.');
+        expect(text.card.source).toBe('Bitcoin: Coin Metrics daily closes to 29 Oct 2026 · 1.5% fee per buy');
+        expect(text.notes).toEqual([
+            'Includes a 1.5% fee on each buy, $268 in total.',
+            'Prices start on 18 July 2010, so the first buy is that day.',
+            'One lump sum puts the same total in at once, on the first buy day.',
+        ]);
+        expect(text.rows.fall).toBe('None: it closed every day at a new high');
+        expect(dcaText({ ...DCA_RESULT, frequency: 'monthly' }, 'GBP', 'x').headline).toMatch(/^£50 a month since/);
     });
 });

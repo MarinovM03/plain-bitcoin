@@ -44,6 +44,16 @@ startRouter(({ route, initial, notFound }) => {
             whileCurrent(view, () => mountPower(main, import.meta.env.VITE_SITE_URL));
         });
     }
+    if (route === 'convert') {
+        import('./tools/convert/index.ts').then(({ mountConvert }) => {
+            whileCurrent(view, () => mountConvert(main, import.meta.env.VITE_SITE_URL));
+        });
+    }
+    if (route === 'dca') {
+        import('./tools/dca/index.ts').then(({ mountDca }) => {
+            whileCurrent(view, () => mountDca(main, import.meta.env.VITE_SITE_URL));
+        });
+    }
 
     if (!initial) {
         window.scrollTo(0, 0);

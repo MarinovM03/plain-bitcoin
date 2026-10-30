@@ -8,7 +8,7 @@ import { renderAnnouncer, renderFooter, renderHeader, renderNoscript } from './s
 
 const DEFAULT_SITE_URL = 'https://plainbitcoin.org';
 
-const API_ORIGINS = ['https://mempool.space', 'https://blockstream.info'];
+const API_ORIGINS = ['https://mempool.space', 'https://blockstream.info', 'https://api.coingecko.com'];
 
 const CSP = [
     "default-src 'self'",

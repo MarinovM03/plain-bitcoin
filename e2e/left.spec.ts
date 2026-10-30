@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { HERO, LEFT_PAGE, SHARE } from '../src/ui/copy.ts';
 import { fakeHeightApi, isApiRequest } from './height-api.ts';
+import { fakePriceApi } from './price-api.ts';
 
 function watch(page: Page) {
     const problems: string[] = [];
@@ -114,16 +115,20 @@ test('a new block is picked up on the next poll and announced once', async ({ pa
 
 test('calculator routes never load three.js or call the height API', async ({ page }) => {
     const chain = await fakeHeightApi(page);
+    const prices = await fakePriceApi(page);
     const { scripts, external, problems } = watch(page);
     await page.goto('/#/convert');
-    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('#tool-result')).toHaveText(/^100,000 sats = £57\.33$/);
     await page.waitForTimeout(2500);
+    await page.goto('/#/dca');
+    await expect(page.locator('#dca-detail')).toBeVisible();
     await page.goto('/#/power');
     await expect(page.locator('#power-detail')).toBeVisible();
     await page.waitForTimeout(1500);
 
     expect(scripts.filter((path) => /\/(three|scene|post|plain|worker)-/.test(path))).toEqual([]);
-    expect(external).toEqual([]);
+    expect(external).toEqual(prices.calls);
+    expect(prices.calls).toEqual(['https://mempool.space/api/v1/prices']);
     expect(chain.calls).toEqual([]);
     expect(problems).toEqual([]);
 });

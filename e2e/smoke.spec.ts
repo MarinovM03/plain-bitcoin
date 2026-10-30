@@ -2,9 +2,11 @@ import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
 import { FOOTER, HERO, pageTitle, ROUTE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeightApi, isApiRequest } from './height-api.ts';
+import { fakePriceApi } from './price-api.ts';
 
 test.beforeEach(async ({ page }) => {
     await fakeHeightApi(page);
+    await fakePriceApi(page);
 });
 
 function watchPage(page: Page) {
@@ -61,7 +63,7 @@ for (const id of TOOL_IDS) {
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
         await expect(page.locator('.share-bar button')).toHaveCount(3);
         for (const button of await page.locator('.share-bar button').all()) {
-            if (id === 'power' || id === 'left') await expect(button).toBeEnabled();
+            if (id !== 'address') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
         if (id === 'left') await expect(page.locator('#hero-stage')).toHaveCount(1);

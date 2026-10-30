@@ -7,17 +7,23 @@ export interface Choice {
     label: string;
 }
 
+export const CURRENCY_CHOICES = [
+    { value: 'GBP', label: FIELDS.pounds },
+    { value: 'USD', label: FIELDS.dollars },
+] as const;
+
 export function amountField(options: {
     id: string;
     label: string;
     decimals: number;
     placeholder?: string;
     value?: string;
+    inputmode?: 'decimal' | 'numeric';
 }): SafeHtml {
     return html`<div class="field">
     <label class="field__label" for="${options.id}">${options.label}</label>
     <div class="field__control">
-        <input id="${options.id}" class="field__input field__input--amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" enterkeyhint="done" data-decimals="${options.decimals}" placeholder="${options.placeholder ?? ''}" value="${options.value ?? ''}" />
+        <input id="${options.id}" class="field__input field__input--amount" type="text" inputmode="${options.inputmode ?? 'decimal'}" autocomplete="off" spellcheck="false" enterkeyhint="done" data-decimals="${options.decimals}" placeholder="${options.placeholder ?? ''}" value="${options.value ?? ''}" />
     </div>
 </div>`;
 }
@@ -57,18 +63,6 @@ function selectControl(id: string, choices: readonly Choice[], selected: string,
     return html`<div class="field__control field__control--select">
         <select id="${id}" class="field__select"${extra}>${items}</select>
     </div>`;
-}
-
-export function selectField(options: {
-    id: string;
-    label: string;
-    choices: readonly Choice[];
-    selected: string;
-}): SafeHtml {
-    return html`<div class="field">
-    <label class="field__label" for="${options.id}">${options.label}</label>
-    ${selectControl(options.id, options.choices, options.selected)}
-</div>`;
 }
 
 export function monthField(options: { id: string; legend: string; min: Month; max: Month; value: Month }): SafeHtml {

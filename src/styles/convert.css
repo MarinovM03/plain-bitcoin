@@ -1,0 +1,17 @@
+.convert-fields {
+    display: grid;
+    gap: 0.875rem;
+}
+
+.price-line {
+    min-height: 2.9em;
+    margin-top: -0.375rem;
+    color: var(--muted);
+    font-size: var(--step-small);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.45;
+}
+
+.tool--convert .note-line[hidden] {
+    display: none;
+}

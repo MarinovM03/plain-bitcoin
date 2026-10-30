@@ -54,6 +54,11 @@ export function formatMoney(amount: number, currency: Fiat): string {
     return formatFiat(amount, currency);
 }
 
+export function formatFiatPrecise(amount: number, currency: Fiat): string {
+    if (amount > 0 && amount < 0.01) return fiatFormat(currency, { maximumSignificantDigits: 2 }).format(amount);
+    return formatFiat(amount, currency);
+}
+
 export function formatAmount(amount: number, currency: Fiat): string {
     if (Number.isInteger(amount)) return fiatFormat(currency, { maximumFractionDigits: 0 }).format(amount);
     return formatFiat(amount, currency);
@@ -107,6 +112,18 @@ const STAMP = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short',
 
 export function formatDay(ms: number): string {
     return DAY.format(ms);
+}
+
+export function formatShortDay(ms: number): string {
+    return STAMP.format(ms);
+}
+
+export function formatUtcClock(ms: number): string {
+    return `${CLOCK.format(ms)} UTC`;
+}
+
+export function isoDayMs(day: string): number {
+    return Date.parse(`${day}T00:00:00Z`);
 }
 
 export function formatUtcStamp(ms: number): string {

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-export const API_HOSTS = ['mempool.space', 'blockstream.info'];
+export const API_HOSTS = ['mempool.space', 'blockstream.info', 'api.coingecko.com'];
 
 export interface FakeChain {
     height: number;

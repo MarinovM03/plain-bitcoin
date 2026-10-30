@@ -1,6 +1,6 @@
 import type { Month } from '../util/month.ts';
 import { FIELDS, POWER } from './copy.ts';
-import { amountField, monthField, segmentedControl } from './fields.ts';
+import { amountField, CURRENCY_CHOICES, monthField, segmentedControl } from './fields.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine } from './output.ts';
 
@@ -10,11 +10,6 @@ export const POWER_PRESETS = ['y2015', 'fiveYears', 'oneYear', 'worst'] as const
 
 export type PowerPreset = (typeof POWER_PRESETS)[number];
 
-const CURRENCIES = [
-    { value: 'GBP', label: FIELDS.pounds },
-    { value: 'USD', label: FIELDS.dollars },
-] as const;
-
 export function renderPowerInputs(min: Month, max: Month): SafeHtml {
     const presets = POWER_PRESETS.map(
         (preset) =>
@@ -22,7 +17,7 @@ export function renderPowerInputs(min: Month, max: Month): SafeHtml {
     );
     return html`<div class="field-row">
     ${amountField({ id: 'power-amount', label: FIELDS.amount, decimals: 2, placeholder: FIELDS.examples.power, value: '1,000' })}
-    ${segmentedControl({ name: 'power-currency', legend: FIELDS.currency, choices: CURRENCIES, selected: 'GBP' })}
+    ${segmentedControl({ name: 'power-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'GBP' })}
 </div>
 ${monthField({ id: 'power-when', legend: FIELDS.when, min, max, value: POWER_DEFAULT_START })}
 <fieldset class="field presets">

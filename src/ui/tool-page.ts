@@ -1,8 +1,10 @@
 import { hrefFor } from '../app/routes.ts';
 import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
+import { renderConvertInputs } from './convert-view.ts';
 import { FIELDS, LEFT_PAGE, TOOL_PAGE, TOOLS } from './copy.ts';
-import { amountField, monthField, segmentedControl, selectField, textField } from './fields.ts';
+import { renderDcaDetail, renderDcaInputs } from './dca-view.ts';
+import { textField } from './fields.ts';
 import { renderHero } from './hero.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine, resultBlock, shareBar, sourceLine } from './output.ts';
@@ -12,7 +14,7 @@ type CalculatorId = Exclude<ToolId, 'left'>;
 
 const EARLIEST_MONTH: Month = { year: 2010, month: 7 };
 
-const LIVE_TOOLS: ReadonlySet<CalculatorId> = new Set(['power']);
+const LIVE_TOOLS: ReadonlySet<CalculatorId> = new Set(['power', 'convert', 'dca']);
 
 function thisMonth(): Month {
     const now = new Date();
@@ -24,25 +26,9 @@ function renderInputs(id: CalculatorId): SafeHtml {
         case 'power':
             return renderPowerInputs(EARLIEST_MONTH, thisMonth());
         case 'convert':
-            return html`${amountField({ id: 'convert-amount', label: FIELDS.amount, decimals: 8, placeholder: FIELDS.examples.convert })}
-${selectField({
-    id: 'convert-unit',
-    label: FIELDS.unit,
-    selected: 'sats',
-    choices: Object.entries(FIELDS.units).map(([value, label]) => ({ value, label })),
-})}`;
+            return renderConvertInputs();
         case 'dca':
-            return html`${amountField({ id: 'dca-amount', label: FIELDS.eachBuy, decimals: 2, placeholder: FIELDS.examples.dca })}
-${segmentedControl({
-    name: 'dca-often',
-    legend: FIELDS.howOften,
-    selected: 'weekly',
-    choices: [
-        { value: 'weekly', label: FIELDS.weekly },
-        { value: 'monthly', label: FIELDS.monthly },
-    ],
-})}
-${monthField({ id: 'dca-start', legend: FIELDS.starting, min: EARLIEST_MONTH, max: thisMonth(), value: { year: 2020, month: 1 } })}`;
+            return renderDcaInputs(EARLIEST_MONTH, thisMonth());
         case 'address':
             return html`${textField({ id: 'address-input', label: FIELDS.address, placeholder: FIELDS.examples.address })}
 <button class="button button--block" type="submit" disabled>${FIELDS.lookUp}</button>
@@ -71,7 +57,7 @@ function renderCalculator(id: CalculatorId): SafeHtml {
                 ${resultBlock({ id: 'tool-result', label: TOOL_PAGE.resultLabel, empty: TOOL_PAGE.resultEmpty, sentence: live })}
                 ${shareBar()}
             </div>
-            ${id === 'power' ? renderPowerDetail() : ''}
+            ${id === 'power' ? renderPowerDetail() : id === 'dca' ? renderDcaDetail() : ''}
             ${sourceLine(TOOL_PAGE.sourcePending, 'tool-source')}
             <p class="privacy-line">${TOOLS[id].privacy}</p>
         </section>
