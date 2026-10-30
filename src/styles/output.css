@@ -96,3 +96,27 @@
         border-color: var(--muted);
     }
 }
+
+.result--sentence .result__figure {
+    display: block;
+    min-height: 2.4em;
+    font-size: clamp(1.25rem, 1.05rem + 1vw, 1.625rem);
+    line-height: 1.2;
+    overflow-wrap: break-word;
+}
+
+.result--sentence .result__detail {
+    min-height: 3em;
+    color: var(--btc);
+    font-size: var(--step-body);
+}
+
+.result--sentence .result__detail:empty {
+    display: block;
+}
+
+.source-line a {
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 0.2em;
+}

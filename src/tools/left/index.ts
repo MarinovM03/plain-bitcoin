@@ -2,15 +2,15 @@ import { HEIGHT_ANCHOR, type Tip } from '../../data/height.ts';
 import { drawFlatField } from '../../hero/flat.ts';
 import { tokenState } from '../../hero/layout.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
-import { CardFiles, copyText, downloadFile, shareFile } from '../../share/actions.ts';
+import { CardFiles } from '../../share/actions.ts';
+import { bindShareBar } from '../../share/bar.ts';
 import { leftCard } from '../../share/cardText.ts';
 import { type CardArt, type ShareCard, siteAddress } from '../../share/index.ts';
-import { LEFT_PAGE, SHARE } from '../../ui/copy.ts';
+import { LEFT_PAGE } from '../../ui/copy.ts';
 import { whenIdle } from '../../util/dom.ts';
 import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, formatWhole } from '../../util/format.ts';
 import { heightFeed, tipAge, watchActive } from './counter.ts';
 
-const COPIED_MS = 2000;
 const MEMPOOL = 'https://mempool.space/';
 
 function find<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
@@ -31,7 +31,6 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const panel = find(root, '#numbers-panel');
     const source = find(root, '#tool-source');
     const status = find(root, '#left-status');
-    const shareButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-share]')];
     const cell = (id: string) => find(panel, `#left-${id}`);
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
@@ -41,7 +40,14 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     let card: ShareCard | null = null;
     let art: CardArt | undefined;
     let ticker = 0;
-    let copiedTimer = 0;
+    const share = bindShareBar(root, {
+        files,
+        card: () => card,
+        art: () => art,
+        onStatus: (message) => {
+            status.textContent = message;
+        },
+    });
 
     function lastBlock(now = Date.now()): string {
         const age = tipAge(tip, now);
@@ -88,7 +94,7 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
         card = live && tip.api ? leftCard(supply, tip.api, tip.checkedAt, site) : null;
         const tokens = tokenState(supply.issued);
         art = (context, box) => drawFlatField(context, box, tokens);
-        for (const button of shareButtons) button.disabled = !card;
+        share.setEnabled(card !== null);
         if (!live && tip.source === 'offline') status.textContent = LEFT_PAGE.shareOffline;
     }
 
@@ -99,31 +105,6 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
                   cell('last').textContent = lastBlock();
               }, 1000)
             : 0;
-    }
-
-    async function onShare(kind: string): Promise<void> {
-        if (!card) return;
-        if (kind === 'copy') {
-            const button = find<HTMLButtonElement>(root, '[data-share="copy"]');
-            button.textContent = (await copyText(card.copy)) ? SHARE.copied : SHARE.copyFailed;
-            window.clearTimeout(copiedTimer);
-            copiedTimer = window.setTimeout(() => {
-                button.textContent = SHARE.copy;
-            }, COPIED_MS);
-            return;
-        }
-        const file = await files.get(card, art);
-        if (kind === 'card' && (await shareFile(file, card.copy)) !== 'unsupported') return;
-        downloadFile(file);
-        status.textContent = SHARE.downloaded;
-    }
-
-    for (const button of shareButtons) {
-        button.addEventListener('click', () => {
-            onShare(button.dataset.share ?? '').catch(() => {
-                status.textContent = SHARE.failed;
-            });
-        });
     }
 
     render();
@@ -143,6 +124,6 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
         unwatch();
         unsubscribe();
         setTicking(false);
-        window.clearTimeout(copiedTimer);
+        share.dispose();
     };
 }

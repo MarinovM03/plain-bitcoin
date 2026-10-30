@@ -1,10 +1,11 @@
 import { POWER_SERIES, powerData } from '../../data/power.ts';
 import { type PowerOutcome, type PowerResult, purchasingPower, sortedMonths, worstStart } from '../../model/power.ts';
 import { barScale, sparkline } from '../../model/scale.ts';
-import { CardFiles, copyText, downloadFile, shareFile } from '../../share/actions.ts';
+import { CardFiles } from '../../share/actions.ts';
+import { bindShareBar } from '../../share/bar.ts';
 import { type PowerText, powerText } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
-import { POWER, SHARE, TOOL_PAGE } from '../../ui/copy.ts';
+import { POWER, TOOL_PAGE } from '../../ui/copy.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { POWER_DEFAULT_START, type PowerPreset } from '../../ui/power-view.ts';
 import { parseAmount } from '../../util/amount-input.ts';
@@ -12,7 +13,6 @@ import { type Fiat, formatWhole } from '../../util/format.ts';
 import { type Month, monthKeyLabel, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
 
 const SETTLE_MS = 700;
-const COPIED_MS = 2000;
 const SPARK_WIDTH = 300;
 const SPARK_HEIGHT = 48;
 
@@ -46,7 +46,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const spark = find<SVGSVGElement>(root, '#power-spark');
     const sparkBase = find<SVGLineElement>(spark, '.spark__base');
     const sparkLine = find<SVGPolylineElement>(spark, '.spark__line');
-    const shareButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-share]')];
 
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
@@ -61,7 +60,14 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const worstMonths = new Map<Fiat, Month | null>();
     let text: PowerText | null = null;
     let settleTimer = 0;
-    let copiedTimer = 0;
+    const share = bindShareBar(root, {
+        files,
+        card: () => text?.card ?? null,
+        onStatus: (message) => {
+            window.clearTimeout(settleTimer);
+            status.textContent = message;
+        },
+    });
 
     const currency = (): Fiat =>
         form.querySelector<HTMLInputElement>('input[name="power-currency"]:checked')?.value === 'USD' ? 'USD' : 'GBP';
@@ -88,10 +94,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         }
     }
 
-    function setShareEnabled(enabled: boolean): void {
-        for (const button of shareButtons) button.disabled = !enabled;
-    }
-
     function settle(message: string): void {
         window.clearTimeout(settleTimer);
         settleTimer = window.setTimeout(() => {
@@ -109,7 +111,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         figure.replaceChildren(empty);
         detail.textContent = '';
         panel.hidden = true;
-        setShareEnabled(false);
+        share.setEnabled(false);
         settle(message);
     }
 
@@ -180,27 +182,8 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         renderPath(result, text);
         renderSources(result, fiat);
         panel.hidden = false;
-        setShareEnabled(true);
+        share.setEnabled(true);
         settle(`${text.headline} ${text.bitcoin}`);
-    }
-
-    async function onShare(kind: string): Promise<void> {
-        const card = text?.card;
-        if (!card) return;
-        if (kind === 'copy') {
-            const button = find<HTMLButtonElement>(root, '[data-share="copy"]');
-            button.textContent = (await copyText(card.copy)) ? SHARE.copied : SHARE.copyFailed;
-            window.clearTimeout(copiedTimer);
-            copiedTimer = window.setTimeout(() => {
-                button.textContent = SHARE.copy;
-            }, COPIED_MS);
-            return;
-        }
-        const file = await files.get(card);
-        if (kind === 'card' && (await shareFile(file, card.copy)) !== 'unsupported') return;
-        downloadFile(file);
-        window.clearTimeout(settleTimer);
-        status.textContent = SHARE.downloaded;
     }
 
     form.addEventListener('input', update);
@@ -213,17 +196,10 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
             update();
         });
     }
-    for (const button of shareButtons) {
-        button.addEventListener('click', () => {
-            onShare(button.dataset.share ?? '').catch(() => {
-                status.textContent = SHARE.failed;
-            });
-        });
-    }
     update();
 
     return () => {
         window.clearTimeout(settleTimer);
-        window.clearTimeout(copiedTimer);
+        share.dispose();
     };
 }
