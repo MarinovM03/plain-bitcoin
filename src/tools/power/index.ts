@@ -199,6 +199,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         const file = await files.get(card);
         if (kind === 'card' && (await shareFile(file, card.copy)) !== 'unsupported') return;
         downloadFile(file);
+        window.clearTimeout(settleTimer);
         status.textContent = SHARE.downloaded;
     }
 
