@@ -20,6 +20,15 @@ export const CONVERT_PRESETS: Record<ConvertPreset, { unit: Unit; value: string 
 
 export const CONVERT_DEFAULT: ConvertPreset = 'hundredThousand';
 
+function presetButton(preset: ConvertPreset): SafeHtml {
+    const hint = CONVERT.presetHints[preset];
+    return html`<button class="chip${hint ? ' chip--hint' : ''}" type="button" data-preset="${preset}" aria-pressed="${String(preset === CONVERT_DEFAULT)}">${CONVERT.presets[preset]}${hint ? html`<span class="chip__hint">${hint}</span>` : ''}</button>`;
+}
+
+export function renderConvertPrice(): SafeHtml {
+    return html`<p class="price-chip"><span class="price-chip__dot" aria-hidden="true"></span><span id="convert-price" class="price-chip__text"></span></p>`;
+}
+
 export function renderConvertInputs(): SafeHtml {
     const start = CONVERT_PRESETS[CONVERT_DEFAULT];
     const fields = CONVERT_UNITS.map((unit) =>
@@ -32,15 +41,31 @@ export function renderConvertInputs(): SafeHtml {
             ...(unit === start.unit ? { value: start.value } : {}),
         }),
     );
-    const presets = (Object.keys(CONVERT_PRESETS) as ConvertPreset[]).map(
-        (preset) =>
-            html`<button class="chip" type="button" data-preset="${preset}" aria-pressed="${String(preset === CONVERT_DEFAULT)}">${CONVERT.presets[preset]}</button>`,
-    );
+    const presets = (Object.keys(CONVERT_PRESETS) as ConvertPreset[]).map(presetButton);
     return html`<div class="convert-fields">${fields}</div>
-<p id="convert-price" class="price-line"></p>
 <p id="convert-note" class="note-line" role="status" hidden></p>
 <fieldset class="field presets">
     <legend class="field__label">${CONVERT.presetsLabel}</legend>
     <div class="presets__list">${presets}</div>
 </fieldset>`;
+}
+
+function referenceStat(label: string, value: SafeHtml | string): SafeHtml {
+    return html`<div class="stat">
+        <dt>${label}</dt>
+        <dd>${value}</dd>
+    </div>`;
+}
+
+export function renderConvertReference(): SafeHtml {
+    const { reference } = CONVERT;
+    return html`<section class="tool__side panel" aria-labelledby="convert-reference-heading">
+    <h2 id="convert-reference-heading" class="panel__title">${CONVERT.referenceHeading}</h2>
+    <dl class="stats">
+        ${referenceStat(reference.units, reference.unitsValue)}
+        ${referenceStat(reference.sat, html`<span id="convert-ref-sat"></span>`)}
+        ${referenceStat(reference.price, html`<span id="convert-ref-price"></span>`)}
+        ${referenceStat(reference.cap, reference.capValue)}
+    </dl>
+</section>`;
 }

@@ -288,7 +288,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
 
     function row(label: string, value: string): HTMLDivElement {
         const item = document.createElement('div');
-        item.className = 'numbers__row';
+        item.className = 'stat';
         const term = document.createElement('dt');
         term.textContent = label;
         const description = document.createElement('dd');
@@ -360,6 +360,12 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     lookupButton.addEventListener('click', () => {
         lookUp().catch(() => {});
     });
+    for (const button of root.querySelectorAll<HTMLButtonElement>('[data-sample]')) {
+        button.addEventListener('click', () => {
+            input.value = button.dataset.sample ?? '';
+            analyse().catch(() => {});
+        });
+    }
     fullToggle.addEventListener('change', () => {
         updateCard();
         if (text) files.get(text.card).catch(() => {});

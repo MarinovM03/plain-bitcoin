@@ -38,7 +38,14 @@ describe('renderToolPage', () => {
     it('gives every calculator the shared frame', () => {
         for (const id of TOOL_IDS.filter((tool) => tool !== 'left')) {
             const markup = renderToolPage(id).value;
-            for (const part of ['class="tool__inputs"', 'class="result', 'class="share-bar"', 'class="source-line"']) {
+            for (const part of [
+                'class="eyebrow"',
+                'class="tool__inputs panel"',
+                'class="tool__dock result"',
+                'class="share-bar"',
+                'class="source-strip"',
+                'class="source-line"',
+            ]) {
                 expect(markup).toContain(part);
             }
             expect(markup).toContain(escapeHtml(TOOLS[id].privacy));

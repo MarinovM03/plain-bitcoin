@@ -1,5 +1,5 @@
 import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.ts';
-import { convert, type ParseFailure, parseToSats, pasteFits, type Unit } from '../../model/convert.ts';
+import { convert, type ParseFailure, parseToSats, pasteFits, SATS_PER_BTC, type Unit } from '../../model/convert.ts';
 import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
 import { type ConvertText, convertText, priceLabel, rateLine } from '../../share/cardText.ts';
@@ -12,7 +12,14 @@ import {
 } from '../../ui/convert-view.ts';
 import { CONVERT, TOOL_PAGE } from '../../ui/copy.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
-import { formatShortDay, formatUtcClock, formatUtcStamp, isoDayMs } from '../../util/format.ts';
+import {
+    formatFiatPrecise,
+    formatMoney,
+    formatShortDay,
+    formatUtcClock,
+    formatUtcStamp,
+    isoDayMs,
+} from '../../util/format.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
@@ -29,6 +36,8 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     ) as Record<Unit, HTMLInputElement>;
     const presetButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
     const priceLine = find(root, '#convert-price');
+    const refSat = find(root, '#convert-ref-sat');
+    const refPrice = find(root, '#convert-ref-price');
     const note = find(root, '#convert-note');
     const label = find(root, '#tool-result-label');
     const figure = find(root, '#tool-result');
@@ -68,6 +77,9 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
 
     function renderPrice(): void {
         priceLine.textContent = `${rateLine(quote)} · ${priceLabel(quote)}`;
+        const { gbp, usd } = quote.value;
+        refSat.textContent = `${formatFiatPrecise(gbp / SATS_PER_BTC, 'GBP')} · ${formatFiatPrecise(usd / SATS_PER_BTC, 'USD')}`;
+        refPrice.textContent = `${formatMoney(gbp, 'GBP')} · ${formatMoney(usd, 'USD')}`;
     }
 
     function renderSource(): void {

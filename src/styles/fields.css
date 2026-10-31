@@ -20,14 +20,14 @@
     display: flex;
     align-items: center;
     min-height: 3.25rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--edge);
     border-radius: var(--radius);
-    background: var(--ink-raised);
+    background: var(--well);
     transition: border-color var(--duration) var(--ease);
 }
 
 .field__control:focus-within {
-    border-color: var(--muted);
+    border-color: color-mix(in srgb, var(--btc) 60%, var(--edge));
     outline: 2px solid var(--paper);
     outline-offset: 2px;
 }
@@ -90,9 +90,9 @@
     display: flex;
     gap: 0.25rem;
     padding: 0.25rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--edge);
     border-radius: var(--radius);
-    background: var(--ink-raised);
+    background: var(--well);
 }
 
 .segmented__option {
@@ -119,9 +119,6 @@
     border-radius: calc(var(--radius) - 2px);
     color: var(--muted);
     font-weight: 600;
-    transition:
-        background-color var(--duration) var(--ease),
-        color var(--duration) var(--ease);
 }
 
 .segmented__input:checked + .segmented__text {
@@ -147,6 +144,25 @@
     align-items: end;
 }
 
+.field-pair {
+    display: grid;
+    gap: var(--space-m);
+}
+
+.presets {
+    padding-top: var(--space-m);
+    border-top: 1px solid var(--edge);
+}
+
+.presets .field__label {
+    margin-bottom: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: var(--step-tiny);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
 .presets__list {
     display: flex;
     flex-wrap: wrap;
@@ -154,17 +170,25 @@
 }
 
 .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     min-height: var(--tap);
     padding: 0 0.875rem;
-    border: 1px solid var(--line);
+    border: 1px solid var(--edge);
     border-radius: 999px;
-    background: transparent;
+    background: var(--well);
     color: var(--paper);
     font: 500 var(--step-small) / 1.2 var(--font-body);
     cursor: pointer;
-    transition:
-        background-color var(--duration) var(--ease),
-        border-color var(--duration) var(--ease);
+    transition: border-color var(--duration) var(--ease);
+}
+
+.chip__hint {
+    color: var(--btc);
+    font-family: var(--font-mono);
+    font-size: var(--step-tiny);
+    letter-spacing: 0.04em;
 }
 
 .chip[aria-pressed="true"] {
@@ -173,8 +197,19 @@
     color: var(--ink);
 }
 
+.chip[aria-pressed="true"] .chip__hint {
+    color: color-mix(in srgb, var(--ink) 75%, var(--btc));
+}
+
 @media (hover: hover) {
-    .chip[aria-pressed="false"]:hover {
+    .chip:not([aria-pressed="true"]):hover {
         border-color: var(--muted);
+    }
+}
+
+@container (min-width: 32rem) {
+    .field-pair {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
     }
 }

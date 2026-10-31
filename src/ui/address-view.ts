@@ -2,7 +2,18 @@ import { ADDRESS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine } from './output.ts';
 
+export const ADDRESS_SAMPLES: Record<keyof typeof ADDRESS.samples, string> = {
+    p2tr: 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0',
+    p2wpkh: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+    p2pkh: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+    p2sh: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy',
+};
+
 export function renderAddressInputs(): SafeHtml {
+    const samples = (Object.keys(ADDRESS_SAMPLES) as (keyof typeof ADDRESS_SAMPLES)[]).map(
+        (type) =>
+            html`<button class="chip" type="button" data-sample="${ADDRESS_SAMPLES[type]}">${ADDRESS.samples[type]}</button>`,
+    );
     return html`<div class="field">
     <label class="field__label" for="address-input">${ADDRESS.field}</label>
     <div class="field__control address-field">
@@ -11,6 +22,10 @@ export function renderAddressInputs(): SafeHtml {
     </div>
 </div>
 <p id="address-guard" class="guard-line" role="status" hidden></p>
+<fieldset class="field presets">
+    <legend class="field__label">${ADDRESS.samplesLabel}</legend>
+    <div class="presets__list">${samples}</div>
+</fieldset>
 ${noteLine(ADDRESS.offline)}`;
 }
 
@@ -22,20 +37,22 @@ export function renderAddressCardToggle(): SafeHtml {
 }
 
 export function renderAddressDetail(): SafeHtml {
-    return html`<section id="address-parts" class="address-parts" aria-labelledby="address-parts-heading" hidden>
-    <h2 id="address-parts-heading" class="numbers__heading">${ADDRESS.partsHeading}</h2>
-    <p id="address-text" class="address-parts__text"></p>
-    <p id="address-bytes" class="address-parts__text address-parts__text--bytes" hidden></p>
-    <dl id="address-legend" class="address-parts__legend"></dl>
-</section>
-<p id="address-about" class="note-line" hidden></p>
-<p id="address-multisig" class="note-line" hidden>${ADDRESS.multisig}</p>
-<section class="lookup" aria-labelledby="lookup-heading">
-    <h2 id="lookup-heading" class="numbers__heading">${ADDRESS.lookupHeading}</h2>
-    <p class="lookup__note">${ADDRESS.apiNote}</p>
-    <button id="address-lookup" class="button button--block" type="button" disabled>${ADDRESS.lookUp}</button>
-    <p id="address-lookup-status" class="source-line" role="status" hidden></p>
-    <dl id="address-chain" class="numbers__panel" hidden></dl>
-    <a id="address-explorer" class="lookup__link" href="https://mempool.space/" rel="noopener noreferrer" hidden>${ADDRESS.explorer}</a>
-</section>`;
+    return html`<div class="tool__more address-more">
+    <section id="address-parts" class="panel address-parts" aria-labelledby="address-parts-heading" hidden>
+        <h2 id="address-parts-heading" class="panel__title">${ADDRESS.partsHeading}</h2>
+        <p id="address-text" class="address-parts__text"></p>
+        <p id="address-bytes" class="address-parts__text address-parts__text--bytes" hidden></p>
+        <dl id="address-legend" class="address-parts__legend"></dl>
+        <p id="address-about" class="note-line" hidden></p>
+        <p id="address-multisig" class="note-line" hidden>${ADDRESS.multisig}</p>
+    </section>
+    <section class="panel lookup" aria-labelledby="lookup-heading">
+        <h2 id="lookup-heading" class="panel__title">${ADDRESS.lookupHeading}</h2>
+        <p class="lookup__note">${ADDRESS.apiNote}</p>
+        <button id="address-lookup" class="button button--block" type="button" disabled>${ADDRESS.lookUp}</button>
+        <p id="address-lookup-status" class="source-line" role="status" hidden></p>
+        <dl id="address-chain" class="stats" hidden></dl>
+        <a id="address-explorer" class="lookup__link" href="https://mempool.space/" rel="noopener noreferrer" hidden>${ADDRESS.explorer}</a>
+    </section>
+</div>`;
 }

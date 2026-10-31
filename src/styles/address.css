@@ -8,9 +8,9 @@
     min-height: var(--tap);
     margin-inline-end: 0.25rem;
     padding: 0 0.875rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--ink);
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    background: var(--panel-high);
     color: var(--paper);
     font: 600 var(--step-small) / 1.2 var(--font-body);
     cursor: pointer;
@@ -24,6 +24,7 @@
     padding: 0.75rem 0.875rem;
     border: 1px solid var(--btc);
     border-radius: var(--radius);
+    background: color-mix(in srgb, var(--btc) 8%, transparent);
     font-size: var(--step-body);
     line-height: 1.45;
 }
@@ -46,16 +47,11 @@
     accent-color: var(--btc);
 }
 
-.address-parts {
-    display: grid;
-    gap: 0.75rem;
-}
-
 .address-parts__text {
-    padding: 0.875rem;
-    border: 1px solid var(--line);
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--edge);
     border-radius: var(--radius);
-    background: var(--ink-raised);
+    background: var(--well);
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: var(--step-lead);
@@ -71,7 +67,10 @@
 
 .address-parts__legend {
     display: grid;
-    border-block: 1px solid var(--line);
+    margin: 0;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    overflow: hidden;
 }
 
 .address-parts__row {
@@ -79,13 +78,13 @@
     grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
     gap: 0.75rem;
     align-items: baseline;
-    padding-block: 0.5rem;
-    border-top: 1px solid var(--line);
+    padding: 0.625rem 0.875rem;
+    background: var(--panel-high);
     font-size: var(--step-small);
 }
 
-.address-parts__row:first-child {
-    border-top: 0;
+.address-parts__row + .address-parts__row {
+    border-top: 1px solid var(--edge);
 }
 
 .address-parts__row dt {
@@ -129,12 +128,6 @@
     text-decoration: underline wavy var(--btc);
 }
 
-.lookup {
-    display: grid;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-}
-
 .lookup__note {
     font-size: var(--step-body);
     line-height: 1.45;
@@ -143,15 +136,29 @@
 .lookup__link {
     display: inline-flex;
     align-items: center;
-    min-height: var(--tap);
     justify-self: start;
+    min-height: var(--tap);
     text-decoration: underline;
     text-decoration-color: var(--line);
     text-underline-offset: 0.2em;
 }
 
-@media (min-width: 52rem) {
-    .tool--address .tool__body {
-        grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+@media (min-width: 56rem) {
+    .address-more {
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        align-items: start;
+    }
+
+    .address-parts {
+        grid-column: 1;
+    }
+
+    .lookup {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .address-parts[hidden] + .lookup {
+        grid-column: 1 / -1;
     }
 }

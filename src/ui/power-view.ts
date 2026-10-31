@@ -35,21 +35,25 @@ function bar(kind: 'cash' | 'btc', name: string): SafeHtml {
 }
 
 export function renderPowerDetail(): SafeHtml {
-    return html`<div id="power-detail" class="power-detail" hidden>
-    <section class="power-detail__part" aria-labelledby="power-bars-label">
-        <h2 id="power-bars-label" class="power-detail__label">${POWER.barsLabel}</h2>
+    return html`<div id="power-detail" class="tool__more power-detail" hidden>
+    <section class="panel power-detail__part" aria-labelledby="power-bars-label">
+        <h2 id="power-bars-label" class="panel__title">${POWER.barsLabel}</h2>
         ${bar('cash', POWER.cash)}
         ${bar('btc', POWER.asBitcoin)}
         <p id="power-scale" class="power-detail__scale" hidden></p>
     </section>
-    <div class="power-detail__part">
-        <p id="power-path" class="power-detail__path"></p>
+    <section class="panel power-detail__part" aria-labelledby="power-path-label">
+        <h2 id="power-path-label" class="panel__title">${POWER.pathHeading}</h2>
         <svg id="power-spark" class="spark" viewBox="0 0 300 48" preserveAspectRatio="none" role="img" aria-label="${POWER.pathLabel}">
             <line class="spark__base" x1="0" x2="300" y1="0" y2="0" />
             <polyline class="spark__line" points="" />
         </svg>
-    </div>
-    <p class="power-detail__formula">${POWER.formula}</p>
-    ${noteLine(POWER.caution)}
+        <p id="power-path" class="power-detail__path"></p>
+    </section>
+    <section class="panel panel--quiet power-detail__how" aria-labelledby="power-how-label">
+        <h2 id="power-how-label" class="panel__title">${POWER.howHeading}</h2>
+        <p class="formula">${POWER.formula}</p>
+        ${noteLine(POWER.caution)}
+    </section>
 </div>`;
 }
