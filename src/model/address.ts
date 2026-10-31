@@ -267,6 +267,8 @@ const BASE58_VERSIONS: Record<number, { type: AddressType; network: Network }> =
 };
 
 const BASE58_LENGTH = 25;
+// 58^35 > 256^25, so any longer text decodes past 25 bytes; checking first keeps the quadratic decode short.
+const BASE58_MAX_CHARS = 35;
 
 async function analyseBase58(text: string): Promise<Address | InvalidAddress> {
     const parts: AddressPart[] = [
@@ -282,6 +284,7 @@ async function analyseBase58(text: string): Promise<Address | InvalidAddress> {
         suspect: null,
         bytes,
     });
+    if (text.length > BASE58_MAX_CHARS) return invalid('long');
     const decoded = base58Decode(text);
     if (!Array.isArray(decoded)) return { ...invalid('characters'), suspect: decoded.at };
     if (decoded.length < BASE58_LENGTH) return invalid('short');
@@ -306,21 +309,28 @@ async function analyseBase58(text: string): Promise<Address | InvalidAddress> {
     };
 }
 
-const SEED_WORD = /^[a-z]+$/i;
-const LIST_NUMBER = /^\d+[.):]?$/;
+const SEED_WORDS = 12;
+const HIDDEN = /\p{Cf}/gu;
+// Not % & = + ? #, so an encoded bitcoin: URI label stays one token instead of reading as words.
+const WORD_BREAK = /[\s\p{Cf},;:.!()[\]{}<>"'`|/\\*•“”‘’„«»_-]+/u;
+const WORD = /^[\p{L}\p{M}]+$/u;
+const LIST_NUMBER = /^\d+/;
 const WIF = new RegExp(`^(?:[59][${B58}]{50}|[KLc][${B58}]{51})$`);
-const WIF_INSIDE = new RegExp(`(?:^|[^${B58}])(?:[59][${B58}]{50}|[KLc][${B58}]{51})(?:$|[^${B58}])`);
-const KEY_BOUNDARY = `(?:^|[\\s(\\[\\]/,'"])`;
-const EXTENDED_PRIVATE = new RegExp(`${KEY_BOUNDARY}[xyztuvYZUV]prv[${B58}]{100,108}`);
-const EXTENDED_PUBLIC = new RegExp(`${KEY_BOUNDARY}[xyztuvYZUV]pub[${B58}]{100,108}`);
-const DESCRIPTOR = /^(?:sh|wsh|wpkh|pkh|pk|tr|combo|multi|sortedmulti|multi_a|sortedmulti_a|rawtr)\(/i;
+const EXTENDED_PRIVATE = new RegExp(`(?<![${B58}])[xyztuvYZUV]prv[${B58}]{100,108}`);
+const EXTENDED_PUBLIC = new RegExp(`(?<![${B58}])[xyztuvYZUV]pub[${B58}]{100,108}`);
+const DESCRIPTOR = /(?<![a-z_])(?:sh|wsh|wpkh|pkh|pk|tr|combo|multi|sortedmulti|multi_a|sortedmulti_a|rawtr)\(/i;
 
 export function detectSecret(input: string): SecretKind | null {
-    const words = input.split(/[\s,]+/).filter((word) => word !== '' && !LIST_NUMBER.test(word));
-    if (words.length >= 12 && words.length <= 24 && words.every((word) => SEED_WORD.test(word))) return 'seed';
-    if (WIF.test(input)) return 'wif';
-    if (EXTENDED_PRIVATE.test(input)) return 'extended-private';
-    if (DESCRIPTOR.test(input) && WIF_INSIDE.test(input)) return 'descriptor';
+    const visible = input.replace(HIDDEN, '');
+    const tokens = input
+        .split(WORD_BREAK)
+        .map((token) => token.replace(LIST_NUMBER, ''))
+        .filter((token) => token !== '');
+    if (tokens.filter((token) => WORD.test(token)).length >= SEED_WORDS) return 'seed';
+    if (EXTENDED_PRIVATE.test(visible)) return 'extended-private';
+    if (visible.split(WORD_BREAK).some((token) => WIF.test(token))) {
+        return DESCRIPTOR.test(visible) ? 'descriptor' : 'wif';
+    }
     return null;
 }
 
@@ -341,7 +351,7 @@ export async function analyseAddress(raw: string): Promise<Analysis> {
     if (input === '') return { kind: 'empty' };
     const secret = detectSecret(input);
     if (secret) return { kind: 'secret', secret };
-    if (EXTENDED_PUBLIC.test(input)) return { kind: 'extended-public' };
+    if (EXTENDED_PUBLIC.test(input.replace(HIDDEN, ''))) return { kind: 'extended-public' };
     if (LIGHTNING.test(input)) return { kind: 'lightning' };
     const text = stripUri(input);
     if (BECH32_PREFIX.test(text)) return analyseBech32(text);

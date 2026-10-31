@@ -33,6 +33,20 @@ describe('formatAmountInput', () => {
         expect(typed('9|1,234')).toBe('9|1,234');
     });
 
+    it('keeps at most sixteen whole digits, with the caret on the digits it kept', () => {
+        expect(typed(`${'9'.repeat(20)}|`)).toBe('9,999,999,999,999,999|');
+        expect(typed(`00${'1'.repeat(18)}.5|`)).toBe('1,111,111,111,111,111.5|');
+        expect(typed(`${'1'.repeat(18)}.|5`)).toBe('1,111,111,111,111,111.|5');
+        expect(typed(`12|${'3'.repeat(18)}`)).toBe('1,2|33,333,333,333,333');
+    });
+
+    it('formats a huge paste at once', () => {
+        const pasted = `${'9'.repeat(200_000)}.${'1'.repeat(200_000)}`;
+        const start = performance.now();
+        expect(formatAmountInput(pasted, pasted.length, 2).text).toBe('9,999,999,999,999,999.11');
+        expect(performance.now() - start).toBeLessThan(1000);
+    });
+
     it('drops anything that is not a digit or the first decimal point', () => {
         expect(typed('£1a2|')).toBe('12|');
         expect(typed('1.2.3|')).toBe('1.23|');

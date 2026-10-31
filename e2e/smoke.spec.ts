@@ -139,6 +139,17 @@ test('amount fields group thousands without moving the caret', async ({ page }) 
     await expect(amount).toHaveValue('1,234');
 });
 
+test('a huge paste into an amount field keeps sixteen digits and the page responsive', async ({ page }) => {
+    const problems = watchPage(page);
+    await page.goto('/#/power');
+    const amount = page.getByLabel('Amount', { exact: true });
+    await amount.fill('9'.repeat(200_000));
+    await expect(amount).toHaveValue('9,999,999,999,999,999', { timeout: 3000 });
+    await amount.press('Enter');
+    expect(page.url()).toMatch(/\/#\/power$/);
+    expect(realProblems(problems)).toEqual([]);
+});
+
 test('every link is reachable by keyboard with a visible focus ring, and Enter opens a tool', async ({
     page,
     isMobile,

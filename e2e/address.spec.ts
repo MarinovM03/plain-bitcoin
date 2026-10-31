@@ -126,6 +126,49 @@ test('the secrets guard clears a seed phrase or private key and sends nothing', 
     expect(realProblems(problems)).toEqual([]);
 });
 
+test('the guard sees through hidden characters, numbering and labels, and Enter submits nothing', async ({ page }) => {
+    const { external, problems } = watch(page);
+    const input = page.getByLabel(ADDRESS.field);
+    const words = MADE_UP_SEED.split(' ');
+    for (const secret of [
+        words.join('​ '),
+        words.map((word, i) => `${i + 1}.${word}`).join(' '),
+        `my seed: ${MADE_UP_SEED}.`,
+        JSON.stringify(words),
+        `​${madeUpExtended('xprv')}`,
+        `key: L${'x'.repeat(51)}`,
+    ]) {
+        await input.fill(secret);
+        await expect(page.locator('#address-guard')).toHaveText(ADDRESS.secret);
+        await expect(input).toHaveValue('');
+        await input.press('Enter');
+    }
+    await input.fill(SEGWIT);
+    await input.press('Enter');
+    await expect(page.locator('#tool-result')).toHaveText(ADDRESS.headline(ADDRESS.types.p2wpkh));
+    await page.waitForTimeout(500);
+    expect(external).toEqual([]);
+    expect(page.url()).toMatch(/\/#\/address$/);
+    const stored = await page.evaluate(async () => {
+        const databases = typeof indexedDB.databases === 'function' ? await indexedDB.databases() : [];
+        return localStorage.length + sessionStorage.length + databases.length + document.cookie.length;
+    });
+    expect(stored).toBe(0);
+    expect(realProblems(problems)).toEqual([]);
+});
+
+test('a huge paste is answered at once and never looked up', async ({ page }) => {
+    const { external } = watch(page);
+    const input = page.getByLabel(ADDRESS.field);
+    await input.fill('2'.repeat(100_000));
+    await expect(page.locator('#tool-result')).toHaveText(ADDRESS.invalid.long, { timeout: 3000 });
+    await expect(page.getByRole('button', { name: ADDRESS.lookUp })).toBeDisabled();
+    await input.fill(`<svg onload=alert(1)><script>alert(2)</script>javascript:alert(3)\u0000‮`);
+    await expect(page.locator('#tool-result')).toHaveText(ADDRESS.invalid.unknown);
+    expect(await page.locator('svg[onload], #main script').count()).toBe(0);
+    expect(external).toEqual([]);
+});
+
 test('an extended public key is not looked up', async ({ page }) => {
     await page.getByLabel(ADDRESS.field).fill(madeUpExtended('zpub'));
     await expect(page.locator('#address-guard')).toHaveText(ADDRESS.extendedPublic);

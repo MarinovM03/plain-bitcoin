@@ -308,6 +308,68 @@ describe('Lightning and keys', () => {
         expect(await analyseAddress(text)).toEqual({ kind: 'secret', secret: kind });
     });
 
+    const words = 'made up words for a plain test of the guard only here'.split(' ');
+    const wif = `L${'x'.repeat(51)}`;
+    const xprv = madeUpExtended('xprv');
+
+    it.each([
+        ['zero-width spaces between words', words.join('​ ')],
+        ['zero-width spaces as the only separator', words.join('​')],
+        ['a right-to-left override in front', `‮${words.join(' ')}`],
+        ['numbers stuck to the words', words.map((word, i) => `${i + 1}.${word}`).join(' ')],
+        ['dashed numbers', words.map((word, i) => `${i + 1}-${word}`).join(' ')],
+        ['numbered lines', words.map((word, i) => `${i + 1}) ${word}`).join('\n')],
+        ['a label in front', `my seed: ${words.join(' ')}`],
+        ['a full stop at the end', `${words.join(' ')}.`],
+        ['semicolons', words.join(';')],
+        ['a JSON array', JSON.stringify(words)],
+        ['capitals', words.join(' ').toUpperCase()],
+        ['accented words', words.join(' ').replace('made', 'mádé')],
+        ['words in another script', words.map(() => 'слово').join(' ')],
+        ['more than 24 words', [...words, ...words, 'extra'].join(' ')],
+    ])('still sees a seed phrase written with %s', (_, text) => {
+        expect(detectSecret(text)).toBe('seed');
+    });
+
+    it.each([
+        ['a zero-width space in front of an xprv', `​${xprv}`, 'extended-private'],
+        ['a zero-width space inside an xprv', `${xprv.slice(0, 10)}​${xprv.slice(10)}`, 'extended-private'],
+        ['an xprv after an equals sign', `key=${xprv}`, 'extended-private'],
+        ['a quoted WIF', `"${wif}"`, 'wif'],
+        ['a labelled WIF', `key: ${wif}`, 'wif'],
+        ['a zero-width space in front of a WIF', `​${wif}`, 'wif'],
+        ['a WIF on its own line', `\n${wif}\n`, 'wif'],
+        ['a labelled descriptor', `desc: wpkh(${wif})#checksum`, 'descriptor'],
+    ])('still sees a key written with %s', (_, text, kind) => {
+        expect(detectSecret(text)).toBe(kind);
+    });
+
+    it('sees an extended public key through hidden characters', async () => {
+        expect((await analyseAddress(`​${madeUpExtended('zpub')}`)).kind).toBe('extended-public');
+    });
+
+    it('does not mistake addresses, invoices or a payment link for a secret', () => {
+        for (const text of [
+            'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypq',
+            'bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4?amount=0.01&label=Thanks%20for%20the%20coffee%20and%20the%20long%20chat%20about%20blocks%20and%20fees%20today',
+            '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy',
+            `​bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4`,
+        ]) {
+            expect(detectSecret(text)).toBeNull();
+        }
+    });
+
+    it('rejects a hidden character in an address instead of dropping it', async () => {
+        const hidden = await analyseAddress('bc1qw508d6qejxtdg4y5r3​zarvary0c5xw7kv8f3t4');
+        expect(hidden).toMatchObject({ kind: 'invalid', reason: 'characters', suspect: 22 });
+    });
+
+    it('answers a very long base58 paste at once', async () => {
+        const start = performance.now();
+        expect(await analyseAddress('2'.repeat(100_000))).toMatchObject({ kind: 'invalid', reason: 'long' });
+        expect(performance.now() - start).toBeLessThan(100);
+    });
+
     it('does not treat eleven words or a real address as a secret', () => {
         expect(detectSecret('made up words for a plain test of the guard only')).toBeNull();
         expect(detectSecret('bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0')).toBeNull();

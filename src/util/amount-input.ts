@@ -6,6 +6,8 @@ export interface FieldText {
 export type DeleteDirection = 'backward' | 'forward';
 
 const SEPARATOR = ',';
+// Enough for every sat that will ever exist (2,100,000,000,000,000); also keeps a giant paste linear.
+const MAX_INTEGER_DIGITS = 16;
 
 function isDigit(char: string): boolean {
     return char >= '0' && char <= '9';
@@ -25,10 +27,11 @@ export function parseAmount(text: string): number | null {
 export function formatAmountInput(raw: string, caret: number, maxDecimals: number): FieldText {
     let kept = '';
     let keptBeforeCaret = 0;
+    let hasDot = false;
     for (let i = 0; i < raw.length; i += 1) {
         const char = raw.charAt(i);
-        const allowed = isDigit(char) || (char === '.' && maxDecimals > 0 && !kept.includes('.'));
-        if (!allowed) continue;
+        if (char === '.' && maxDecimals > 0 && !hasDot) hasDot = true;
+        else if (!isDigit(char)) continue;
         kept += char;
         if (i < caret) keptBeforeCaret += 1;
     }
@@ -38,8 +41,10 @@ export function formatAmountInput(raw: string, caret: number, maxDecimals: numbe
     const rawFraction = dot === -1 ? null : kept.slice(dot + 1);
 
     const zeros = rawInteger.length - rawInteger.replace(/^0+/, '').length;
-    let integer = rawInteger.slice(zeros);
-    let significantBeforeCaret = keptBeforeCaret - Math.min(zeros, keptBeforeCaret);
+    const limit = zeros + MAX_INTEGER_DIGITS;
+    let integer = rawInteger.slice(zeros, limit);
+    const dropped = Math.min(Math.max(keptBeforeCaret - limit, 0), rawInteger.length - zeros - integer.length);
+    let significantBeforeCaret = keptBeforeCaret - Math.min(zeros, keptBeforeCaret) - dropped;
     if (integer === '' && (zeros > 0 || rawFraction !== null)) {
         integer = '0';
         if (keptBeforeCaret > 0) significantBeforeCaret += 1;
