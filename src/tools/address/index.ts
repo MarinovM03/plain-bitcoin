@@ -12,6 +12,7 @@ import { bindShareBar } from '../../share/bar.ts';
 import { type AddressText, addressText } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
 import { ADDRESS } from '../../ui/copy.ts';
+import { find } from '../../util/dom.ts';
 import { formatBtcExact, formatSats, formatUtcStamp } from '../../util/format.ts';
 
 const SETTLE_MS = 700;
@@ -22,12 +23,6 @@ interface Legend {
     text: string;
     label: string;
     bad?: boolean;
-}
-
-function find<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
-    const element = root.querySelector<T>(selector);
-    if (!element) throw new Error(`Missing ${selector}`);
-    return element;
 }
 
 function span(text: string, className: string): HTMLSpanElement {
@@ -251,7 +246,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function updateCard(): void {
-        text = address ? addressText(address, fullToggle.checked, site) : null;
+        text = address ? addressText(address, fullToggle.checked, Date.now(), site) : null;
         share.setEnabled(text !== null);
     }
 

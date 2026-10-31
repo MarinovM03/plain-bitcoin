@@ -21,8 +21,21 @@ function renderToolList(): SafeHtml {
 </section>`;
 }
 
+function renderIntro(): SafeHtml {
+    const lines = HOME.start.map((line) => html`<li>${line}</li>`);
+    return html`<div class="intro">
+    <p class="promise">${HOME.promise}</p>
+    <section class="start" aria-labelledby="start-heading">
+        <h2 id="start-heading" class="start__heading">${HOME.startHeading}</h2>
+        <ul class="start__lines">${lines}</ul>
+    </section>
+</div>`;
+}
+
 export function renderHome(): SafeHtml {
     return html`${renderHero()}
-<p class="promise">${HOME.promise}</p>
-${renderToolList()}`;
+<div class="home">
+    ${renderIntro()}
+    ${renderToolList()}
+</div>`;
 }

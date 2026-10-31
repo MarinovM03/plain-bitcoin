@@ -7,7 +7,7 @@ import { ADDRESS, LEFT_PAGE, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs } from './dca-view.ts';
 import { renderHero } from './hero.ts';
 import { html, type SafeHtml } from './html.ts';
-import { noteLine, resultBlock, shareBar, sourceLine } from './output.ts';
+import { noteLine, postLink, resultBlock, shareBar, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs } from './power-view.ts';
 
 type CalculatorId = Exclude<ToolId, 'left'>;
@@ -64,6 +64,7 @@ function renderCalculator(id: CalculatorId): SafeHtml {
                 ${shareBar()}
                 ${id === 'address' ? renderAddressCardToggle() : ''}
             </div>
+            ${postLink()}
             ${renderDetail(id)}
             ${sourceLine(id === 'address' ? ADDRESS.sourceIdle : TOOL_PAGE.sourcePending, 'tool-source')}
             <p class="privacy-line">${TOOLS[id].privacy}</p>
@@ -100,6 +101,7 @@ function renderLeft(): SafeHtml {
         ${noteLine(LEFT_PAGE.steps)}
         ${noteLine(LEFT_PAGE.honesty)}
         ${shareBar()}
+        ${postLink()}
         <p id="left-status" class="visually-hidden" aria-live="polite"></p>
         ${sourceLine(TOOL_PAGE.sourcePending, 'tool-source')}
         <p class="privacy-line">${TOOLS.left.privacy}</p>

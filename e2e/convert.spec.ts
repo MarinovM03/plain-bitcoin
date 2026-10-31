@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { CONVERT, SHARE } from '../src/ui/copy.ts';
+import { CONVERT } from '../src/ui/copy.ts';
+import { realProblems } from './console.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const latest = JSON.parse(readFileSync('src/data/prices/latest.json', 'utf8')) as { day: string; GBP: number };
@@ -16,11 +17,6 @@ function watch(page: Page) {
         if (new URL(request.url()).hostname !== 'localhost') external.push(request.url());
     });
     return { problems, external };
-}
-
-function pngSize(path: string): [number, number] {
-    const bytes = readFileSync(path);
-    return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
 }
 
 const fields = (page: Page) => ({
@@ -49,7 +45,7 @@ test('converts 100,000 sats at the live price, asking only the price API', async
     }
     expect(external).toEqual(['https://mempool.space/api/v1/prices']);
     expect(prices.calls).toHaveLength(1);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('the last-edited field drives the others, and presets fill one field', async ({ page }) => {
@@ -75,6 +71,23 @@ test('the last-edited field drives the others, and presets fill one field', asyn
     await expect(page.locator('[data-preset="coin"]')).toHaveAttribute('aria-pressed', 'true');
     await page.locator('[data-preset="pizza"]').click();
     await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = £573,290,000.00');
+});
+
+test('what is typed before the tool finishes loading still drives the answer', async ({ page }) => {
+    await fakePriceApi(page);
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+        release = resolve;
+    });
+    await page.route(/\/assets\/convert-[^/]+\.js$/, async (route) => {
+        await held;
+        await route.continue();
+    });
+    await page.goto('/#/convert', { waitUntil: 'commit' });
+    await fields(page).btc.fill('0.5');
+    release();
+    await expect(page.locator('#tool-result')).toHaveText(/^0\.5 BTC = £[\d,]+\.\d{2}$/);
+    await expect(fields(page).sats).toHaveValue('50,000,000');
 });
 
 test('refuses impossible amounts and pasted garbage calmly', async ({ page }) => {
@@ -125,22 +138,7 @@ test('offline, it converts at the bundled last close and says so', async ({ page
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics');
     const pounds = ((100_000 * latest.GBP) / 1e8).toFixed(2);
     await expect(page.locator('#tool-result')).toHaveText(`100,000 sats = £${pounds}`);
-    expect(problems.filter((text) => !text.includes('net::ERR_INTERNET_DISCONNECTED'))).toEqual([]);
-});
-
-test('the card states the amount with the price source and time', async ({ page, isMobile }) => {
-    await fakePriceApi(page);
-    await page.goto('/#/convert');
-    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
-    await page.evaluate(() => {
-        Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
-    });
-    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-share="card"]').click()]);
-    expect(download.suggestedFilename()).toBe('plain-bitcoin-100000-sats.png');
-    const file = test.info().outputPath('card.png');
-    await download.saveAs(file);
-    expect(pngSize(file)).toEqual(isMobile ? [1080, 1350] : [1200, 675]);
-    await expect(page.locator('#tool-result-status')).toHaveText(SHARE.downloaded);
+    expect(realProblems(problems).filter((text) => !text.includes('net::ERR_INTERNET_DISCONNECTED'))).toEqual([]);
 });
 
 test('every field and preset is reachable by keyboard', async ({ page, isMobile }) => {

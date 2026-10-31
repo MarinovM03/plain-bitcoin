@@ -1,4 +1,5 @@
 .hero {
+    container-type: inline-size;
     position: relative;
     height: clamp(22rem, 62svh, 34rem);
     margin-inline: calc(-1 * var(--gutter));
@@ -134,12 +135,17 @@
         top: 0;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
+        justify-content: center;
         align-items: flex-start;
+        padding-inline: 2.5cqi;
+    }
+
+    .hero__figure {
+        font-size: clamp(2.25rem, 6cqi, 4.5rem);
     }
 
     .hero__plain {
-        inset: 0 0 0 40%;
+        inset: 0 0 0 46%;
         padding: 1rem;
     }
 }

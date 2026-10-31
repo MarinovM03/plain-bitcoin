@@ -8,6 +8,7 @@ import { DCA, TOOL_PAGE } from '../../ui/copy.ts';
 import { CHART_HEIGHT, CHART_WIDTH, DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { parseAmount } from '../../util/amount-input.ts';
+import { find, link } from '../../util/dom.ts';
 import { type Fiat, formatDay, isoDayMs } from '../../util/format.ts';
 import { type Month, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
 
@@ -23,20 +24,6 @@ const LOADERS: Record<Fiat, () => Promise<DailySeries>> = {
     GBP: () => import('../../data/prices/daily-gbp.json').then((module) => module.default),
     USD: () => import('../../data/prices/daily-usd.json').then((module) => module.default),
 };
-
-function find<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
-    const element = root.querySelector<T>(selector);
-    if (!element) throw new Error(`Missing ${selector}`);
-    return element;
-}
-
-function link(text: string, href: string): HTMLAnchorElement {
-    const anchor = document.createElement('a');
-    anchor.href = href;
-    anchor.textContent = text;
-    anchor.rel = 'noopener noreferrer';
-    return anchor;
-}
 
 function lastDayMs(series: DailyCloses): number {
     return isoDayMs(series.start) + (series.closes.length - 1) * DAY_MS;

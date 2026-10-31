@@ -7,25 +7,11 @@ import { bindShareBar } from '../../share/bar.ts';
 import { leftCard } from '../../share/cardText.ts';
 import { type CardArt, type ShareCard, siteAddress } from '../../share/index.ts';
 import { LEFT_PAGE } from '../../ui/copy.ts';
-import { whenIdle } from '../../util/dom.ts';
+import { afterFirstPaint, find, link, whenIdle } from '../../util/dom.ts';
 import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, formatWhole } from '../../util/format.ts';
 import { heightFeed, tipAge, watchActive } from './counter.ts';
 
 const MEMPOOL = 'https://mempool.space/';
-
-function find<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
-    const element = root.querySelector<T>(selector);
-    if (!element) throw new Error(`Missing ${selector}`);
-    return element;
-}
-
-function link(text: string, href: string): HTMLAnchorElement {
-    const anchor = document.createElement('a');
-    anchor.href = href;
-    anchor.textContent = text;
-    anchor.rel = 'noopener noreferrer';
-    return anchor;
-}
 
 export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const panel = find(root, '#numbers-panel');
@@ -107,20 +93,38 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
             : 0;
     }
 
+    let barVisible = false;
+    const prepareCard = () => {
+        if (!barVisible) return;
+        whenIdle(() => {
+            if (card) files.get(card, art).catch(() => {});
+        });
+    };
+    const barWatch = new IntersectionObserver((entries) => {
+        barVisible = entries.some((entry) => entry.isIntersecting);
+        prepareCard();
+    });
+    barWatch.observe(find(root, '.share-bar'));
+
     render();
     const unsubscribe = heights.subscribe((next: Tip) => {
         tip = next;
         render();
-        whenIdle(() => {
-            if (card) files.get(card, art).catch(() => {});
-        });
+        prepareCard();
     });
-    const unwatch = watchActive(panel, (active) => {
-        heights.setActive(owner, active);
-        setTicking(active);
+    let disposed = false;
+    let unwatch = () => {};
+    afterFirstPaint(() => {
+        if (disposed) return;
+        unwatch = watchActive(panel, (active) => {
+            heights.setActive(owner, active);
+            setTicking(active);
+        });
     });
 
     return () => {
+        disposed = true;
+        barWatch.disconnect();
         unwatch();
         unsubscribe();
         setTicking(false);

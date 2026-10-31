@@ -11,6 +11,7 @@ import {
     CONVERT_DECIMALS as DECIMALS,
 } from '../../ui/convert-view.ts';
 import { CONVERT, TOOL_PAGE } from '../../ui/copy.ts';
+import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import { formatShortDay, formatUtcClock, formatUtcStamp, isoDayMs } from '../../util/format.ts';
 
 const SETTLE_MS = 700;
@@ -21,20 +22,6 @@ const FAILURES: Record<Exclude<ParseFailure, 'empty'>, string> = {
     'too-small': CONVERT.tooSmall,
     'too-big': CONVERT.tooBig,
 };
-
-function find<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
-    const element = root.querySelector<T>(selector);
-    if (!element) throw new Error(`Missing ${selector}`);
-    return element;
-}
-
-function link(text: string, href: string): HTMLAnchorElement {
-    const anchor = document.createElement('a');
-    anchor.href = href;
-    anchor.textContent = text;
-    anchor.rel = 'noopener noreferrer';
-    return anchor;
-}
 
 export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const inputs = Object.fromEntries(
@@ -54,7 +41,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const prices = priceFeed();
     const owner = {};
     let quote: PriceQuote = prices.quote;
-    let unit: Unit = 'sats';
+    let unit: Unit = CONVERT_UNITS.find((current) => inputs[current].value !== inputs[current].defaultValue) ?? 'sats';
     let text: ConvertText | null = null;
     let settleTimer = 0;
     const share = bindShareBar(root, {
@@ -169,13 +156,21 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         renderPrice();
         update();
     });
-    const sync = () => prices.setActive(owner, !document.hidden);
+    let started = false;
+    let disposed = false;
+    const sync = () => {
+        if (started) prices.setActive(owner, !document.hidden);
+    };
     document.addEventListener('visibilitychange', sync);
-    sync();
+    afterFirstPaint(() => {
+        started = !disposed;
+        sync();
+    });
     renderPrice();
     update();
 
     return () => {
+        disposed = true;
         unsubscribe();
         document.removeEventListener('visibilitychange', sync);
         prices.setActive(owner, false);

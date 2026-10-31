@@ -3,6 +3,11 @@ import { type CardFiles, copyText, downloadFile, shareFile } from './actions.ts'
 import type { CardArt, ShareCard } from './index.ts';
 
 const COPIED_MS = 2000;
+const POST_INTENT = 'https://x.com/intent/post';
+
+export function postUrl(text: string): string {
+    return `${POST_INTENT}?text=${encodeURIComponent(text)}`;
+}
 
 export interface ShareBarOptions {
     files: CardFiles;
@@ -18,7 +23,18 @@ export interface ShareBar {
 
 export function bindShareBar(root: ParentNode, options: ShareBarOptions): ShareBar {
     const buttons = [...root.querySelectorAll<HTMLButtonElement>('[data-share]')];
+    const post = root.querySelector<HTMLAnchorElement>('[data-share-post]');
     let copiedTimer = 0;
+    let enabled = false;
+
+    function refreshPost(): void {
+        if (!post) return;
+        const card = enabled ? options.card() : null;
+        post.href = card ? postUrl(card.copy) : POST_INTENT;
+        if (card) post.removeAttribute('aria-disabled');
+        else post.setAttribute('aria-disabled', 'true');
+        post.tabIndex = card ? 0 : -1;
+    }
 
     async function onShare(button: HTMLButtonElement): Promise<void> {
         const card = options.card();
@@ -43,9 +59,14 @@ export function bindShareBar(root: ParentNode, options: ShareBarOptions): ShareB
         });
     }
 
+    post?.addEventListener('click', refreshPost);
+    refreshPost();
+
     return {
-        setEnabled(enabled) {
-            for (const button of buttons) button.disabled = !enabled;
+        setEnabled(next) {
+            enabled = next;
+            for (const button of buttons) button.disabled = !next;
+            refreshPost();
         },
         dispose() {
             window.clearTimeout(copiedTimer);

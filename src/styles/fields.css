@@ -8,6 +8,7 @@
 }
 
 .field__label {
+    float: left;
     padding: 0;
     color: var(--muted);
     font-size: var(--step-small);

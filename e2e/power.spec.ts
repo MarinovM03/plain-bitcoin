@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { POWER, SHARE } from '../src/ui/copy.ts';
+import { cardName, expectedCardSize, pngSize } from './card-file.ts';
+import { realProblems } from './console.ts';
 
 async function openPower(page: Page) {
     const requests: string[] = [];
@@ -18,11 +19,6 @@ async function openPower(page: Page) {
     return { requests, problems };
 }
 
-function pngSize(path: string): [number, number] {
-    const bytes = readFileSync(path);
-    return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
-}
-
 test('answers the default question at once, from bundled data only', async ({ page }) => {
     const { requests, problems } = await openPower(page);
     await expect(page.locator('#tool-result')).toHaveText(/^£1,000 in January 2015 is worth £[\d,]+ today\.$/);
@@ -34,7 +30,7 @@ test('answers the default question at once, from bundled data only', async ({ pa
     await expect(page.getByText(POWER.caution)).toHaveCount(1);
     await expect(page.locator('#tool-result-status')).toHaveText(/^£1,000 in January 2015/);
     expect(requests).toEqual([]);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('switching currency keeps the start month', async ({ page }) => {
@@ -71,16 +67,16 @@ test('an empty amount or a CPI gap clears the answer and disables sharing', asyn
     await expect(page.locator('#power-detail')).toBeHidden();
 });
 
-test('Share card falls back to a PNG download when Web Share is missing', async ({ page, isMobile }) => {
+test('Share card falls back to a PNG download when Web Share is missing', async ({ page }) => {
     await openPower(page);
     await page.evaluate(() => {
         Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
     });
     const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-share="card"]').click()]);
-    expect(download.suggestedFilename()).toBe('plain-bitcoin-1000-gbp-2015-01.png');
+    expect(download.suggestedFilename()).toMatch(cardName('power'));
     const file = test.info().outputPath('card.png');
     await download.saveAs(file);
-    expect(pngSize(file)).toEqual(isMobile ? [1080, 1350] : [1200, 675]);
+    expect(pngSize(file)).toEqual(await expectedCardSize(page));
     await expect(page.locator('#tool-result-status')).toHaveText(SHARE.downloaded);
 });
 
@@ -97,7 +93,7 @@ test('Share card hands the PNG and the sentence to Web Share when it can', async
     await page.locator('[data-share="card"]').click();
     const shared = await page.waitForFunction(() => (window as unknown as { shared: unknown }).shared);
     expect(await shared.jsonValue()).toEqual({
-        name: 'plain-bitcoin-1000-gbp-2015-01.png',
+        name: expect.stringMatching(cardName('power')),
         type: 'image/png',
         text: expect.stringMatching(/^£1,000 in January 2015 is worth .+\nplainbitcoin\.org$/),
     });

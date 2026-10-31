@@ -25,9 +25,12 @@ startRouter(({ route, initial, notFound }) => {
     cleanups = [];
     const view = ++viewCount;
 
-    const page = route === 'home' ? renderHome() : renderToolPage(route);
-    const note = notFound ? html`<p class="route-note">${ROUTE.notFound}</p>` : '';
-    main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${page}</div>`.value;
+    const prerendered = initial && route === 'home' && !notFound;
+    if (!prerendered) {
+        const page = route === 'home' ? renderHome() : renderToolPage(route);
+        const note = notFound ? html`<p class="route-note">${ROUTE.notFound}</p>` : '';
+        main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${page}</div>`.value;
+    }
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
     bindFields(main);
 

@@ -20,6 +20,7 @@ export const TOKENS = {
 
     gutter: '1rem',
     measure: '56rem',
+    measureWide: '72rem',
     tap: '2.75rem',
     radius: '6px',
     duration: '160ms',

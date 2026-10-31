@@ -5,9 +5,27 @@ export const SITE_NAME = 'Plain Bitcoin';
 
 export const SITE_DESCRIPTION = 'A few honest Bitcoin tools, fast and plain. Everything runs in your browser.';
 
+export const OG_IMAGE = {
+    path: 'og.png',
+    width: 1200,
+    height: 630,
+    headline: 'Plain answers to Bitcoin questions.',
+    detail: 'Five small tools. Every number shows its source.',
+    source: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
+    alt: 'Plain Bitcoin: plain answers to Bitcoin questions, next to a field of bitcoin tokens, issued ones solid.',
+} as const;
+
 export const HOME = {
     promise: 'Plain answers to Bitcoin questions, worked out in your browser.',
     toolsHeading: 'Tools',
+    startHeading: 'Start here',
+    start: [
+        'Bitcoin has a fixed supply: never more than 21 million BTC.',
+        'New coins come with each block, about every 10 minutes. The amount halves every 210,000 blocks.',
+        'One bitcoin is 100,000,000 sats, so you can own a small part of one.',
+        "The price moves a lot. Past results don't tell you what happens next.",
+        'Never share a seed phrase or private key. No honest tool asks for one.',
+    ],
 } as const;
 
 export const HERO = {
@@ -74,6 +92,7 @@ export const SHARE = {
     failed: 'Could not make the card. Try Copy text instead.',
     downloaded: 'Card saved as a PNG.',
     handle: '@PlainBTC',
+    post: 'Post on X',
 } as const;
 
 export const FIELDS = {
@@ -382,6 +401,8 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
+    follow: '@PlainBTC on X',
+    followUrl: 'https://x.com/PlainBTC',
 } as const;
 
 export const NOSCRIPT = {

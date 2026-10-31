@@ -9,26 +9,13 @@ import { POWER, TOOL_PAGE } from '../../ui/copy.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { POWER_DEFAULT_START, type PowerPreset } from '../../ui/power-view.ts';
 import { parseAmount } from '../../util/amount-input.ts';
+import { find, link } from '../../util/dom.ts';
 import { type Fiat, formatWhole } from '../../util/format.ts';
 import { type Month, monthKeyLabel, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
 
 const SETTLE_MS = 700;
 const SPARK_WIDTH = 300;
 const SPARK_HEIGHT = 48;
-
-function find<T extends Element = HTMLElement>(root: ParentNode, selector: string): T {
-    const element = root.querySelector<T>(selector);
-    if (!element) throw new Error(`Missing ${selector}`);
-    return element;
-}
-
-function link(text: string, href: string): HTMLAnchorElement {
-    const anchor = document.createElement('a');
-    anchor.href = href;
-    anchor.textContent = text;
-    anchor.rel = 'noopener noreferrer';
-    return anchor;
-}
 
 export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const form = find<HTMLFormElement>(root, '.tool__inputs');

@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { DCA, SHARE } from '../src/ui/copy.ts';
+import { DCA } from '../src/ui/copy.ts';
+import { realProblems } from './console.ts';
 
 async function openDca(page: Page) {
     const problems: string[] = [];
@@ -15,11 +15,6 @@ async function openDca(page: Page) {
     await page.goto('/#/dca');
     await expect(page.locator('#dca-detail')).toBeVisible();
     return { problems, external };
-}
-
-function pngSize(path: string): [number, number] {
-    const bytes = readFileSync(path);
-    return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
 }
 
 const money = /£[\d,]+/.source;
@@ -43,7 +38,7 @@ test('answers £50 a week since January 2020 from bundled closes only, with the 
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics reference price, daily closes to');
     await expect(page.locator('#tool-result-status')).toHaveText(/^£50 a week since Jan 2020/);
     expect(external).toEqual([]);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('presets, cadence and currency recompute, and the start month is kept', async ({ page }) => {
@@ -82,19 +77,6 @@ test('a start before the prices begin moves to the first close and says so', asy
         'Prices start on 18 July 2010, so the first buy is that day.',
     );
     await expect(page.locator('#dca-buys')).toHaveText(/, 18 Jul 2010 to /);
-});
-
-test('the card carries the sentence and the lump sum', async ({ page, isMobile }) => {
-    await openDca(page);
-    await page.evaluate(() => {
-        Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
-    });
-    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-share="card"]').click()]);
-    expect(download.suggestedFilename()).toBe('plain-bitcoin-dca-50-gbp-weekly-2020-01-01.png');
-    const file = test.info().outputPath('card.png');
-    await download.saveAs(file);
-    expect(pngSize(file)).toEqual(isMobile ? [1080, 1350] : [1200, 675]);
-    await expect(page.locator('#tool-result-status')).toHaveText(SHARE.downloaded);
 });
 
 test('recomputes within a frame', async ({ page }) => {

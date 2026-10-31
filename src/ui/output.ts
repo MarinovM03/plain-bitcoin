@@ -18,6 +18,10 @@ export function noteLine(text: string): SafeHtml {
     return html`<p class="note-line">${text}</p>`;
 }
 
+export function postLink(): SafeHtml {
+    return html`<a class="post-link" href="https://x.com/intent/post" data-share-post target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">${SHARE.post} <span aria-hidden="true">↗</span></a>`;
+}
+
 export function shareBar(): SafeHtml {
     return html`<div class="share-bar" role="group" aria-label="${SHARE.label}">
     <button class="button button--primary" type="button" data-share="card" disabled>${SHARE.card}</button>

@@ -80,10 +80,7 @@ describe('powerText', () => {
         expect(card.source).toBe('CPI: ONS to Aug 2026 · Bitcoin: Coin Metrics close, Sept 2026');
         expect(card.alt).toBe(`${card.headline} ${card.detail}`);
         expect(card.copy).toBe(`${card.headline} ${card.detail}\nplainbitcoin.org`);
-        expect(card.fileName).toBe('plain-bitcoin-1000-gbp-2015-01.png');
-        expect(powerText({ ...BASE, amount: 12.5 }, 'USD', 'x').card.fileName).toBe(
-            'plain-bitcoin-12-5-usd-2015-01.png',
-        );
+        expect(card.fileName).toBe('plain-bitcoin-power-2026-09.png');
     });
 });
 
@@ -101,7 +98,7 @@ describe('leftCard', () => {
         expect(card.source).toBe('Block height: mempool.space, 30 Oct 2026, 18:06 UTC · Supply: the issuance schedule');
         expect(card.copy).toBe(`${card.headline} ${card.detail}
 plainbitcoin.org`);
-        expect(card.fileName).toBe('plain-bitcoin-left-973854.png');
+        expect(card.fileName).toBe('plain-bitcoin-left-2026-10-30.png');
     });
 });
 
@@ -119,7 +116,7 @@ describe('convertText', () => {
         expect(text.detail).toBe('Also 0.001 BTC or $76.78.');
         expect(text.card.source).toBe('Price: mempool.space, 30 Oct 2026, 19:20 UTC');
         expect(text.card.copy).toBe('100,000 sats = £57.33. Also 0.001 BTC or $76.78.\nplainbitcoin.org');
-        expect(text.card.fileName).toBe('plain-bitcoin-100000-sats.png');
+        expect(text.card.fileName).toBe('plain-bitcoin-converter-2026-10-30.png');
     });
 
     it('keeps tiny amounts visible and answers money in sats', () => {
@@ -177,7 +174,7 @@ describe('dcaText', () => {
         expect(text.card.source).toBe('Bitcoin: Coin Metrics daily closes to 29 Oct 2026 · fees not included');
         expect(text.card.copy).toBe(`${text.headline} ${text.card.detail}
 plainbitcoin.org`);
-        expect(text.card.fileName).toBe('plain-bitcoin-dca-50-gbp-weekly-2020-01-01.png');
+        expect(text.card.fileName).toBe('plain-bitcoin-dca-2026-10-29.png');
         expect(text.asOf).toBe('today = close, 29 October 2026');
     });
 
@@ -220,6 +217,8 @@ plainbitcoin.org`);
     });
 });
 
+const CHECKED = Date.UTC(2026, 9, 31, 9, 0);
+
 describe('addressText', () => {
     const taproot = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 
@@ -230,19 +229,19 @@ describe('addressText', () => {
     }
 
     it('shares the type only by default', async () => {
-        const text = addressText(await taprootAddress(), false, 'plainbitcoin.org');
+        const text = addressText(await taprootAddress(), false, CHECKED, 'plainbitcoin.org');
         expect(text.headline).toBe('This is a Taproot address (P2TR).');
         expect(text.detail).toBe('Bitcoin mainnet. The Bech32m checksum is valid.');
         expect(text.card.detail).toBe(text.detail);
         expect(text.card.source).toBe('Checked in the browser, nothing sent · Bech32m, BIP 350');
-        expect(text.card.fileName).toBe('plain-bitcoin-address-p2tr.png');
+        expect(text.card.fileName).toBe('plain-bitcoin-address-2026-10-31.png');
         for (const field of [text.card.headline, text.card.detail, text.card.alt, text.card.copy, text.card.fileName]) {
             expect(field).not.toContain(taproot.slice(4, 20));
         }
     });
 
     it('puts the full address on the card only when asked', async () => {
-        const text = addressText(await taprootAddress(), true, 'plainbitcoin.org');
+        const text = addressText(await taprootAddress(), true, CHECKED, 'plainbitcoin.org');
         expect(text.card.detail.replaceAll(' ', '')).toBe(taproot);
         expect(text.card.detail.startsWith('bc1p 0xlx vlhe')).toBe(true);
         expect(text.card.copy).toBe(`This is a Taproot address (P2TR).\n${taproot}\nplainbitcoin.org`);

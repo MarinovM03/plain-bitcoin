@@ -2,7 +2,7 @@ import { TOKENS } from '../styles/tokens.ts';
 import { SHARE, SITE_NAME } from '../ui/copy.ts';
 import type { CardArt, ShareCard } from './index.ts';
 
-export type CardShape = 'wide' | 'tall';
+export type CardShape = 'wide' | 'tall' | 'og';
 
 interface Layout {
     width: number;
@@ -26,6 +26,17 @@ export const CARD_LAYOUTS: Record<CardShape, Layout> = {
         minHeadline: 40,
         maxLines: 3,
         detail: 32,
+        small: 22,
+    },
+    og: {
+        width: 1200,
+        height: 630,
+        pad: 68,
+        wordmark: 40,
+        headline: 60,
+        minHeadline: 40,
+        maxLines: 3,
+        detail: 30,
         small: 22,
     },
     tall: {

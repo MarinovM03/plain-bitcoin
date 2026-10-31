@@ -23,6 +23,14 @@ import {
 import { monthKeyLabel } from '../util/month.ts';
 import type { ShareCard } from './index.ts';
 
+export function cardFileName(tool: string, date: string): string {
+    return `plain-bitcoin-${tool}-${date}.png`;
+}
+
+function utcDay(ms: number): string {
+    return new Date(ms).toISOString().slice(0, 10);
+}
+
 export interface PowerText {
     headline: string;
     bitcoin: string;
@@ -62,7 +70,6 @@ export function powerText(result: PowerResult, currency: Fiat, site: string): Po
     const bitcoinValue = formatMoney(result.btcValueNow, currency);
     const fall = formatPercent(result.maxDrawdown);
     const detail = fall === '0%' ? POWER.cardDetail(bitcoinValue) : POWER.cardDetailFall(bitcoinValue, fall);
-    const fileAmount = String(result.amount).replace(/[^\d]/g, '-');
     return {
         headline,
         bitcoin: POWER.bitcoin(bitcoinValue, formatBtcAmount(result.btc)),
@@ -82,7 +89,7 @@ export function powerText(result: PowerResult, currency: Fiat, site: string): Po
             ),
             alt: `${headline} ${detail}`,
             copy: `${headline} ${detail}\n${site}`,
-            fileName: `plain-bitcoin-${fileAmount}-${currency.toLowerCase()}-${result.start}.png`,
+            fileName: cardFileName('power', result.priceMonth),
         },
     };
 }
@@ -126,7 +133,7 @@ export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuot
             source: CONVERT.cardSource(priceLabel(quote)),
             alt: `${headline}. ${detail}`,
             copy: `${headline}. ${detail}\n${site}`,
-            fileName: `plain-bitcoin-${sats}-sats.png`,
+            fileName: cardFileName('converter', utcDay(quote.asOf)),
         },
     };
 }
@@ -167,7 +174,6 @@ export function dcaText(result: DcaResult, currency: Fiat, site: string): DcaTex
     const fees = result.feePercent > 0 ? DCA.feesPaid(percent, money(result.fees)) : DCA.feesNone;
     const notes = [fees, ...(result.clamped ? [DCA.clamped(day(result.start))] : []), DCA.lumpNote];
     const detail = fall === null ? DCA.cardDetailNoFall(invested, buys) : DCA.cardDetail(invested, buys, fall);
-    const fileAmount = String(result.amount).replace(/[^\d]/g, '-');
     return {
         headline,
         detail: DCA.detail(invested, buys, formatBtcExact(result.sats)),
@@ -201,7 +207,7 @@ export function dcaText(result: DcaResult, currency: Fiat, site: string): DcaTex
             ),
             alt: `${headline} ${detail}`,
             copy: `${headline} ${detail}\n${site}`,
-            fileName: `plain-bitcoin-dca-${fileAmount}-${currency.toLowerCase()}-${result.frequency}-${result.start}.png`,
+            fileName: cardFileName('dca', result.end),
         },
     };
 }
@@ -216,7 +222,7 @@ export function leftCard(supply: Supply, api: string, checkedAt: number, site: s
         alt: `${headline} ${detail}`,
         copy: `${headline} ${detail}
 ${site}`,
-        fileName: `plain-bitcoin-left-${supply.height}.png`,
+        fileName: cardFileName('left', utcDay(checkedAt)),
     };
 }
 
@@ -230,7 +236,7 @@ function groupsOfFour(text: string): string {
     return text.match(/.{1,4}/g)?.join(' ') ?? text;
 }
 
-export function addressText(address: Address, showAddress: boolean, site: string): AddressText {
+export function addressText(address: Address, showAddress: boolean, checkedAt: number, site: string): AddressText {
     const headline = ADDRESS.headline(ADDRESS.types[address.type]);
     const detail = ADDRESS.detail(ADDRESS.networks[address.network], ADDRESS.encodings[address.encoding]);
     const cardDetail = showAddress ? groupsOfFour(address.text) : detail;
@@ -243,7 +249,7 @@ export function addressText(address: Address, showAddress: boolean, site: string
             source: ADDRESS.cardSource(ADDRESS.specs[address.encoding]),
             alt: `${headline} ${cardDetail}`,
             copy: showAddress ? `${headline}\n${address.text}\n${site}` : `${headline} ${detail}\n${site}`,
-            fileName: `plain-bitcoin-address-${address.type}.png`,
+            fileName: cardFileName('address', utcDay(checkedAt)),
         },
     };
 }

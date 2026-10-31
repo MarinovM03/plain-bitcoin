@@ -1,7 +1,8 @@
 import { createHeightFeed, type HeightFeed, type Tip } from '../../data/height.ts';
-import { type HeroShot, mountHero } from '../../hero/index.ts';
+import { type HeroHandle, type HeroShot, mountHero } from '../../hero/index.ts';
 import { supplyAt } from '../../model/supply.ts';
 import { HERO } from '../../ui/copy.ts';
+import { afterFirstPaint } from '../../util/dom.ts';
 import { btcParts, formatAge, formatBtcExact, formatWhole } from '../../util/format.ts';
 
 let feed: HeightFeed | null = null;
@@ -91,28 +92,37 @@ export function mountCounter(root: HTMLElement, shot: HeroShot, announce: (messa
     renderFigure();
     renderNote();
     let shown = supplyAt(tip.height).issued;
-    const scene = mountHero(stage, shot, shown);
+    let disposed = false;
+    let stop = () => {};
 
-    const unsubscribe = heights.subscribe((next, change) => {
-        tip = next;
-        renderFigure();
-        renderNote();
-        const issued = supplyAt(next.height).issued;
-        if (issued !== shown) scene.setIssued(issued, change.blocks > 0);
-        shown = issued;
-        if (change.blocks > 0) announce(arrivalLine(next.height, change.blocks));
-    });
-
-    const unwatch = watchActive(hero, (active) => {
-        heights.setActive(owner, active);
-        setTicking(active);
-        if (active) renderNote();
+    // Live requests and the hero wait for the first paint, so neither competes with it on a slow phone.
+    afterFirstPaint(() => {
+        if (disposed) return;
+        const scene: HeroHandle = mountHero(stage, shot, shown);
+        const unsubscribe = heights.subscribe((next, change) => {
+            tip = next;
+            renderFigure();
+            renderNote();
+            const issued = supplyAt(next.height).issued;
+            if (issued !== shown) scene.setIssued(issued, change.blocks > 0);
+            shown = issued;
+            if (change.blocks > 0) announce(arrivalLine(next.height, change.blocks));
+        });
+        const unwatch = watchActive(hero, (active) => {
+            heights.setActive(owner, active);
+            setTicking(active);
+            if (active) renderNote();
+        });
+        stop = () => {
+            unwatch();
+            unsubscribe();
+            scene.dispose();
+        };
     });
 
     return () => {
-        unwatch();
-        unsubscribe();
+        disposed = true;
+        stop();
         setTicking(false);
-        scene.dispose();
     };
 }

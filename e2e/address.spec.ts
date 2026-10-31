@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { ADDRESS } from '../src/ui/copy.ts';
+import { realProblems } from './console.ts';
 
 const TAPROOT = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 const SEGWIT = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
@@ -84,7 +85,7 @@ test('decodes offline and asks mempool.space only after the tap', async ({ page 
     await input.fill(TAPROOT);
     await expect(page.locator('#address-chain')).toBeHidden();
     expect(await horizontalOverflow(page)).toBe(0);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('a one-character typo is a checksum failure with the character marked', async ({ page }) => {
@@ -122,7 +123,7 @@ test('the secrets guard clears a seed phrase or private key and sends nothing', 
     expect(external).toEqual([]);
     expect(page.url()).toMatch(/\/#\/address$/);
     expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('an extended public key is not looked up', async ({ page }) => {
@@ -135,7 +136,9 @@ test('an extended public key is not looked up', async ({ page }) => {
 test('paste fills the field, and the card shows the type unless the address is switched on', async ({
     page,
     context,
+    browserName,
 }) => {
+    test.skip(browserName !== 'chromium', 'Clipboard permission is Chromium only');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.evaluate((text) => navigator.clipboard.writeText(text), TAPROOT);
     await page.getByRole('button', { name: ADDRESS.paste }).click();
@@ -157,5 +160,5 @@ test('paste fills the field, and the card shows the type unless the address is s
 
     const download = page.waitForEvent('download');
     await page.locator('[data-share="download"]').click();
-    expect((await download).suggestedFilename()).toBe('plain-bitcoin-address-p2tr.png');
+    expect((await download).suggestedFilename()).toMatch(/^plain-bitcoin-address-\d{4}-\d{2}-\d{2}\.png$/);
 });

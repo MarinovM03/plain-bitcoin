@@ -15,6 +15,7 @@ export function renderNoscript(): SafeHtml {
 export function renderFooter(): SafeHtml {
     return html`<footer class="footer">
     <p>${FOOTER.privacy}</p>
+    <a class="footer__follow" href="${FOOTER.followUrl}" rel="noopener noreferrer">${FOOTER.follow}</a>
 </footer>`;
 }
 

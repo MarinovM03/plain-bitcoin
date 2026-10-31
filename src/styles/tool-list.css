@@ -64,7 +64,7 @@
 
 @media (min-width: 48rem) {
     .tool-row {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 16rem) auto;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 20rem) auto;
         padding-block: 1.125rem;
     }
 
