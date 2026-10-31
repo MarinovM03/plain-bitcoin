@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { HERO, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, HERO, NAV, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
@@ -9,6 +9,7 @@ const ROUTES = ['', ...TOOL_IDS] as const;
 const TAPROOT = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 const SIZES = [
     [360, 740],
+    [360, 780],
     [390, 844],
     [844, 390],
     [720, 450],
@@ -60,11 +61,18 @@ test('the keyboard reaches every tool from home in reading order and lands on it
     test.skip(isMobile, 'Keyboard path is checked on desktop');
     await open(page, '');
     const order: string[] = [];
-    for (let step = 0; step < 2 + TOOL_IDS.length; step++) {
+    const expected = [
+        SITE_NAME,
+        ...TOOL_IDS.map((id) => NAV.short[id]),
+        `${FOOTER.handle} ↗`,
+        `${HERO.link} →`,
+        ...TOOL_IDS.map((id) => TOOLS[id].name),
+    ];
+    for (let step = 0; step < expected.length; step++) {
         await page.keyboard.press('Tab');
         order.push(await page.evaluate(() => document.activeElement?.textContent?.trim().split('\n')[0] ?? ''));
     }
-    expect(order).toEqual([SITE_NAME, `${HERO.link} →`, ...TOOL_IDS.map((id) => TOOLS[id].name)]);
+    expect(order).toEqual(expected);
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[TOOL_IDS.at(-1) ?? 'address'].name);

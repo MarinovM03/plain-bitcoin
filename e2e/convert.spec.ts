@@ -93,6 +93,7 @@ test('what is typed before the tool finishes loading still drives the answer', a
 test('refuses impossible amounts and pasted garbage calmly', async ({ page }) => {
     await fakePriceApi(page);
     await page.goto('/#/convert');
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
     const field = fields(page);
     await field.btc.fill('21000001');
     await expect(page.locator('#convert-note')).toHaveText(CONVERT.tooBig);
@@ -152,7 +153,9 @@ test('every field and preset is reachable by keyboard', async ({ page, isMobile 
         order.push(await page.evaluate(() => document.activeElement?.id || document.activeElement?.textContent || ''));
     }
     expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-gbp', 'convert-usd']);
-    expect(order.slice(4)).toEqual(Object.values(CONVERT.presets));
+    expect(order.slice(4)).toEqual(
+        Object.entries(CONVERT.presets).map(([preset, label]) => label + (CONVERT.presetHints[preset] ?? '')),
+    );
     await page.keyboard.press('Enter');
     await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = £573,290,000.00');
 });

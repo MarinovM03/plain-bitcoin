@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { ADDRESS_SAMPLES } from '../src/ui/address-view.ts';
 import { ADDRESS } from '../src/ui/copy.ts';
 import { realProblems } from './console.ts';
 
@@ -86,6 +87,16 @@ test('decodes offline and asks mempool.space only after the tap', async ({ page 
     await expect(page.locator('#address-chain')).toBeHidden();
     expect(await horizontalOverflow(page)).toBe(0);
     expect(realProblems(problems)).toEqual([]);
+});
+
+test('each sample fills the field and is decoded as its type, with nothing sent', async ({ page }) => {
+    const { external } = watch(page);
+    for (const type of Object.keys(ADDRESS_SAMPLES) as (keyof typeof ADDRESS_SAMPLES)[]) {
+        await page.getByRole('button', { name: ADDRESS.samples[type], exact: true }).click();
+        await expect(page.getByLabel(ADDRESS.field)).toHaveValue(ADDRESS_SAMPLES[type]);
+        await expect(page.locator('#tool-result')).toHaveText(ADDRESS.headline(ADDRESS.types[type]));
+    }
+    expect(external).toEqual([]);
 });
 
 test('a one-character typo is a checksum failure with the character marked', async ({ page }) => {
