@@ -17,6 +17,8 @@ const CSP = [
     "font-src 'self'",
     "img-src 'self' data: blob:",
     `connect-src 'self' ${API_ORIGINS.join(' ')}`,
+    "worker-src 'self'",
+    "frame-src 'none'",
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -46,7 +48,6 @@ const PERMISSIONS_POLICY = [
     'screen-wake-lock=()',
     'serial=()',
     'usb=()',
-    'web-share=(self)',
     'xr-spatial-tracking=()',
 ].join(', ');
 
