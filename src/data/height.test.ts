@@ -11,6 +11,7 @@ import {
 } from './height.ts';
 
 const ANCHOR_MS = HEIGHT_ANCHOR.time * 1000;
+const AHEAD = HEIGHT_ANCHOR.height + 46;
 
 interface FakeChain {
     height: number;
@@ -46,50 +47,50 @@ describe('estimateTip', () => {
 
 describe('parsing', () => {
     it('accepts a plain height at or above the anchor', () => {
-        expect(parseHeight('973900\n')).toBe(973_900);
+        expect(parseHeight(`${AHEAD}\n`)).toBe(AHEAD);
         expect(parseHeight('12')).toBeNull();
-        expect(parseHeight('973900.5')).toBeNull();
+        expect(parseHeight(`${AHEAD}.5`)).toBeNull();
         expect(parseHeight('<html>')).toBeNull();
     });
 
     it('reads the timestamp of the matching block only', () => {
         const blocks = [
-            { height: 973_901, timestamp: 1_793_400_000 },
-            { height: 973_900, timestamp: 1_793_399_000 },
+            { height: AHEAD + 1, timestamp: 1_793_400_000 },
+            { height: AHEAD, timestamp: 1_793_399_000 },
         ];
-        expect(parseBlockTime(blocks, 973_900)).toBe(1_793_399_000);
-        expect(parseBlockTime(blocks, 973_902)).toBeNull();
-        expect(parseBlockTime({ height: 973_900 }, 973_900)).toBeNull();
-        expect(parseBlockTime([{ height: 973_900, timestamp: 'soon' }], 973_900)).toBeNull();
+        expect(parseBlockTime(blocks, AHEAD)).toBe(1_793_399_000);
+        expect(parseBlockTime(blocks, AHEAD + 2)).toBeNull();
+        expect(parseBlockTime({ height: AHEAD }, AHEAD)).toBeNull();
+        expect(parseBlockTime([{ height: AHEAD, timestamp: 'soon' }], AHEAD)).toBeNull();
     });
 });
 
 describe('fetchTip', () => {
     it('asks mempool.space first, then the block for its time', async () => {
-        const chain = { height: 973_900, down: new Set<string>(), calls: [] };
+        const chain = { height: AHEAD, down: new Set<string>(), calls: [] };
         const tip = await fetchTip(fakeFetch(chain), null);
-        expect(tip).toEqual({ height: 973_900, time: HEIGHT_ANCHOR.time + 46 * 600, api: 'mempool.space' });
+        expect(tip).toEqual({ height: AHEAD, time: HEIGHT_ANCHOR.time + 46 * 600, api: 'mempool.space' });
         expect(chain.calls).toEqual([
             'https://mempool.space/api/blocks/tip/height',
-            'https://mempool.space/api/blocks/973900',
+            `https://mempool.space/api/blocks/${AHEAD}`,
         ]);
     });
 
     it('falls back to blockstream.info when mempool.space fails', async () => {
-        const chain = { height: 973_900, down: new Set(['mempool.space']), calls: [] };
+        const chain = { height: AHEAD, down: new Set(['mempool.space']), calls: [] };
         const tip = await fetchTip(fakeFetch(chain), null);
         expect(tip.api).toBe('blockstream.info');
-        expect(tip.height).toBe(973_900);
+        expect(tip.height).toBe(AHEAD);
     });
 
     it('skips the block request when the height has not moved', async () => {
-        const chain = { height: 973_900, down: new Set<string>(), calls: [] };
-        await fetchTip(fakeFetch(chain), { height: 973_900, time: 42 });
+        const chain = { height: AHEAD, down: new Set<string>(), calls: [] };
+        await fetchTip(fakeFetch(chain), { height: AHEAD, time: 42 });
         expect(chain.calls).toEqual(['https://mempool.space/api/blocks/tip/height']);
     });
 
     it('throws when every API fails', async () => {
-        const chain = { height: 973_900, down: new Set(['mempool.space', 'blockstream.info']), calls: [] };
+        const chain = { height: AHEAD, down: new Set(['mempool.space', 'blockstream.info']), calls: [] };
         await expect(fetchTip(fakeFetch(chain), null)).rejects.toThrow();
     });
 });

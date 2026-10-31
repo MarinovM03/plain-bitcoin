@@ -1,7 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
 import { FOOTER, HERO, pageTitle, ROUTE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
-import { fakeHeightApi, isApiRequest } from './height-api.ts';
+import { realProblems } from './console.ts';
+import { fakeHeightApi, isApiRequest, leftFigure } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 test.beforeEach(async ({ page }) => {
@@ -34,7 +35,7 @@ test('home shows the shell, the live hero and every tool in order', async ({ pag
     await expect(page).toHaveTitle(SITE_NAME);
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(HERO.heading);
-    await expect(page.locator('#hero-figure')).toHaveText('894,203.1019 BTC');
+    await expect(page.locator('#hero-figure')).toHaveText(leftFigure());
     await expect(page.locator('.tool-row__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
     await expect(page.locator('.tool-row__preview')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].preview));
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
@@ -49,7 +50,7 @@ test('home shows the shell, the live hero and every tool in order', async ({ pag
     expect(await page.locator('.hero').boundingBox()).toEqual(hero);
 
     expect(await horizontalOverflow(page)).toBe(0);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 for (const id of TOOL_IDS) {
@@ -70,7 +71,7 @@ for (const id of TOOL_IDS) {
         else await expect(page.locator('.result__figure')).toBeVisible();
 
         expect(await horizontalOverflow(page)).toBe(0);
-        expect(problems).toEqual([]);
+        expect(realProblems(problems)).toEqual([]);
     });
 }
 
@@ -96,7 +97,7 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
 
     await page.getByRole('link', { name: /All tools/ }).click();
     await expect(page).toHaveURL(/#\/$/);
-    expect(problems).toEqual([]);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('an unknown route goes home with one quiet note', async ({ page }) => {

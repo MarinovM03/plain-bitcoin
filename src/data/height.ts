@@ -1,7 +1,10 @@
 import { TARGET_BLOCK_SECONDS } from '../model/supply.ts';
+import anchor from './height-anchor.json' with { type: 'json' };
 
-// Block 973,854 as reported by mempool.space on 30 Oct 2026 (timestamp 2026-10-30T17:58:11Z).
-export const HEIGHT_ANCHOR = { height: 973_854, time: 1_793_383_091 } as const;
+export const HEIGHT_ANCHOR: { readonly height: number; readonly time: number } = {
+    height: anchor.height,
+    time: anchor.time,
+};
 
 export const HEIGHT_APIS = [
     { name: 'mempool.space', base: 'https://mempool.space/api' },

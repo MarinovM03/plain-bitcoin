@@ -1,0 +1,7 @@
+{
+    "source": "mempool.space",
+    "url": "https://mempool.space/api/blocks/tip/height",
+    "asOf": "2026-10-31",
+    "height": 974008,
+    "time": 1793471798
+}
