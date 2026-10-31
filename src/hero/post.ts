@@ -23,7 +23,7 @@ import type { Rgb } from './aces.ts';
 export const GLOW_LAYER = 1;
 
 const MSAA_SAMPLES = 4;
-const BLOOM = { strength: 1.15, radius: 0.55, threshold: 0 };
+const BLOOM = { strength: 1.3, radius: 0.6, threshold: 0 };
 
 const VERTEX = /* glsl */ `
 varying vec2 vUv;

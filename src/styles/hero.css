@@ -1,16 +1,25 @@
 .hero {
     container-type: inline-size;
     position: relative;
-    height: clamp(22rem, 62svh, 34rem);
+    height: clamp(24rem, 68svh, 36rem);
     margin-inline: calc(-1 * var(--gutter));
     overflow: hidden;
-    border-block: 1px solid var(--line);
+    border-bottom: 1px solid var(--edge);
     background-color: var(--ink-raised);
-    background-image: radial-gradient(
-        110% 70% at 72% 18%,
-        color-mix(in srgb, var(--btc) 12%, transparent),
-        transparent 62%
-    );
+    background-image:
+        radial-gradient(90% 70% at 74% 22%, color-mix(in srgb, var(--btc) 16%, transparent), transparent 64%),
+        radial-gradient(70% 60% at 12% 100%, color-mix(in srgb, var(--fiat) 6%, transparent), transparent 70%);
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--paper) 6%, transparent),
+        inset 0 0 80px color-mix(in srgb, var(--ink) 70%, transparent);
+    pointer-events: none;
 }
 
 .hero__stage {
@@ -33,7 +42,7 @@
 
 .hero__plain {
     position: absolute;
-    inset: 0 0 38% 0;
+    inset: 0 0 40% 0;
     padding: 0.75rem var(--gutter) 0;
 }
 
@@ -45,19 +54,41 @@
 
 .hero__text {
     position: absolute;
+    z-index: 1;
     inset-inline: 0;
     bottom: 0;
-    padding: 3rem var(--gutter) 1.25rem;
-    background: linear-gradient(to top, var(--ink-raised) 55%, transparent);
+    padding: 3.5rem var(--gutter) 1.25rem;
+    background: linear-gradient(to top, var(--ink-raised) 52%, transparent);
     pointer-events: none;
+}
+
+.hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--btc);
+    font-family: var(--font-mono);
+    font-size: var(--step-tiny);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.hero__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--btc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--btc) 25%, transparent);
 }
 
 .hero__heading {
     font-family: var(--font-display);
     font-weight: 600;
     font-size: var(--step-heading);
-    line-height: 1.1;
-    letter-spacing: -0.015em;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
 }
 
 .hero__figure {
@@ -70,8 +101,10 @@
     font-weight: 500;
     font-size: var(--step-figure);
     line-height: 1.15;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     color: var(--btc);
+    text-shadow: 0 0 32px color-mix(in srgb, var(--btc) 30%, transparent);
 }
 
 .hero__fraction,
@@ -82,6 +115,7 @@
 .hero__unit {
     white-space: pre;
     color: var(--paper);
+    text-shadow: none;
 }
 
 .hero__figure-empty {
@@ -89,6 +123,7 @@
     font-family: var(--font-body);
     font-weight: 400;
     font-size: var(--step-lead);
+    text-shadow: none;
 }
 
 .hero__note {
@@ -103,26 +138,37 @@
     align-items: center;
     gap: 0.375rem;
     min-height: var(--tap);
-    margin-top: 0.25rem;
+    margin-top: 0.375rem;
+    padding-inline: 1rem;
+    border: 1px solid color-mix(in srgb, var(--btc) 50%, var(--edge));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 70%, transparent);
     color: var(--paper);
-    text-decoration: underline;
-    text-decoration-color: var(--btc);
-    text-underline-offset: 0.2em;
+    font-size: var(--step-small);
+    font-weight: 600;
     pointer-events: auto;
+    transition: border-color var(--duration) var(--ease);
+}
+
+@media (hover: hover) {
+    .hero__link:hover {
+        border-color: var(--btc);
+    }
 }
 
 @media (min-width: 40rem) {
     .hero {
         height: auto;
-        aspect-ratio: 21 / 10;
+        aspect-ratio: 16 / 8;
         margin-inline: 0;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
+        margin-top: var(--space-m);
+        border: 1px solid var(--edge);
+        border-radius: var(--radius-lg);
     }
 
     .hero__text {
-        padding: 3rem 1.75rem 1.5rem;
-        background: linear-gradient(to right, var(--ink-raised) 28%, transparent 62%);
+        padding: 3rem 2rem 1.75rem;
+        background: linear-gradient(to right, var(--ink-raised) 26%, transparent 64%);
     }
 
     .hero__plain {
@@ -137,11 +183,15 @@
         flex-direction: column;
         justify-content: center;
         align-items: flex-start;
-        padding-inline: 2.5cqi;
+        padding-inline: 3cqi;
+    }
+
+    .hero__heading {
+        font-size: clamp(2rem, 4.2cqi, 3.75rem);
     }
 
     .hero__figure {
-        font-size: clamp(2.25rem, 6cqi, 4.5rem);
+        font-size: clamp(2.25rem, 6.4cqi, 5rem);
     }
 
     .hero__plain {
@@ -150,9 +200,19 @@
     }
 }
 
+@media (min-width: 64rem) {
+    .hero {
+        aspect-ratio: 16 / 7;
+    }
+
+    .hero--page {
+        aspect-ratio: 16 / 7.5;
+    }
+}
+
 @media (orientation: landscape) and (max-height: 32rem) {
     .hero {
-        height: 78svh;
+        height: 80svh;
         aspect-ratio: auto;
     }
 

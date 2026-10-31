@@ -116,6 +116,8 @@ const DRIFT_PITCH = 1.2;
 const TILT_YAW = 2.5;
 const TILT_PITCH = 1.5;
 const SLIVER_DROP = 2.6;
+const POOL_OPACITY = 0.48;
+const PULSE_BASE = 4;
 const UP = new Vector3(0, 1, 0);
 
 const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -219,14 +221,16 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     };
     await nextTask();
     scene.environment = buildEnvironment();
-    scene.environmentIntensity = 0.32;
+    scene.environmentIntensity = 0.4;
 
-    const key = new DirectionalLight(mix(TOKENS.paper, TOKENS.btc, 0.2), 2.4);
+    const key = new DirectionalLight(mix(TOKENS.paper, TOKENS.btc, 0.28), 2.9);
     key.position.set(-60, 90, 70);
-    const rim = new DirectionalLight(color(TOKENS.fiat), 1.5);
+    const rim = new DirectionalLight(color(TOKENS.fiat), 2.1);
     rim.position.set(55, 28, -90);
+    const kicker = new DirectionalLight(mix(TOKENS.btc, TOKENS.paper, 0.45), 0.8);
+    kicker.position.set(40, 18, 110);
     const fill = new HemisphereLight(color(TOKENS.line), color(TOKENS.ink), 0.55);
-    scene.add(key, rim, fill);
+    scene.add(key, rim, kicker, fill);
 
     await nextTask();
     const faceTexture = coinFaceTexture();
@@ -299,7 +303,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     for (const material of [partialFace, partialEdge]) {
         material.color = fresh.clone();
         material.emissive = color(TOKENS.btc);
-        material.emissiveIntensity = 0.12;
+        material.emissiveIntensity = 0.22;
     }
     const partial = new Mesh(wedgeGeometry(shape, 0, Math.PI * 2), [partialFace, partialEdge]);
     const marker = new Mesh(
@@ -312,7 +316,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
             map: glow,
             color: color(TOKENS.btc),
             transparent: true,
-            opacity: 0.35,
+            opacity: POOL_OPACITY,
             blending: AdditiveBlending,
             depthWrite: false,
         }),
@@ -320,7 +324,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     pool.scale.setScalar(4.2);
     const sliverMaterial = new MeshBasicMaterial({ color: color(TOKENS.btc).multiplyScalar(3) });
     const sliver = new Mesh(wedgeGeometry(shape, 0, 0.02), [sliverMaterial, sliverMaterial]);
-    const pulse = new PointLight(mix(TOKENS.btc, TOKENS.paper, 0.3), 0, 9, 2);
+    const pulse = new PointLight(mix(TOKENS.btc, TOKENS.paper, 0.3), PULSE_BASE, 9, 2);
     scene.add(partial, marker, pool, sliver);
     if (full) scene.add(pulse);
 
@@ -557,8 +561,8 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
                     ease: ease.outCubic,
                     update: (t) => {
                         const glowing = Math.sin(Math.min(1, t * 6) * Math.PI * 0.5) * (1 - t);
-                        poolMaterial.opacity = 0.35 + glowing * 0.9;
-                        pulse.intensity = glowing * 28;
+                        poolMaterial.opacity = POOL_OPACITY + glowing * 0.9;
+                        pulse.intensity = PULSE_BASE + glowing * 28;
                     },
                 });
             },
