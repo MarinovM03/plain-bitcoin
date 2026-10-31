@@ -12,6 +12,8 @@ export default defineConfig({
     },
     projects: [
         { name: 'phone', use: { ...devices['Pixel 7'] } },
+        { name: 'phone-landscape', use: { ...devices['Pixel 7 landscape'] } },
+        { name: 'iphone', use: { ...devices['iPhone 14'] } },
         { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     ],
     webServer: {
