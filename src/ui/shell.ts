@@ -1,10 +1,24 @@
 import { hrefFor } from '../app/routes.ts';
-import { FOOTER, NOSCRIPT, SITE_NAME } from './copy.ts';
+import { TOOL_IDS } from '../tools/index.ts';
+import { FOOTER, HOME, NAV, NOSCRIPT, SITE_NAME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
+function followLink(className: string, text: string): SafeHtml {
+    return html`<a class="${className}" href="${FOOTER.followUrl}" rel="noopener noreferrer">${text} <span aria-hidden="true">↗</span></a>`;
+}
+
 export function renderHeader(): SafeHtml {
+    const links = TOOL_IDS.map(
+        (id) => html`<li><a class="nav__link" href="${hrefFor(id)}" data-nav="${id}">${NAV.short[id]}</a></li>`,
+    );
     return html`<header class="topbar">
-    <a class="wordmark" href="${hrefFor('home')}">${SITE_NAME}</a>
+    <div class="topbar__inner">
+        <a class="wordmark" href="${hrefFor('home')}" data-nav="home">${SITE_NAME}</a>
+        <nav class="nav" aria-label="${NAV.label}">
+            <ul class="nav__list">${links}</ul>
+        </nav>
+        ${followLink('topbar__follow', FOOTER.handle)}
+    </div>
 </header>`;
 }
 
@@ -13,12 +27,36 @@ export function renderNoscript(): SafeHtml {
 }
 
 export function renderFooter(): SafeHtml {
+    const links = TOOL_IDS.map(
+        (id) => html`<li><a class="footer__link" href="${hrefFor(id)}">${TOOLS[id].name}</a></li>`,
+    );
     return html`<footer class="footer">
-    <p>${FOOTER.privacy}</p>
-    <a class="footer__follow" href="${FOOTER.followUrl}" rel="noopener noreferrer">${FOOTER.follow}</a>
+    <div class="footer__inner">
+        <div class="footer__brand">
+            <p class="footer__name">${SITE_NAME}</p>
+            <p class="footer__promise">${HOME.promise}</p>
+            <p class="footer__privacy">${FOOTER.privacy}</p>
+        </div>
+        <nav class="footer__tools" aria-labelledby="footer-tools-heading">
+            <h2 id="footer-tools-heading" class="footer__heading">${FOOTER.toolsHeading}</h2>
+            <ul class="footer__list">${links}</ul>
+        </nav>
+        <section class="footer__social" aria-labelledby="footer-follow-heading">
+            <h2 id="footer-follow-heading" class="footer__heading">${FOOTER.followHeading}</h2>
+            <p class="footer__note">${FOOTER.followNote}</p>
+            ${followLink('footer__follow', FOOTER.follow)}
+        </section>
+    </div>
 </footer>`;
 }
 
 export function renderAnnouncer(): SafeHtml {
     return html`<div id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>`;
+}
+
+export function markCurrent(route: string): void {
+    for (const link of document.querySelectorAll<HTMLElement>('[data-nav]')) {
+        if (link.dataset.nav === route) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+    }
 }

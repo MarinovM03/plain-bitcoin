@@ -17,18 +17,38 @@ export const OG_IMAGE = {
 
 export const HOME = {
     promise: 'Plain answers to Bitcoin questions, worked out in your browser.',
-    toolsHeading: 'Tools',
+    promiseDetail: 'Five tools. Every number shows its source and when it was checked.',
+    toolsKicker: 'Tools',
+    toolsHeading: 'Pick a question',
+    open: 'Open',
     startHeading: 'Start here',
-    start: [
-        'Bitcoin has a fixed supply: never more than 21 million BTC.',
-        'New coins come with each block, about every 10 minutes. The amount halves every 210,000 blocks.',
-        'One bitcoin is 100,000,000 sats, so you can own a small part of one.',
+    facts: [
+        { figure: '21M BTC', text: 'Bitcoin has a fixed supply: never more than 21 million BTC.' },
+        {
+            figure: '10 min',
+            text: 'New coins come with each block, about every 10 minutes. The amount halves every 210,000 blocks.',
+        },
+        { figure: '100M sats', text: 'One bitcoin is 100,000,000 sats, so you can own a small part of one.' },
+    ],
+    cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
         'Never share a seed phrase or private key. No honest tool asks for one.',
     ],
 } as const;
 
+export const NAV = {
+    label: 'Tools',
+    short: {
+        left: 'Left to mine',
+        power: 'Purchasing power',
+        convert: 'Converter',
+        dca: 'DCA',
+        address: 'Address',
+    } satisfies Record<ToolId, string>,
+} as const;
+
 export const HERO = {
+    eyebrow: 'Live supply',
     heading: 'Bitcoin left to mine',
     figureEmpty: 'Counting',
     link: 'Issued so far and the next halving',
@@ -41,45 +61,54 @@ export const HERO = {
     offline: (height: string) => `Estimated, offline: block ${height}, assuming a block every 10 minutes.`,
 } as const;
 
-export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
-    left: {
-        name: 'Bitcoin left to mine',
-        question: 'How much bitcoin is still to be mined?',
-        preview: 'Counted from the latest block',
-        privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
-    },
-    power: {
-        name: 'Purchasing power',
-        question: 'What is an old amount of money worth today, and in bitcoin?',
-        preview: '£1,000 in 2015, worth today',
-        privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
-    },
-    convert: {
-        name: 'Converter',
-        question: 'How much is this in sats, bitcoin, pounds or dollars?',
-        preview: '1 BTC = 100,000,000 sats',
-        privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
-    },
-    dca: {
-        name: 'Buying on a schedule',
-        question: 'How does buying a little at a time (DCA) compare with one lump sum?',
-        preview: '£50 a week or one lump sum',
-        privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
-    },
-    address: {
-        name: 'Address lookup',
-        question: 'What kind of bitcoin address is this, and is it typed right?',
-        preview: 'Type, typo check, public balance',
-        privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
-    },
-};
+export const TOOLS: Record<ToolId, { name: string; kind: string; question: string; preview: string; privacy: string }> =
+    {
+        left: {
+            name: 'Bitcoin left to mine',
+            kind: 'Live supply',
+            question: 'How much bitcoin is still to be mined?',
+            preview: 'Counted from the latest block',
+            privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
+        },
+        power: {
+            name: 'Purchasing power',
+            kind: 'Cash against bitcoin',
+            question: 'What is an old amount of money worth today, and in bitcoin?',
+            preview: '£1,000 in 2015, worth today',
+            privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
+        },
+        convert: {
+            name: 'Converter',
+            kind: 'Units and price',
+            question: 'How much is this in sats, bitcoin, pounds or dollars?',
+            preview: '1 BTC = 100,000,000 sats',
+            privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
+        },
+        dca: {
+            name: 'Buying on a schedule',
+            kind: 'Past prices',
+            question: 'How does buying a little at a time (DCA) compare with one lump sum?',
+            preview: '£50 a week or one lump sum',
+            privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
+        },
+        address: {
+            name: 'Address lookup',
+            kind: 'Read-only check',
+            question: 'What kind of bitcoin address is this, and is it typed right?',
+            preview: 'Type, typo check, public balance',
+            privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
+        },
+    };
 
 export const TOOL_PAGE = {
     back: 'All tools',
     inputsLabel: 'Your numbers',
+    addressLabel: 'Your address',
     resultLabel: 'Answer',
     resultEmpty: 'Your answer shows here.',
     sourcePending: 'Source and as-of date show here with each answer.',
+    sourceHeading: 'Source and privacy',
+    moreHeading: 'Worked out',
 } as const;
 
 export const SHARE = {
@@ -126,6 +155,8 @@ export const POWER = {
     bitcoin: (value: string, btc: string) => `As bitcoin, it would be ${value} today (${btc}).`,
     asOf: (close: string) => `today = close, ${close}`,
     barsLabel: "In today's money",
+    pathHeading: 'On the way, as bitcoin',
+    howHeading: 'How it is worked out',
     cash: 'Kept as cash',
     asBitcoin: 'As bitcoin',
     buysThen: (value: string) => `Buys what ${value} bought then.`,
@@ -160,14 +191,24 @@ export const POWER = {
 
 export const CONVERT = {
     fields: { sats: 'Sats', btc: 'Bitcoin (BTC)', gbp: 'Pounds (GBP)', usd: 'Dollars (USD)' },
-    presetsLabel: 'Try an amount',
+    presetsLabel: 'Quick amounts',
     presets: {
         sat: '1 sat',
         thousand: '1,000 sats',
         hundredThousand: '100k sats',
         cent: '0.01 BTC',
         coin: '1 BTC',
-        pizza: '10,000 BTC, Pizza Day',
+        pizza: '10,000 BTC',
+    },
+    presetHints: { sat: 'Smallest', pizza: 'Pizza Day' } as Partial<Record<string, string>>,
+    referenceHeading: 'For reference',
+    reference: {
+        units: '1 BTC',
+        unitsValue: '100,000,000 sats',
+        sat: '1 sat',
+        price: '1 BTC',
+        cap: 'Most there will ever be',
+        capValue: '21,000,000 BTC',
     },
     labelLive: (clock: string) => `live price, ${clock}`,
     empty: 'Type an amount in any field.',
@@ -203,6 +244,7 @@ export const DCA = {
         `${amount} ${every} since ${since} is worth ${worth} today (one lump sum: ${lump}).`,
     detail: (invested: string, buys: string, btc: string) => `${invested} put in over ${buys}, buying ${btc}.`,
     asOf: (day: string) => `today = close, ${day}`,
+    numbersHeading: 'The numbers',
     rows: {
         invested: 'Put in',
         bought: 'Bitcoin bought',
@@ -244,6 +286,13 @@ export const ADDRESS = {
     field: 'Bitcoin address',
     placeholder: 'bc1q…',
     paste: 'Paste',
+    samplesLabel: 'Try a sample',
+    samples: {
+        p2tr: 'Taproot',
+        p2wpkh: 'SegWit',
+        p2pkh: 'Legacy',
+        p2sh: 'Script',
+    },
     pasteBlocked: 'Paste was blocked. Press and hold the field, then choose Paste.',
     offline: 'The check runs in your browser. Nothing you paste leaves this page.',
     empty: 'Paste or type an address to check it.',
@@ -401,7 +450,11 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    follow: '@PlainBTC on X',
+    toolsHeading: 'All tools',
+    followHeading: 'Follow',
+    followNote: 'New answer cards and tools, posted on X.',
+    follow: 'Follow @PlainBTC on X',
+    handle: '@PlainBTC',
     followUrl: 'https://x.com/PlainBTC',
 } as const;
 

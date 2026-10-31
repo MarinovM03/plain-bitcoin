@@ -1,0 +1,109 @@
+.footer {
+    border-top: 1px solid var(--edge);
+    background: var(--panel);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.footer__inner {
+    display: grid;
+    gap: 2.25rem;
+    padding-block: 2.5rem 2.75rem;
+}
+
+.footer__brand {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+}
+
+.footer__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-lead);
+}
+
+.footer__promise {
+    max-width: 26ch;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-title);
+    line-height: 1.25;
+}
+
+.footer__privacy,
+.footer__note {
+    max-width: 38ch;
+    color: var(--muted);
+    font-size: var(--step-small);
+}
+
+.footer__heading {
+    margin: 0 0 0.5rem;
+    color: var(--btc);
+    font-family: var(--font-mono);
+    font-size: var(--step-tiny);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.footer__list {
+    display: grid;
+}
+
+.footer__link {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap);
+    border-bottom: 1px solid var(--edge);
+    transition: color var(--duration) var(--ease);
+}
+
+.footer__social {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+}
+
+.footer__social .footer__heading {
+    margin-bottom: 0;
+}
+
+.footer__follow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3.25rem;
+    padding-inline: 1.5rem;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 700;
+    transition: background-color var(--duration) var(--ease);
+}
+
+@media (hover: hover) {
+    .footer__link:hover {
+        color: var(--btc);
+    }
+
+    .footer__follow:hover {
+        background: var(--btc);
+    }
+}
+
+@media (min-width: 48rem) {
+    .footer__inner {
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+        gap: 3rem;
+        padding-block: 3.5rem;
+    }
+
+    .footer__follow {
+        justify-self: start;
+    }
+}

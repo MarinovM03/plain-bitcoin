@@ -5,6 +5,7 @@ import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
 import { bindFields } from './ui/field-behaviour.ts';
 import { renderHome } from './ui/home.ts';
 import { html } from './ui/html.ts';
+import { markCurrent } from './ui/shell.ts';
 import { renderToolPage } from './ui/tool-page.ts';
 import { byId } from './util/dom.ts';
 
@@ -32,6 +33,7 @@ startRouter(({ route, initial, notFound }) => {
         main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${page}</div>`.value;
     }
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
+    markCurrent(route);
     bindFields(main);
 
     if (route === 'home' || route === 'left') {

@@ -1,0 +1,223 @@
+.eyebrow {
+    color: var(--btc);
+    font-family: var(--font-mono);
+    font-size: var(--step-tiny);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.panel {
+    display: grid;
+    gap: var(--space-m);
+    align-content: start;
+    min-width: 0;
+    padding: var(--space-m);
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-lg);
+    background: var(--panel);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 4%, transparent);
+}
+
+.panel--quiet {
+    background: transparent;
+    box-shadow: none;
+}
+
+.panel__head {
+    display: grid;
+    gap: 0.375rem;
+}
+
+.panel__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-title);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.panel__kicker {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--step-tiny);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.section-head {
+    display: grid;
+    gap: 0.375rem;
+    margin-bottom: var(--space-m);
+}
+
+.section-head__title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-heading);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+}
+
+.stats {
+    display: grid;
+    margin: 0;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.stats[hidden] {
+    display: none;
+}
+
+.stat {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    min-width: 0;
+    padding: 0.75rem 0.875rem;
+    background: var(--panel-high);
+}
+
+.stat + .stat {
+    border-top: 1px solid var(--edge);
+}
+
+.stat dt {
+    color: var(--muted);
+    font-size: var(--step-small);
+}
+
+.stat dd {
+    min-width: 0;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.stat--text dd {
+    font-family: var(--font-body);
+    font-weight: 500;
+}
+
+.stat--lead {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.stat--lead dd {
+    color: var(--btc);
+    font-size: var(--step-title);
+    text-align: left;
+}
+
+.notes {
+    gap: var(--space-s);
+}
+
+.note-line,
+.source-line,
+.privacy-line {
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.5;
+}
+
+.note-line {
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--edge);
+}
+
+.note-line[hidden] {
+    display: none;
+}
+
+.source-line a {
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 0.2em;
+}
+
+.formula {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+}
+
+.source-strip {
+    display: grid;
+    gap: 0.375rem;
+    margin-top: var(--space-l);
+    padding-top: var(--space-m);
+    border-top: 1px solid var(--edge);
+}
+
+@media (min-width: 40rem) {
+    .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        background: var(--edge);
+    }
+
+    .stat {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        justify-content: flex-start;
+        padding: 0.875rem 1rem;
+    }
+
+    .stat + .stat {
+        border-top: 0;
+    }
+
+    .stat dd {
+        font-size: var(--step-lead);
+        text-align: left;
+    }
+
+    .stat--text dd {
+        font-size: var(--step-body);
+    }
+
+    .stat--wide,
+    .stat--lead {
+        grid-column: span 2;
+    }
+
+    .stat--lead dd {
+        font-size: var(--step-title);
+        line-height: 1.2;
+    }
+
+    .stats > .stat:last-child:nth-child(odd):not(.stat--wide, .stat--lead) {
+        grid-column: span 2;
+    }
+
+    .panel {
+        padding: var(--space-l);
+    }
+}
+
+@media (min-width: 64rem) {
+    .stats--four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .stats--four > .stat:last-child:nth-child(odd):not(.stat--wide, .stat--lead) {
+        grid-column: auto;
+    }
+
+    .stats--four .stat:not(.stat--lead) dd {
+        font-size: var(--step-body);
+    }
+}
