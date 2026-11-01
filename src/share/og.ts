@@ -1,12 +1,11 @@
 import { HEIGHT_ANCHOR } from '../data/height.ts';
-import { drawFlatField } from '../hero/flat.ts';
-import { tokenState } from '../hero/layout.ts';
-import { supplyAt } from '../model/supply.ts';
+import { sceneArt } from '../hero/bus.ts';
 import { OG_IMAGE } from '../ui/copy.ts';
 import { renderCard } from './card.ts';
 
-export function renderOgImage(site: string): Promise<Blob> {
-    const tokens = tokenState(supplyAt(HEIGHT_ANCHOR.height).issued);
+const ART_ASPECT = 1.4;
+
+export async function renderOgImage(site: string): Promise<Blob> {
     const card = {
         headline: OG_IMAGE.headline,
         detail: OG_IMAGE.detail,
@@ -15,5 +14,6 @@ export function renderOgImage(site: string): Promise<Blob> {
         copy: OG_IMAGE.headline,
         fileName: OG_IMAGE.path,
     };
-    return renderCard(card, 'og', site, (context, box) => drawFlatField(context, box, tokens));
+    const art = await sceneArt({ id: 'left', height: HEIGHT_ANCHOR.height }, ART_ASPECT);
+    return renderCard(card, 'og', site, art);
 }

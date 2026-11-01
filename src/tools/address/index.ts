@@ -1,4 +1,5 @@
 import { type ChainStats, explorerUrl, fetchChainStats } from '../../data/address.ts';
+import type { CharRole } from '../../hero/bus.ts';
 import {
     type Address,
     type AddressPart,
@@ -11,9 +12,11 @@ import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
 import { type AddressText, addressText } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
-import { ADDRESS } from '../../ui/copy.ts';
+import { ADDRESS, SCENE } from '../../ui/copy.ts';
+import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { find } from '../../util/dom.ts';
 import { formatBtcExact, formatSats, formatUtcStamp } from '../../util/format.ts';
+import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const MULTISIG_TYPES = new Set(['p2sh', 'p2wsh', 'p2tr']);
@@ -62,6 +65,17 @@ function partLabel(part: AddressPart, analysis: Address | InvalidAddress): strin
     }
 }
 
+function charRoles(analysis: Address | InvalidAddress): CharRole[] {
+    const roles: CharRole[] = Array.from({ length: analysis.text.length }, () => 'unknown');
+    for (const part of analysis.parts) roles.fill(part.role, part.start, part.end);
+    return roles;
+}
+
+function invalidCaption(analysis: InvalidAddress): string {
+    if (analysis.suspect !== null || analysis.reason === 'characters') return SCENE.addressBad;
+    return analysis.reason === 'checksum' ? SCENE.addressLoose : SCENE.address;
+}
+
 function whyInvalid(analysis: InvalidAddress): string {
     const position = (analysis.suspect ?? 0) + 1;
     switch (analysis.reason) {
@@ -81,6 +95,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     const pasteButton = find<HTMLButtonElement>(root, '#address-paste');
     const guard = find(root, '#address-guard');
     const figure = find(root, '#tool-result');
+    const big = find(root, '#tool-result-figure');
     const detail = find(root, '#tool-result-detail');
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
@@ -96,6 +111,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     const explorer = find<HTMLAnchorElement>(root, '#address-explorer');
     const fullToggle = find<HTMLInputElement>(root, '#address-card-full');
 
+    const scene = linkScene(root);
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
     let address: Address | null = null;
@@ -250,8 +266,44 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         share.setEnabled(text !== null);
     }
 
+    function renderScene(analysis: Analysis): void {
+        const empty = {
+            id: 'address',
+            text: '',
+            roles: [],
+            state: 'empty',
+            suspect: null,
+            checksumBad: false,
+        } as const;
+        if (analysis.kind === 'address') {
+            big.textContent = ADDRESS.figures[analysis.type];
+            scene.set({ ...empty, text: analysis.text, roles: charRoles(analysis), state: 'valid' }, SCENE.address);
+            return;
+        }
+        if (analysis.kind === 'invalid') {
+            big.textContent = analysis.reason === 'checksum' ? ADDRESS.figures.checksum : ADDRESS.figures.invalid;
+            scene.set(
+                {
+                    ...empty,
+                    text: analysis.text,
+                    roles: charRoles(analysis),
+                    state: 'invalid',
+                    suspect: analysis.suspect,
+                    checksumBad: analysis.reason === 'checksum',
+                },
+                invalidCaption(analysis),
+            );
+            return;
+        }
+        if (analysis.kind === 'lightning') big.textContent = ADDRESS.figures.lightning;
+        else if (analysis.kind === 'extended-public') big.textContent = ADDRESS.figures.extendedPublic;
+        else big.textContent = EMPTY_FIGURE;
+        scene.set(empty, SCENE.addressEmpty);
+    }
+
     function render(analysis: Analysis): void {
         showGuard(null);
+        renderScene(analysis);
         if (analysis.kind === 'secret') {
             input.value = '';
             showGuard(ADDRESS.secret);

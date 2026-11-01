@@ -10,10 +10,6 @@ export const ADDRESS_SAMPLES: Record<keyof typeof ADDRESS.samples, string> = {
 };
 
 export function renderAddressInputs(): SafeHtml {
-    const samples = (Object.keys(ADDRESS_SAMPLES) as (keyof typeof ADDRESS_SAMPLES)[]).map(
-        (type) =>
-            html`<button class="chip" type="button" data-sample="${ADDRESS_SAMPLES[type]}">${ADDRESS.samples[type]}</button>`,
-    );
     return html`<div class="field">
     <label class="field__label" for="address-input">${ADDRESS.field}</label>
     <div class="field__control address-field">
@@ -21,9 +17,16 @@ export function renderAddressInputs(): SafeHtml {
         <button id="address-paste" class="address-field__paste" type="button" hidden>${ADDRESS.paste}</button>
     </div>
 </div>
-<p id="address-guard" class="guard-line" role="status" hidden></p>
-<fieldset class="field presets">
-    <legend class="field__label">${ADDRESS.samplesLabel}</legend>
+<p id="address-guard" class="guard-line" role="status" hidden></p>`;
+}
+
+export function renderAddressMore(): SafeHtml {
+    const samples = (Object.keys(ADDRESS_SAMPLES) as (keyof typeof ADDRESS_SAMPLES)[]).map(
+        (type) =>
+            html`<button class="chip" type="button" data-sample="${ADDRESS_SAMPLES[type]}">${ADDRESS.samples[type]}</button>`,
+    );
+    return html`<fieldset class="presets">
+    <legend class="visually-hidden">${ADDRESS.samplesLabel}</legend>
     <div class="presets__list">${samples}</div>
 </fieldset>
 ${noteLine(ADDRESS.offline)}`;

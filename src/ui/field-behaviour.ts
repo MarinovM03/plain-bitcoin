@@ -1,4 +1,5 @@
 import { type DeleteDirection, deleteAcrossSeparator, formatAmountInput } from '../util/amount-input.ts';
+import { watchHeight } from '../util/dom.ts';
 import { clampMonth, type Month, monthLabel, monthsIn, monthValue, parseMonth, yearsBetween } from '../util/month.ts';
 
 const DELETES: Partial<Record<string, DeleteDirection>> = {
@@ -70,6 +71,31 @@ export function bindMonthField(fieldset: HTMLFieldSetElement): void {
         const current = readMonthField(fieldset);
         if (current) setMonthField(fieldset, current);
     });
+}
+
+const TYPED = '.field__input';
+
+const KEYBOARD_SHARE = 0.8;
+
+export function trackMore(root: HTMLElement): () => void {
+    const tool = root.querySelector<HTMLElement>('.tool');
+    const more = root.querySelector<HTMLElement>('.more');
+    if (!tool || !more) return () => {};
+    return watchHeight(more, (height) => tool.style.setProperty('--more', `${height}px`));
+}
+
+export function watchTyping(root: HTMLElement): () => void {
+    const viewport = window.visualViewport;
+    if (!viewport) return () => {};
+    const coarse = window.matchMedia('(pointer: coarse)');
+    // Follows the on-screen keyboard rather than focus, so a tap that blurs a field never moves the button under it.
+    const sync = () => {
+        const keyboard = viewport.height < window.innerHeight * KEYBOARD_SHARE;
+        const typing = coarse.matches && keyboard && document.activeElement?.matches(TYPED) === true;
+        root.querySelector('.tool')?.toggleAttribute('data-typing', typing);
+    };
+    viewport.addEventListener('resize', sync);
+    return () => viewport.removeEventListener('resize', sync);
 }
 
 export function bindFields(root: ParentNode): void {

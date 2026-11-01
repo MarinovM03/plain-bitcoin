@@ -156,12 +156,13 @@ test('every field and preset is reachable by keyboard', async ({ page, isMobile 
     await page.goto('/#/convert');
     await page.locator('h1').focus();
     const order: string[] = [];
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 11; i += 1) {
         await page.keyboard.press('Tab');
         order.push(await page.evaluate(() => document.activeElement?.id || document.activeElement?.textContent || ''));
     }
     expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-gbp', 'convert-usd']);
-    expect(order.slice(4)).toEqual(
+    expect(order[4]).toBe(CONVERT.presetsLabel);
+    expect(order.slice(5)).toEqual(
         Object.entries(CONVERT.presets).map(([preset, label]) => label + (CONVERT.presetHints[preset] ?? '')),
     );
     await page.keyboard.press('Enter');

@@ -37,11 +37,14 @@ export function renderConvertInputs(): SafeHtml {
             ...(unit === start.unit ? { value: start.value } : {}),
         }),
     );
-    const presets = (Object.keys(CONVERT_PRESETS) as ConvertPreset[]).map(presetButton);
     return html`<div class="convert-fields">${fields}</div>
-<p id="convert-note" class="note-line" role="status" hidden></p>
-<fieldset class="field presets">
-    <legend class="field__label">${CONVERT.presetsLabel}</legend>
+<p id="convert-note" class="note-line" role="status" hidden></p>`;
+}
+
+export function renderConvertMore(): SafeHtml {
+    const presets = (Object.keys(CONVERT_PRESETS) as ConvertPreset[]).map(presetButton);
+    return html`<fieldset class="presets">
+    <legend class="visually-hidden">${CONVERT.presetsLabel}</legend>
     <div class="presets__list">${presets}</div>
 </fieldset>`;
 }

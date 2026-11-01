@@ -44,3 +44,23 @@ export function whenIdle(task: () => void): void {
         setTimeout(task, 200);
     }
 }
+
+export function watchHeight(element: HTMLElement, apply: (height: number) => void): () => void {
+    let last = element.offsetHeight;
+    let frame = 0;
+    apply(last);
+    const observer = new ResizeObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+            const next = element.offsetHeight;
+            if (next === last) return;
+            last = next;
+            apply(next);
+        });
+    });
+    observer.observe(element);
+    return () => {
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+    };
+}

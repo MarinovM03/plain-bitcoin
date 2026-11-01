@@ -1,18 +1,41 @@
 import { SHARE, TOOL_PAGE } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
-export function resultBlock(options: { id: string; label: string; empty: string; extra?: SafeHtml | '' }): SafeHtml {
+export const EMPTY_FIGURE = '—';
+
+export function resultBlock(options: { id: string; label: string; empty: string }): SafeHtml {
     return html`<section class="result" aria-labelledby="${options.id}-label">
     <p id="${options.id}-label" class="result__label">${options.label}</p>
-    <p id="${options.id}" class="result__figure"><span class="result__empty">${options.empty}</span></p>
+    <p id="${options.id}-figure" class="result__figure" aria-hidden="true">${EMPTY_FIGURE}</p>
+    <p id="${options.id}" class="result__sentence"><span class="result__empty">${options.empty}</span></p>
     <p id="${options.id}-detail" class="result__detail"></p>
     <p id="${options.id}-status" class="visually-hidden" aria-live="polite"></p>
-    <div class="result__actions">
+</section>`;
+}
+
+export function sceneWindow(options: { head: SafeHtml; caption: string; still?: SafeHtml }): SafeHtml {
+    return html`<div class="scene">
+    ${options.head}
+    <div id="scene-plot" class="scene__plot" aria-hidden="true"${options.still ? html` data-still="own"` : ''}>${options.still ?? ''}</div>
+    <p id="scene-caption" class="scene__caption">${options.caption}</p>
+</div>`;
+}
+
+export function moreOptions(label: string, body: SafeHtml): SafeHtml {
+    return html`<details class="more" open>
+    <summary class="more__toggle">${label}</summary>
+    <div class="more__body">${body}</div>
+</details>`;
+}
+
+export function shareSection(extra: SafeHtml | '' = ''): SafeHtml {
+    return html`<div class="share">
+    <div class="share__actions">
         ${shareBar()}
         ${postLink()}
     </div>
-    ${options.extra ?? ''}
-</section>`;
+    ${extra}
+</div>`;
 }
 
 export function sourceLine(privacy: string, text: string = TOOL_PAGE.sourcePending): SafeHtml {

@@ -7,7 +7,7 @@ import { fakePriceApi } from './price-api.ts';
 const TAPROOT = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 
 const TOOLS: { tool: string; route: string; answer: string; prepare?: (page: Page) => Promise<void> }[] = [
-    { tool: 'left', route: 'left', answer: '#hero-figure' },
+    { tool: 'left', route: 'left', answer: '#left-figure' },
     { tool: 'power', route: 'power', answer: '#tool-result' },
     {
         tool: 'converter',

@@ -1,14 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
-import { supplyAt } from '../src/model/supply.ts';
-import { HERO, LEFT_PAGE } from '../src/ui/copy.ts';
+import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
+import { HOME, LEFT_PAGE, TOOLS } from '../src/ui/copy.ts';
 import { formatBtc, formatPpm, formatWhole } from '../src/util/format.ts';
 import { realProblems } from './console.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest, leftFigure } from './height-api.ts';
+import { fakePriceApi } from './price-api.ts';
 
 const SUPPLY = supplyAt(FAKE_HEIGHT);
 const BLOCK = formatWhole(FAKE_HEIGHT);
-
-import { fakePriceApi } from './price-api.ts';
 
 test.beforeEach(async ({ page }) => {
     await fakePriceApi(page);
@@ -30,24 +29,26 @@ function watch(page: Page) {
     return { problems, scripts, external };
 }
 
-test('home counts down from the live height and links to every number', async ({ page }) => {
+test('home shows the live amount left and the left page counts down from the live height', async ({ page }) => {
     const chain = await fakeHeightApi(page);
     const { problems, external } = watch(page);
     await page.goto('/');
 
-    await expect(page.locator('#hero-figure')).toHaveText(leftFigure());
-    await expect(page.locator('#hero-note')).toHaveText(
-        new RegExp(String.raw`^Block ${BLOCK}: 3\.125 BTC issued, 4 min 1\d s ago\.$`),
-    );
-    await expect(page.locator('#hero-stage')).toHaveAttribute('data-tier', /^(full|phone|plain)$/);
-    await page.getByRole('link', { name: HERO.link }).click();
+    const whole = formatWhole(Math.floor(SUPPLY.left / SATS_PER_BTC));
+    await expect(page.locator('[data-tile-figure="left"]')).toHaveText(HOME.leftFigure(`${whole} BTC`));
+    await page.locator('.tile', { hasText: TOOLS.left.name }).click();
     await expect(page).toHaveURL(/#\/left$/);
 
-    expect(external.every(isApiRequest)).toBe(true);
-    expect(chain.calls[0]).toBe('https://mempool.space/api/blocks/tip/height');
-    await expect(page.locator('#hero-supply')).toHaveText(
+    await expect(page.locator('#left-figure')).toHaveText(leftFigure());
+    await expect(page.locator('#left-note')).toHaveText(
+        new RegExp(String.raw`^Block ${BLOCK}: 3\.125 BTC issued, 4 min 1\d s ago\.$`),
+    );
+    await expect(page.locator('#left-supply')).toHaveText(
         /^[\d,]+ of 21,000,000 BTC minedNext halving in [\d,]+ blocks$/,
     );
+    await expect(page.locator('#stage')).toHaveAttribute('data-tier', /^(full|phone|plain)$/);
+    expect(external.every(isApiRequest)).toBe(true);
+    expect(chain.calls[0]).toBe('https://mempool.space/api/blocks/tip/height');
     expect(realProblems(problems)).toEqual([]);
 });
 
@@ -72,6 +73,7 @@ test('the numbers panel shows every figure for the live height', async ({ page }
     await expect(panel.locator('#left-max')).toHaveText('20,999,999.9769 BTC');
     await expect(page.locator('#tool-source')).toContainText('mempool.space, checked');
     await expect(page.getByText(LEFT_PAGE.honesty)).toBeVisible();
+    await expect(page.locator('#scene-caption')).toHaveText(/^Each dot is 10,000 BTC\./);
     expect(realProblems(problems)).toEqual([]);
 });
 
@@ -83,7 +85,7 @@ test('offline, it estimates the height from the anchor and says so', async ({ pa
     const { problems } = watch(page);
     await page.goto('/#/left');
 
-    await expect(page.locator('#hero-note')).toHaveText(/^Estimated, offline: block [\d,]+, assuming a block/);
+    await expect(page.locator('#left-note')).toHaveText(/^Estimated, offline: block [\d,]+, assuming a block/);
     await expect(page.locator('#tool-source')).toContainText(`estimated offline from block ${BLOCK}`);
     await expect(page.locator('[data-share="card"]')).toBeDisabled();
     await expect(page.locator('#left-status')).toHaveText(LEFT_PAGE.shareOffline);
@@ -98,24 +100,24 @@ test('a new block is picked up on the next poll and announced once', async ({ pa
     );
     const chain = await fakeHeightApi(page);
     await page.clock.install();
-    await page.goto('/');
+    await page.goto('/#/left');
     await page.clock.runFor(500);
-    await expect(page.locator('#hero-figure')).toHaveText(leftFigure());
+    await expect(page.locator('#left-figure')).toHaveText(leftFigure());
 
     chain.height += 1;
     await page.clock.runFor(46_000);
-    await expect(page.locator('#hero-figure')).toHaveText(leftFigure(FAKE_HEIGHT + 1));
+    await expect(page.locator('#left-figure')).toHaveText(leftFigure(FAKE_HEIGHT + 1));
     await expect(page.locator('#announcer')).toHaveText(`Block ${formatWhole(FAKE_HEIGHT + 1)}: 3.125 BTC issued.`);
 
     await page.clock.runFor(46_000);
-    await expect(page.locator('#hero-figure')).toHaveText(leftFigure(FAKE_HEIGHT + 1));
+    await expect(page.locator('#left-figure')).toHaveText(leftFigure(FAKE_HEIGHT + 1));
     const heightCalls = chain.calls.filter((url) => url.endsWith('/tip/height'));
     const blockCalls = chain.calls.filter((url) => /\/blocks\/\d+$/.test(url));
     expect(heightCalls).toHaveLength(3);
     expect(blockCalls).toHaveLength(2);
 });
 
-test('calculator routes never load three.js; only the converter asks for price and height', async ({ page }) => {
+test('no route loads three.js, and only the converter asks for price and height', async ({ page }) => {
     const chain = await fakeHeightApi(page);
     const prices = await fakePriceApi(page);
     const { scripts, external, problems } = watch(page);
@@ -132,22 +134,11 @@ test('calculator routes never load three.js; only the converter asks for price a
     await expect(page.locator('#address-parts')).toBeVisible();
     await page.waitForTimeout(1500);
 
-    expect(scripts.filter((path) => /\/(three|scene|post|plain|worker)-/.test(path))).toEqual([]);
+    expect(scripts.filter((path) => /\/three-/.test(path))).toEqual([]);
     expect(external).toEqual(converter);
     expect(prices.calls).toEqual(['https://mempool.space/api/v1/prices']);
     expect(chain.calls.filter((url) => url.endsWith('/tip/height'))).toEqual([
         'https://mempool.space/api/blocks/tip/height',
     ]);
     expect(realProblems(problems)).toEqual([]);
-});
-
-test('the WebGL hero renders without errors when forced on', async ({ page }) => {
-    await fakeHeightApi(page);
-    const { problems, scripts } = watch(page);
-    await page.goto('/?hero=phone');
-    await expect(page.locator('#hero-stage canvas.is-ready')).toHaveCount(1, { timeout: 20_000 });
-    await expect(page.locator('#hero-stage')).toHaveAttribute('data-tier', 'phone');
-    expect(scripts.some((path) => /\/(three|worker)-/.test(path))).toBe(true);
-    // Headless Chromium draws WebGL in software; its driver notes are about that renderer, not the page.
-    expect(realProblems(problems).filter((text) => !text.includes('GL Driver Message'))).toEqual([]);
 });

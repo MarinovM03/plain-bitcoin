@@ -11,17 +11,20 @@ export const POWER_PRESETS = ['y2015', 'fiveYears', 'oneYear', 'worst'] as const
 export type PowerPreset = (typeof POWER_PRESETS)[number];
 
 export function renderPowerInputs(min: Month, max: Month): SafeHtml {
-    const presets = POWER_PRESETS.map(
-        (preset) =>
-            html`<button class="chip" type="button" data-preset="${preset}" aria-pressed="false">${POWER.presets[preset]}</button>`,
-    );
     return html`<div class="field-row">
     ${amountField({ id: 'power-amount', label: FIELDS.amount, decimals: 2, placeholder: FIELDS.examples.power, value: '1,000' })}
     ${segmentedControl({ name: 'power-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'GBP' })}
 </div>
-${monthField({ id: 'power-when', legend: FIELDS.when, min, max, value: POWER_DEFAULT_START })}
-<fieldset class="field presets">
-    <legend class="field__label">${POWER.presetsLabel}</legend>
+${monthField({ id: 'power-when', legend: FIELDS.when, min, max, value: POWER_DEFAULT_START })}`;
+}
+
+export function renderPowerMore(): SafeHtml {
+    const presets = POWER_PRESETS.map(
+        (preset) =>
+            html`<button class="chip" type="button" data-preset="${preset}" aria-pressed="false">${POWER.presets[preset]}</button>`,
+    );
+    return html`<fieldset class="presets">
+    <legend class="visually-hidden">${POWER.presetsLabel}</legend>
     <div class="presets__list">${presets}</div>
 </fieldset>`;
 }
@@ -36,13 +39,13 @@ function bar(kind: 'cash' | 'btc', name: string): SafeHtml {
 
 export function renderPowerDetail(): SafeHtml {
     return html`<div id="power-detail" class="tool__more power-detail" hidden>
-    <section class="details power-detail__part" aria-labelledby="power-bars-label">
+    <section class="details" aria-labelledby="power-bars-label">
         <h2 id="power-bars-label" class="details__title">${POWER.barsLabel}</h2>
         ${bar('cash', POWER.cash)}
         ${bar('btc', POWER.asBitcoin)}
         <p id="power-scale" class="power-detail__scale" hidden></p>
     </section>
-    <section class="details power-detail__part" aria-labelledby="power-path-label">
+    <section class="details" aria-labelledby="power-path-label">
         <h2 id="power-path-label" class="details__title">${POWER.pathHeading}</h2>
         <svg id="power-spark" class="spark" viewBox="0 0 300 48" preserveAspectRatio="none" role="img" aria-label="${POWER.pathLabel}">
             <line class="spark__base" x1="0" x2="300" y1="0" y2="0" />
@@ -50,7 +53,7 @@ export function renderPowerDetail(): SafeHtml {
         </svg>
         <p id="power-path" class="power-detail__path"></p>
     </section>
-    <section class="details power-detail__how" aria-labelledby="power-how-label">
+    <section class="details" aria-labelledby="power-how-label">
         <h2 id="power-how-label" class="details__title">${POWER.howHeading}</h2>
         <p class="formula">${POWER.formula}</p>
         ${noteLine(POWER.caution)}

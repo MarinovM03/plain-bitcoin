@@ -10,9 +10,19 @@ import {
     type ConvertPreset,
     CONVERT_DECIMALS as DECIMALS,
 } from '../../ui/convert-view.ts';
-import { CONVERT, TOOL_PAGE } from '../../ui/copy.ts';
+import { CONVERT, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
+import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
-import { formatFiatPrecise, formatShortDay, formatUtcClock, formatUtcStamp, isoDayMs } from '../../util/format.ts';
+import {
+    formatFiatPrecise,
+    formatSats,
+    formatShortDay,
+    formatUtcClock,
+    formatUtcStamp,
+    isoDayMs,
+} from '../../util/format.ts';
+import { satsScale } from '../../util/sats-scale.ts';
+import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
@@ -32,10 +42,12 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const note = find(root, '#convert-note');
     const label = find(root, '#tool-result-label');
     const figure = find(root, '#tool-result');
+    const big = find(root, '#tool-result-figure');
     const detail = find(root, '#tool-result-detail');
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
 
+    const scene = linkScene(root);
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
     const prices = priceFeed();
@@ -94,7 +106,9 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         empty.className = 'result__empty';
         empty.textContent = message;
         figure.replaceChildren(empty);
+        big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
+        scene.set({ id: 'convert', sats: 0 }, SCENE.convertEmpty);
         share.setEnabled(false);
         settle(message);
     }
@@ -125,7 +139,12 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         for (const other of CONVERT_UNITS) if (other !== unit) inputs[other].value = conversion.fields[other];
         text = convertText(unit, conversion, quote, site);
         figure.textContent = text.headline;
+        big.textContent = text.figure;
         detail.textContent = text.detail;
+        scene.set(
+            { id: 'convert', sats: parsed.value },
+            SCENE.convert(formatSats(satsScale(parsed.value).perDot), formatSats(parsed.value)),
+        );
         share.setEnabled(true);
         settle(`${text.headline}. ${text.detail}`);
     }

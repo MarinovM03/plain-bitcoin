@@ -1,7 +1,3 @@
-.power-detail__part {
-    align-content: start;
-}
-
 .bar {
     display: grid;
     gap: 0.5rem;
@@ -36,7 +32,7 @@
     --decade: 0;
     height: 0.875rem;
     border-radius: 999px;
-    background: var(--ink);
+    background: color-mix(in srgb, var(--ink) 72%, transparent);
     overflow: hidden;
 }
 
@@ -47,7 +43,7 @@
             transparent 0 calc(100% * var(--decade) - 1px),
             var(--line) calc(100% * var(--decade) - 1px) calc(100% * var(--decade))
         ),
-        var(--ink);
+        color-mix(in srgb, var(--ink) 72%, transparent);
 }
 
 .bar__fill {

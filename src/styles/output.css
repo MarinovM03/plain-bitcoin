@@ -1,52 +1,80 @@
 .result {
     display: grid;
-    gap: 0.625rem;
+    gap: 0.25rem;
     min-width: 0;
-    padding-left: var(--space-m);
-    border-left: 3px solid var(--btc);
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--line);
 }
 
 .result__label {
     color: var(--muted);
-    font-size: var(--step-small);
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }
 
 .result__figure {
-    min-height: 1.15em;
+    color: var(--btc);
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: var(--step-answer);
-    line-height: 1.15;
-    letter-spacing: -0.02em;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+.result__fraction {
+    font-size: 0.6em;
+    letter-spacing: -0.02em;
+}
+
+.result__unit {
+    color: var(--muted);
+    font-size: 0.45em;
+    letter-spacing: 0.04em;
+}
+
+.result__sentence {
+    font-size: var(--step-body);
+    line-height: 1.4;
+}
+
+.tool--left .result {
+    padding-top: 0;
+    border-top: 0;
 }
 
 .result__empty {
     color: var(--muted);
-    font-family: var(--font-body);
-    font-weight: 400;
-    font-size: var(--step-lead);
-    letter-spacing: 0;
+}
+
+.result__line {
+    display: block;
 }
 
 .result__detail {
-    color: var(--btc);
-    font-size: var(--step-lead);
-    line-height: 1.45;
+    color: var(--muted);
+    font-size: var(--step-small);
+    line-height: 1.4;
 }
 
 .result__detail:empty {
     display: none;
 }
 
-.result__actions {
+.share {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.share__actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 1.25rem;
-    margin-top: 0.5rem;
 }
 
 .share-bar {
@@ -111,4 +139,14 @@
     color: var(--muted);
     text-decoration: none;
     pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-height: 32rem) {
+    .result__figure {
+        font-size: 1.875rem;
+    }
+
+    .result__sentence {
+        font-size: var(--step-small);
+    }
 }

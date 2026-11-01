@@ -1,6 +1,5 @@
 import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
-import { drawFlatField } from '../../hero/flat.ts';
-import { tokenState } from '../../hero/layout.ts';
+import { sceneArt, stage } from '../../hero/bus.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
 import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
@@ -12,12 +11,14 @@ import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, format
 import { tipAge, watchActive } from './counter.ts';
 
 const MEMPOOL = 'https://mempool.space/';
+const ART_ASPECT = 1.4;
 
 export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const panel = find(root, '#numbers-panel');
     const source = find(root, '#tool-source');
     const status = find(root, '#left-status');
     const cell = (id: string) => find(panel, `#left-${id}`);
+    const plot = find(root, '#scene-plot');
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
     const heights = heightFeed();
@@ -26,6 +27,7 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     let card: ShareCard | null = null;
     let art: CardArt | undefined;
     let ticker = 0;
+    let shownHeight = -1;
     const share = bindShareBar(root, {
         files,
         card: () => card,
@@ -78,8 +80,17 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
 
         const live = tip.source === 'live' && tip.api !== null;
         card = live && tip.api ? leftCard(supply, tip.api, tip.checkedAt, site) : null;
-        const tokens = tokenState(supply.issued);
-        art = (context, box) => drawFlatField(context, box, tokens);
+        if (supply.height !== shownHeight) {
+            const data = { id: 'left', height: supply.height } as const;
+            if (shownHeight < 0) stage.show(plot, data);
+            else stage.update(data);
+            shownHeight = supply.height;
+            sceneArt(data, ART_ASPECT)
+                .then((next) => {
+                    art = next;
+                })
+                .catch(() => {});
+        }
         share.setEnabled(card !== null);
         if (!live && tip.source === 'offline') status.textContent = LEFT_PAGE.shareOffline;
     }

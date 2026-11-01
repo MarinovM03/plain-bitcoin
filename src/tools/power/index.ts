@@ -5,13 +5,15 @@ import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
 import { type PowerText, powerText } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
-import { POWER, TOOL_PAGE } from '../../ui/copy.ts';
+import { POWER, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
+import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { POWER_DEFAULT_START, type PowerPreset } from '../../ui/power-view.ts';
 import { parseAmount } from '../../util/amount-input.ts';
 import { find, link } from '../../util/dom.ts';
-import { type Fiat, formatWhole } from '../../util/format.ts';
+import { type Fiat, formatMoney, formatWhole } from '../../util/format.ts';
 import { type Month, monthKeyLabel, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
+import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const SPARK_WIDTH = 300;
@@ -24,6 +26,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const presetButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
     const label = find(root, '#tool-result-label');
     const figure = find(root, '#tool-result');
+    const big = find(root, '#tool-result-figure');
     const detail = find(root, '#tool-result-detail');
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
@@ -34,6 +37,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const sparkBase = find<SVGLineElement>(spark, '.spark__base');
     const sparkLine = find<SVGPolylineElement>(spark, '.spark__line');
 
+    const scene = linkScene(root);
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
     const months = sortedMonths(POWER_SERIES.USD.prices.months);
@@ -96,8 +100,10 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         empty.className = 'result__empty';
         empty.textContent = message;
         figure.replaceChildren(empty);
+        big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
         panel.hidden = true;
+        scene.set({ id: 'power', cash: 0, bitcoin: 0 }, SCENE.powerEmpty);
         share.setEnabled(false);
         settle(message);
     }
@@ -164,7 +170,12 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         text = powerText(result, fiat, site);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
+        big.textContent = formatMoney(result.equivalentNow, fiat);
         detail.textContent = text.bitcoin;
+        scene.set(
+            { id: 'power', cash: result.amount, bitcoin: result.btcValueNow },
+            SCENE.power(barScale([result.amount, result.btcValueNow]).log),
+        );
         renderBars(result, text);
         renderPath(result, text);
         renderSources(result, fiat);

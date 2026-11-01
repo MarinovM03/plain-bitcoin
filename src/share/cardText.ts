@@ -102,6 +102,7 @@ export function priceLabel(quote: PriceQuote): string {
 
 export interface ConvertText {
     headline: string;
+    figure: string;
     detail: string;
     card: ShareCard;
 }
@@ -122,6 +123,7 @@ export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuot
     const detail = CONVERT.detail(first, second);
     return {
         headline,
+        figure: words[target],
         detail,
         card: {
             headline,

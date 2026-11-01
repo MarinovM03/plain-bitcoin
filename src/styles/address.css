@@ -10,7 +10,7 @@
     padding: 0 0.875rem;
     border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--ink);
+    background: color-mix(in srgb, var(--ink) 72%, transparent);
     color: var(--paper);
     font: 600 var(--step-small) / 1.2 var(--font-body);
     cursor: pointer;
@@ -51,7 +51,7 @@
     padding: 0.875rem 1rem;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--ink);
+    background: color-mix(in srgb, var(--ink) 72%, transparent);
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: var(--step-lead);

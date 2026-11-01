@@ -1,13 +1,14 @@
 import { heightFeed, type Tip } from '../../data/height.ts';
-import { type HeroHandle, type HeroShot, mountHero } from '../../hero/index.ts';
 import { SATS_PER_BTC, supplyAt } from '../../model/supply.ts';
-import { HERO } from '../../ui/copy.ts';
-import { afterFirstPaint } from '../../util/dom.ts';
+import { LEFT_PAGE } from '../../ui/copy.ts';
 import { btcParts, formatAge, formatBtcExact, formatWhole } from '../../util/format.ts';
 
 export function supplyLines(height: number): [string, string] {
     const supply = supplyAt(height);
-    return [HERO.mined(formatWhole(Math.floor(supply.issued / SATS_PER_BTC))), HERO.halving(supply.blocksToHalving)];
+    return [
+        LEFT_PAGE.mined(formatWhole(Math.floor(supply.issued / SATS_PER_BTC))),
+        LEFT_PAGE.halving(supply.blocksToHalving),
+    ];
 }
 
 export function tipAge(tip: Tip, now = Date.now()): string | null {
@@ -17,17 +18,17 @@ export function tipAge(tip: Tip, now = Date.now()): string | null {
 
 export function tipLine(tip: Tip, now = Date.now()): string {
     const height = formatWhole(tip.height);
-    if (tip.source === 'checking') return HERO.checking(height);
-    if (tip.source === 'offline') return HERO.offline(height);
+    if (tip.source === 'checking') return LEFT_PAGE.checking(height);
+    if (tip.source === 'offline') return LEFT_PAGE.offline(height);
     const reward = formatBtcExact(supplyAt(tip.height).subsidy);
     const age = tipAge(tip, now);
-    return age === null ? HERO.live(height, reward) : HERO.liveAgo(height, reward, age);
+    return age === null ? LEFT_PAGE.live(height, reward) : LEFT_PAGE.liveAgo(height, reward, age);
 }
 
 export function arrivalLine(height: number, blocks: number): string {
     const added = formatBtcExact(supplyAt(height).issued - supplyAt(height - blocks).issued);
-    if (blocks === 1) return HERO.live(formatWhole(height), added);
-    return HERO.liveMany(formatWhole(height - blocks + 1), formatWhole(height), added);
+    if (blocks === 1) return LEFT_PAGE.live(formatWhole(height), added);
+    return LEFT_PAGE.liveMany(formatWhole(height - blocks + 1), formatWhole(height), added);
 }
 
 function span(className: string, text: string): HTMLSpanElement {
@@ -53,75 +54,48 @@ export function watchActive(target: Element, onChange: (active: boolean) => void
     };
 }
 
-export function mountCounter(root: HTMLElement, shot: HeroShot, announce: (message: string) => void): () => void {
-    const hero = root.querySelector<HTMLElement>('.hero');
-    const stage = root.querySelector<HTMLElement>('#hero-stage');
-    const figure = root.querySelector<HTMLElement>('#hero-figure');
-    const note = root.querySelector<HTMLElement>('#hero-note');
-    const supply = root.querySelector<HTMLElement>('#hero-supply');
-    if (!hero || !stage || !figure || !note || !supply) return () => {};
-
+export function mountCounter(root: HTMLElement, announce: (message: string) => void): () => void {
+    const figure = root.querySelector<HTMLElement>('#left-figure');
+    const supply = root.querySelector<HTMLElement>('#left-supply');
+    const note = root.querySelector<HTMLElement>('#left-note');
     const heights = heightFeed();
-    const owner = {};
     let tip = heights.tip;
     let ticker = 0;
 
     function renderFigure(): void {
+        if (!figure || !supply) return;
         const parts = btcParts(supplyAt(tip.height).left);
-        figure?.replaceChildren(
-            span('hero__whole', parts.whole),
-            span('hero__fraction', parts.fraction ? `.${parts.fraction}` : ''),
-            span('hero__unit', ' BTC'),
+        figure.replaceChildren(
+            span('result__whole', parts.whole),
+            span('result__fraction', parts.fraction ? `.${parts.fraction}` : ''),
+            span('result__unit', LEFT_PAGE.unit),
         );
-        supply?.replaceChildren(...supplyLines(tip.height).map((line) => span('hero__supply-line', line)));
+        supply.replaceChildren(...supplyLines(tip.height).map((line) => span('result__line', line)));
     }
 
     function renderNote(): void {
         if (note) note.textContent = tipLine(tip);
     }
 
-    function setTicking(on: boolean): void {
+    function setTicking(): void {
         window.clearInterval(ticker);
-        ticker = on ? window.setInterval(renderNote, 1000) : 0;
+        ticker = note && !document.hidden ? window.setInterval(renderNote, 1000) : 0;
     }
 
     renderFigure();
     renderNote();
-    let shown = supplyAt(tip.height).issued;
-    let scene: HeroHandle | null = null;
-    let disposed = false;
-    let stop = () => {};
-
+    setTicking();
+    document.addEventListener('visibilitychange', setTicking);
     const unsubscribe = heights.subscribe((next, change) => {
         tip = next;
         renderFigure();
         renderNote();
-        const issued = supplyAt(next.height).issued;
-        if (issued !== shown) scene?.setIssued(issued, change.blocks > 0);
-        shown = issued;
         if (change.blocks > 0) announce(arrivalLine(next.height, change.blocks));
     });
 
-    // Live requests and the hero wait for the first paint, so neither competes with it on a slow phone.
-    afterFirstPaint(() => {
-        if (disposed) return;
-        const mounted = mountHero(stage, shot, shown);
-        scene = mounted;
-        const unwatch = watchActive(hero, (active) => {
-            heights.setActive(owner, active);
-            setTicking(active);
-            if (active) renderNote();
-        });
-        stop = () => {
-            unwatch();
-            mounted.dispose();
-        };
-    });
-
     return () => {
-        disposed = true;
         unsubscribe();
-        stop();
-        setTicking(false);
+        document.removeEventListener('visibilitychange', setTicking);
+        window.clearInterval(ticker);
     };
 }

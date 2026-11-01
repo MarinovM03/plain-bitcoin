@@ -1,16 +1,27 @@
-import { type DailyCloses, type DcaOutcome, dca, FREQUENCIES, type Frequency } from '../../model/dca.ts';
+import {
+    buyDays,
+    type DailyCloses,
+    type DcaOutcome,
+    type DcaResult,
+    dayNumber,
+    dca,
+    FREQUENCIES,
+    type Frequency,
+} from '../../model/dca.ts';
 import { lineChart } from '../../model/scale.ts';
 import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
 import { type DcaText, dcaText } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
-import { DCA, TOOL_PAGE } from '../../ui/copy.ts';
+import { DCA, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
 import { CHART_HEIGHT, CHART_WIDTH, DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
+import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { parseAmount } from '../../util/amount-input.ts';
 import { find, link } from '../../util/dom.ts';
 import { type Fiat, formatDay, isoDayMs } from '../../util/format.ts';
 import { type Month, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
+import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const CHART_SAMPLES = 240;
@@ -24,6 +35,15 @@ const LOADERS: Record<Fiat, () => Promise<DailySeries>> = {
     GBP: () => import('../../data/prices/daily-gbp.json').then((module) => module.default),
     USD: () => import('../../data/prices/daily-usd.json').then((module) => module.default),
 };
+
+function buyIndices(result: DcaResult): number[] {
+    const first = dayNumber(result.start);
+    const last = dayNumber(result.lastBuy);
+    if (first === null || last === null) return [];
+    const indices = buyDays(result.frequency, first, last).map((day) => day - first);
+    const end = result.points.length - 1;
+    return indices.at(-1) === end ? indices : [...indices, end];
+}
 
 function lastDayMs(series: DailyCloses): number {
     return isoDayMs(series.start) + (series.closes.length - 1) * DAY_MS;
@@ -42,6 +62,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     const presetButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
     const label = find(root, '#tool-result-label');
     const figure = find(root, '#tool-result');
+    const big = find(root, '#tool-result-figure');
     const detail = find(root, '#tool-result-detail');
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
@@ -54,6 +75,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         value: find<SVGPolylineElement>(chart, '.dca-chart__line--value'),
     };
 
+    const scene = linkScene(root);
     const site = siteAddress(siteUrl);
     const files = new CardFiles(site);
     const loaded = new Map<Fiat, DailySeries>();
@@ -111,8 +133,11 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         empty.className = 'result__empty';
         empty.textContent = message;
         figure.replaceChildren(empty);
+        big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
         panel.hidden = true;
+        chart.classList.add('dca-chart--empty');
+        scene.set({ id: 'dca', value: [], invested: [], lump: [] }, SCENE.dcaEmpty);
         share.setEnabled(false);
         settle(message);
     }
@@ -135,6 +160,17 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         lines.lump.setAttribute('points', chartLines[1] ?? '');
         lines.value.setAttribute('points', chartLines[2] ?? '');
         chart.setAttribute('aria-label', words.chartAlt);
+        chart.classList.remove('dca-chart--empty');
+        const marks = buyIndices(outcome.result);
+        scene.set(
+            {
+                id: 'dca',
+                value: marks.map((i) => points[i]?.value ?? 0),
+                invested: marks.map((i) => points[i]?.invested ?? 0),
+                lump: marks.map((i) => points[i]?.lumpValue ?? 0),
+            },
+            SCENE.dca,
+        );
     }
 
     function renderNotes(words: DcaText): void {
@@ -179,6 +215,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         text = dcaText(outcome.result, fiat, site);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
+        big.textContent = text.rows.worth;
         detail.textContent = text.detail;
         for (const row of DCA_ROWS) find(panel, `#dca-${row}`).textContent = text.rows[row];
         renderChart(text, outcome);
