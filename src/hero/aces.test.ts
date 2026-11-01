@@ -4,7 +4,7 @@ import { aces, hexToSrgb, inverseAces, srgbToLinear } from './aces.ts';
 
 describe('inverseAces', () => {
     it('finds the scene colour that tone-maps back to the page background', () => {
-        for (const hex of [TOKENS.ink, TOKENS.inkRaised, TOKENS.line]) {
+        for (const hex of [TOKENS.ink, TOKENS.raised, TOKENS.line]) {
             const target = hexToSrgb(hex).map(srgbToLinear) as [number, number, number];
             const mapped = aces(inverseAces(target));
             for (let c = 0; c < 3; c += 1) expect(mapped[c]).toBeCloseTo(target[c] ?? 0, 5);

@@ -86,6 +86,7 @@ interface TierSettings {
     environmentSize: number;
     startRatio: number;
     maxRatio: number;
+    introSeconds: number;
 }
 
 const TIERS: Record<WebGlTier, TierSettings> = {
@@ -97,6 +98,7 @@ const TIERS: Record<WebGlTier, TierSettings> = {
         environmentSize: 128,
         startRatio: 1.5,
         maxRatio: 1.5,
+        introSeconds: 2.6,
     },
     phone: {
         segments: 9,
@@ -106,6 +108,7 @@ const TIERS: Record<WebGlTier, TierSettings> = {
         environmentSize: 64,
         startRatio: 1,
         maxRatio: 1.25,
+        introSeconds: 1.8,
     },
 };
 
@@ -115,6 +118,8 @@ const DRIFT_YAW = 3.5;
 const DRIFT_PITCH = 1.2;
 const TILT_YAW = 2.5;
 const TILT_PITCH = 1.5;
+const INTRO_PULL = 0.6;
+const INTRO_YAW = -16;
 const SLIVER_DROP = 2.6;
 const POOL_OPACITY = 0.48;
 const PULSE_BASE = 4;
@@ -203,7 +208,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
 
-    const background = hexToSrgb(TOKENS.inkRaised);
+    const background = hexToSrgb(TOKENS.raised);
     const backgroundLinear = background.map(srgbToLinear) as unknown as Rgb;
     const sceneBackground = linearColor(full ? inverseAces(backgroundLinear) : backgroundLinear);
 
@@ -221,15 +226,15 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     };
     await nextTask();
     scene.environment = buildEnvironment();
-    scene.environmentIntensity = 0.4;
+    scene.environmentIntensity = 0.3;
 
-    const key = new DirectionalLight(mix(TOKENS.paper, TOKENS.btc, 0.28), 2.9);
+    const key = new DirectionalLight(mix(TOKENS.paper, TOKENS.btc, 0.3), 3.3);
     key.position.set(-60, 90, 70);
-    const rim = new DirectionalLight(color(TOKENS.fiat), 2.1);
+    const rim = new DirectionalLight(color(TOKENS.fiat), 2.8);
     rim.position.set(55, 28, -90);
-    const kicker = new DirectionalLight(mix(TOKENS.btc, TOKENS.paper, 0.45), 0.8);
+    const kicker = new DirectionalLight(mix(TOKENS.btc, TOKENS.paper, 0.45), 0.6);
     kicker.position.set(40, 18, 110);
-    const fill = new HemisphereLight(color(TOKENS.line), color(TOKENS.ink), 0.55);
+    const fill = new HemisphereLight(color(TOKENS.line), color(TOKENS.ink), 0.4);
     scene.add(key, rim, kicker, fill);
 
     await nextTask();
@@ -241,7 +246,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     const slabs = slabGeometry(layout);
     const slabSide = new MeshStandardMaterial({ color: mix(TOKENS.line, TOKENS.ink, 0.35), roughness: 0.92 });
     const slabTop = new MeshStandardMaterial({
-        color: mix(TOKENS.line, TOKENS.inkRaised, 0.25),
+        color: mix(TOKENS.line, TOKENS.raised, 0.25),
         roughness: 0.85,
         map: shadow.texture,
     });
@@ -402,6 +407,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
     const offset = new Vector3();
     const right = new Vector3();
     let driftTime = options.reducedMotion ? DRIFT_SECONDS : 0;
+    let intro = options.reducedMotion ? 1 : 0;
     const tilt = { yaw: 0, pitch: 0, goalYaw: 0, goalPitch: 0 };
 
     function pose(): void {
@@ -413,11 +419,13 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
         offset.lerpVectors(start.position, goal.position, t).sub(look);
         const envelope = Math.sin((Math.PI * Math.min(driftTime, DRIFT_SECONDS)) / DRIFT_SECONDS) ** 2;
         const phase = (driftTime / DRIFT_SECONDS) * Math.PI * 2 * 1.4;
-        const yaw = DRIFT_YAW * envelope * Math.sin(phase) + tilt.yaw;
+        const away = 1 - ease.outCubic(intro);
+        const yaw = DRIFT_YAW * envelope * Math.sin(phase) + tilt.yaw + INTRO_YAW * away;
         const pitch = DRIFT_PITCH * envelope * Math.sin(phase * 0.7) + tilt.pitch;
         offset.applyAxisAngle(UP, MathUtils.degToRad(yaw));
         right.crossVectors(UP, offset).normalize();
         offset.applyAxisAngle(right, MathUtils.degToRad(-pitch));
+        offset.multiplyScalar(1 + INTRO_PULL * away);
         camera.position.copy(look).add(offset);
         camera.lookAt(look);
         const offsetX = MathUtils.lerp(start.offsetX, goal.offsetX, t);
@@ -491,7 +499,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
 
     function animating(): boolean {
         const tilting = Math.abs(tilt.yaw - tilt.goalYaw) + Math.abs(tilt.pitch - tilt.goalPitch) > 0.002;
-        return tweens.busy || driftTime < DRIFT_SECONDS || tilting;
+        return tweens.busy || intro < 1 || driftTime < DRIFT_SECONDS || tilting;
     }
 
     function frame(now: number): void {
@@ -499,6 +507,7 @@ export async function createScene(canvas: SceneCanvas, options: SceneInit): Prom
         const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
         last = now;
         tweens.tick(dt);
+        if (intro < 1) intro = Math.min(1, intro + dt / settings.introSeconds);
         if (driftTime < DRIFT_SECONDS) driftTime = Math.min(DRIFT_SECONDS, driftTime + dt);
         const k = damp(4, dt);
         tilt.yaw += (tilt.goalYaw - tilt.yaw) * k;

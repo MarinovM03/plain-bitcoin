@@ -21,7 +21,7 @@ export function drawFlatField(context: CanvasRenderingContext2D, box: ArtBox, to
     const r = TOKEN_RADIUS * scale;
 
     context.save();
-    context.fillStyle = TOKENS.inkRaised;
+    context.fillStyle = TOKENS.raised;
     for (const block of layout.blocks) {
         if (block.w * scale < 0.5) continue;
         context.fillRect(px(block.x), pz(block.z), block.w * scale, block.d * scale);

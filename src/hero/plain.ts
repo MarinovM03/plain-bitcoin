@@ -52,7 +52,7 @@ export function plainSvg(scene: Picture): string {
         const size = Math.min(block.w, block.d) * 0.11;
         if (size < view.w * 0.012 || block.w < size * 6) continue;
         parts.push(
-            `<text x="${n(block.x + block.w / 2)}" y="${n(block.z + block.d / 2 + size * 0.35)}" font-size="${n(size)}" text-anchor="middle" fill="${TOKENS.paper}" stroke="${TOKENS.inkRaised}" stroke-width="${n(size * 0.28)}" paint-order="stroke" font-family="${TOKENS.fontMono.replace(/"/g, "'")}">${block.label}</text>`,
+            `<text x="${n(block.x + block.w / 2)}" y="${n(block.z + block.d / 2 + size * 0.35)}" font-size="${n(size)}" text-anchor="middle" fill="${TOKENS.paper}" stroke="${TOKENS.raised}" stroke-width="${n(size * 0.28)}" paint-order="stroke" font-family="${TOKENS.fontMono.replace(/"/g, "'")}">${block.label}</text>`,
         );
     }
     parts.push('</svg>');

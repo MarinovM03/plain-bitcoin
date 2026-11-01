@@ -1,15 +1,11 @@
 :root {
-    --ink: #17140f;
-    --ink-raised: #201c16;
-    --line: #3b342b;
-    --paper: #efe6d4;
-    --muted: #ab9f8b;
+    --ink: #0b0d10;
+    --raised: #15181d;
+    --line: #2a2f37;
+    --paper: #f3f4f6;
+    --muted: #9ba3ad;
     --btc: #f7931a;
     --fiat: #7db7e8;
-    --well: #110f0b;
-    --panel: #1c1813;
-    --panel-high: #24201a;
-    --edge: #2e2820;
 
     --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-display: "Fraunces", Georgia, "Times New Roman", serif;
@@ -20,17 +16,15 @@
     --step-body: 1rem;
     --step-lead: 1.125rem;
     --step-title: clamp(1.25rem, 1.05rem + 0.9vw, 1.5rem);
-    --step-heading: clamp(1.875rem, 1.35rem + 2.4vw, 2.75rem);
-    --step-display: clamp(2.25rem, 1.5rem + 3.2vw, 3.75rem);
-    --step-figure: clamp(2.5rem, 1.6rem + 4.5vw, 4rem);
-    --step-answer: clamp(1.25rem, 0.9rem + 2vw, 2.75rem);
+    --step-heading: clamp(1.75rem, 1.4rem + 1.6vw, 2.25rem);
+    --step-figure: clamp(2.5rem, 1.6rem + 4.5vw, 4.5rem);
+    --step-answer: clamp(1.75rem, 1.15rem + 3vw, 3.25rem);
 
     --gutter: 1rem;
-    --measure: 56rem;
+    --measure: 46rem;
     --measure-wide: 72rem;
     --tap: 2.75rem;
-    --radius: 6px;
-    --radius-lg: 14px;
+    --radius: 8px;
     --space-s: 0.75rem;
     --space-m: 1.25rem;
     --space-l: 2rem;
