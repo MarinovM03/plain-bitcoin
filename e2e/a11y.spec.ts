@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, HERO, NAV, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, NAV, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
@@ -20,7 +20,10 @@ async function open(page: Page, route: string) {
     await page.goto(`/?hero=plain#/${route}`);
     if (route === 'address') await page.locator('#address-input').fill(TAPROOT);
     if (route !== '' && route !== 'left') await expect(page.locator('[data-share="copy"]')).toBeEnabled();
-    if (route === '' || route === 'left') await expect(page.locator('#hero-note')).not.toBeEmpty();
+    if (route === '') await expect(page.locator('.tile__preview svg')).toHaveCount(TOOL_IDS.length);
+    if (route === 'left') await expect(page.locator('#left-note')).not.toBeEmpty();
+    const live = route === '' || route === 'left' || route === 'convert';
+    if (live) await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
 }
 
 test.beforeEach(async ({ page }) => {
@@ -65,12 +68,18 @@ test('the keyboard reaches every tool from home in reading order and lands on it
         SITE_NAME,
         ...TOOL_IDS.map((id) => NAV.short[id]),
         `${FOOTER.handle} ↗`,
-        `${HERO.link} →`,
+        'mempool.space',
         ...TOOL_IDS.map((id) => TOOLS[id].name),
     ];
     for (let step = 0; step < expected.length; step++) {
         await page.keyboard.press('Tab');
-        order.push(await page.evaluate(() => document.activeElement?.textContent?.trim().split('\n')[0] ?? ''));
+        order.push(
+            await page.evaluate(() => {
+                const active = document.activeElement;
+                const text = active?.querySelector('.tile__name')?.textContent ?? active?.textContent ?? '';
+                return text.trim().replace(/ \d\d:\d\d UTC$/, '');
+            }),
+        );
     }
     expect(order).toEqual(expected);
     await page.keyboard.press('Enter');

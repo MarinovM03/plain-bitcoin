@@ -1,15 +1,14 @@
 @import "./tokens.css";
 @import "./fonts.css";
 @import "./base.css";
+@import "./stage.css";
 @import "./shell.css";
 @import "./status.css";
-@import "./details.css";
-@import "./hero.css";
 @import "./home.css";
-@import "./tool-list.css";
 @import "./tool-page.css";
 @import "./fields.css";
 @import "./output.css";
+@import "./details.css";
 @import "./power.css";
 @import "./convert.css";
 @import "./dca.css";

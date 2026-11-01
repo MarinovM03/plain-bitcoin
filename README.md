@@ -12,6 +12,12 @@ Every result exports as a Plain Bitcoin card (1200x675 or 1080x1350 PNG) with it
 
 One static site. No backend, no accounts, no cookies. The site never asks for keys, seeds or signatures.
 
+## The live stage
+
+Behind every page sits one drawing surface. Its halftone field is drawn from real chain data only: the block height sets its pattern, the minutes since the last block slowly thicken it, and a real new block sends one wave across it from the block number in the status line. Otherwise it moves only when you change an input or move a mouse over it, and when nothing changes it stops drawing. Each tool shows its answer on the same surface: 2,100 dots of 10,000 BTC each for Bitcoin left to mine, two stacks for purchasing power, a grid of sats for the converter, one mark per buy for buying on a schedule, and one column per character for an address. The text under each picture says what it shows.
+
+The stage fetches nothing. It only receives the block height, the block time and the tool's own result from the page, and it never sees anything you type except the address you are checking, which stays on the page. It loads after the page has painted; the answer and the inputs work before it arrives. With reduced motion it draws single still frames, on Save-Data, without WebGL or on slow hardware it shows the same pictures as plain SVG with a static background, and the buying-on-a-schedule chart is a real SVG chart in every case.
+
 ## Privacy: what leaves your browser, and when
 
 | Request             | When                                                                                                      | Where                                          |
@@ -20,7 +26,7 @@ One static site. No backend, no accounts, no cookies. The site never asks for ke
 | Bitcoin price       | On the home page, Bitcoin left to mine and the converter, while the tab is visible, at most once a minute | mempool.space, or CoinGecko if it fails        |
 | One address balance | Only when you tap Look up on the address page, after a note that names the service                        | mempool.space                                  |
 
-The block and price line under the top bar shares those two requests with the tool on the same page; there is one of each, never two. On purchasing power, buying on a schedule and address lookup it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Purchasing power and buying on a schedule work from bundled files and make no requests. Nothing you type is stored, logged or put in the URL. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
+The block and price line in the top bar shares those two requests with the tool on the same page; there is one of each, never two. On purchasing power, buying on a schedule and address lookup it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Purchasing power and buying on a schedule work from bundled files and make no requests. Nothing you type is stored, logged or put in the URL. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
 
 If a seed phrase, private key (WIF), extended private key or a descriptor holding one is pasted into the address field, the page clears the field at once and says why. It looks through numbering, labels, punctuation, other wordlists and invisible characters, and nothing about it is sent or kept. Extended public keys are refused too, because they reveal a whole wallet.
 
@@ -68,7 +74,7 @@ npm run dev
 
 `VITE_SITE_URL` sets the canonical URL, the Open Graph and Twitter tags and the address on the cards at build time (default `https://plainbitcoin.org/`).
 
-Size budgets (gzip): first-load JS under 35 kB, CSS under 15 kB, fonts under 80 kB, the hero (three.js) under 170 kB and never loaded on calculator routes.
+Size budgets (gzip): first-load JS under 35 kB, CSS under 15 kB, fonts under 80 kB, and the stage (its loader, worker, every scene and the still renderer together) under 170 kB, loaded only after first paint.
 
 CI (GitHub Actions) runs lint, typecheck, unit tests, build, the budget check and the Chromium end-to-end tests on every push and pull request.
 
@@ -101,23 +107,24 @@ To check a build locally first: `VITE_SITE_URL=https://plainbitcoin.org npm run 
 
 Run these on real phones before each launch. The automated tests cover the same ground in emulators, but not the share sheet, real keypads or Safari's own behaviour.
 
-- **Portrait**: every page fits at 360 px wide with no sideways scroll; the answer and share buttons stay reachable at the bottom.
-- **Landscape**: the hero and every tool still fit; the answer bar does not cover the inputs.
+- **Portrait**: on every tool the status line, the picture, the first input and the answer are on the first screen at 360 px wide, with no sideways scroll.
+- **Keyboard up**: typing in a field shrinks the picture so the answer stays visible; tapping a button after typing does not make it jump.
+- **Landscape**: picture on the left, inputs and answer on the right, nothing pinned but the background.
 - **One-handed reach**: amount fields, presets, Share card and Look up are reachable with a thumb; nothing important sits only at the top.
 - **Keypads**: amount fields open the number keypad; the address field does not autocorrect or capitalise.
 - **Share sheet**: Share card opens the system share sheet with the PNG and the sentence (iOS Safari, Android Chrome); posting to X works; Post on X opens the X app or site with the sentence.
 - **Paste**: the Paste button on the address page fills the field (iOS shows its own Paste prompt).
-- **Hero scroll**: swiping over the hero scrolls the page and is never trapped; the hero pauses when scrolled away.
+- **Stage**: scrolling is never trapped; the field fades from behind the details as you scroll and stops drawing in a background tab.
 - **Offline**: with flight mode on after the first load, the counter says "estimated, offline" and the converter uses the last close, both labelled.
 - **Safari**: Web Inspector, Network: each font file downloads once; no console errors.
-- **Save-Data / Low Data Mode**: the hero shows the plain picture instead of WebGL.
-- **Reduced motion**: with Reduce Motion on, the hero shows still states and pages do not animate.
+- **Save-Data / Low Data Mode**: the stage shows the plain SVG pictures instead of WebGL.
+- **Reduced motion**: with Reduce Motion on, the stage draws still frames only and pages do not animate.
 
 ## Layout
 
 ```
 src/app      hash router
-src/hero     the Bitcoin-left hero (the only code that may use WebGL; renders in a worker)
+src/hero     the live stage: bus, scenes, still SVGs and the WebGL engine (the only code that may use WebGL; draws in a worker)
 src/tools    one folder per tool
 src/model    pure, unit-tested math
 src/data     public API clients and bundled data snapshots

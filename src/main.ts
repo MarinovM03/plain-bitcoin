@@ -1,17 +1,20 @@
 import './styles/main.css';
 import { startRouter } from './app/router.ts';
+import { stage, startStage } from './hero/bus.ts';
 import { mountCounter } from './tools/left/counter.ts';
 import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
-import { bindFields } from './ui/field-behaviour.ts';
-import { renderHome } from './ui/home.ts';
+import { bindFields, trackMore, watchTyping } from './ui/field-behaviour.ts';
+import { mountHome, renderHome } from './ui/home.ts';
 import { html } from './ui/html.ts';
-import { markCurrent } from './ui/shell.ts';
+import { markCurrent, trackChrome } from './ui/shell.ts';
 import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
-import { byId } from './util/dom.ts';
+import { afterFirstPaint, byId, find } from './util/dom.ts';
 
 const main = byId('main');
 const announcer = byId('announcer');
+trackChrome(find(document, '.topbar'));
+startStage(byId('stage'), afterFirstPaint);
 const status = mountStatus(byId('status'));
 const announce = (message: string) => {
     announcer.textContent = message;
@@ -27,6 +30,7 @@ startRouter(({ route, initial, notFound }) => {
     for (const cleanup of cleanups) cleanup();
     cleanups = [];
     const view = ++viewCount;
+    stage.clear();
 
     const prerendered = initial && route === 'home' && !notFound;
     if (!prerendered) {
@@ -38,10 +42,10 @@ startRouter(({ route, initial, notFound }) => {
     markCurrent(route);
     status.setRoute(route);
     bindFields(main);
+    cleanups.push(watchTyping(main), trackMore(main));
 
-    if (route === 'home' || route === 'left') {
-        cleanups.push(mountCounter(main, route === 'left' ? 'field' : 'edge', announce));
-    }
+    if (route === 'home') cleanups.push(mountHome(main));
+    if (route === 'home' || route === 'left') cleanups.push(mountCounter(main, announce));
     if (route === 'left') {
         import('./tools/left/index.ts').then(({ mountLeft }) => {
             whileCurrent(view, () => mountLeft(main, import.meta.env.VITE_SITE_URL));

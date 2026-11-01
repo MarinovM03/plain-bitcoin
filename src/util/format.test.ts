@@ -8,6 +8,7 @@ import {
     formatBtcExact,
     formatDay,
     formatFiat,
+    formatMinutes,
     formatMoney,
     formatPercent,
     formatPpm,
@@ -124,6 +125,13 @@ describe('time', () => {
         expect(formatAge(-5)).toBe('0 s');
         expect(formatAge(252)).toBe('4 min 12 s');
         expect(formatAge(3_780)).toBe('1 h 3 min');
+    });
+
+    it('rounds the time since a block down to whole minutes', () => {
+        expect(formatMinutes(-20)).toBe('<1 min');
+        expect(formatMinutes(59)).toBe('<1 min');
+        expect(formatMinutes(372)).toBe('6 min');
+        expect(formatMinutes(3_780)).toBe('1 h 3 min');
     });
 
     it('formats days and UTC stamps', () => {

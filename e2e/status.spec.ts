@@ -29,6 +29,8 @@ for (const route of LIVE_ROUTES) {
         await expect(status.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
         await expect(status).toHaveAttribute('data-state', 'live');
         await expect(status).toHaveAttribute('aria-live', 'off');
+        await expect(status.locator('#status-age')).toHaveText('4 min since block');
+        await expect(status.locator('#status-source')).toHaveAttribute('href', 'https://mempool.space/');
     });
 }
 
@@ -52,6 +54,7 @@ for (const route of QUIET_ROUTES) {
         await expect(page.locator('#status-block')).toHaveText(new RegExp(`${STATUS.estimated.trim()}$`));
         await expect(page.locator('#status-source')).toHaveText(/^last close /);
         await expect(page.locator('#status')).toHaveAttribute('data-state', 'estimate');
+        await expect(page.locator('#status-age')).toHaveText(/^est\. (<1|\d+) min since block$/);
         await page.waitForTimeout(3000);
         expect(calls).toEqual([]);
     });

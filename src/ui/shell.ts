@@ -1,11 +1,16 @@
 import { hrefFor } from '../app/routes.ts';
 import { TOOL_IDS } from '../tools/index.ts';
+import { watchHeight } from '../util/dom.ts';
 import { FOOTER, HOME, NAV, NOSCRIPT, SITE_NAME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 import { renderStatus } from './status.ts';
 
 function followLink(className: string, text: string): SafeHtml {
     return html`<a class="${className}" href="${FOOTER.followUrl}" rel="noopener noreferrer">${text} <span aria-hidden="true">↗</span></a>`;
+}
+
+export function renderStage(): SafeHtml {
+    return html`<div id="stage" class="stage" aria-hidden="true"></div>`;
 }
 
 export function renderHeader(): SafeHtml {
@@ -56,4 +61,8 @@ export function markCurrent(route: string): void {
         if (link.dataset.nav === route) link.setAttribute('aria-current', 'page');
         else link.removeAttribute('aria-current');
     }
+}
+
+export function trackChrome(topbar: HTMLElement): void {
+    watchHeight(topbar, (height) => document.documentElement.style.setProperty('--chrome', `${height}px`));
 }

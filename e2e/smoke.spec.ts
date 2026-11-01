@@ -1,8 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
+import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, HERO, pageTitle, ROUTE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, HOME, pageTitle, ROUTE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { formatWhole } from '../src/util/format.ts';
 import { realProblems } from './console.ts';
-import { fakeHeightApi, isApiRequest, leftFigure } from './height-api.ts';
+import { FAKE_HEIGHT, fakeHeightApi, isApiRequest } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 test.beforeEach(async ({ page }) => {
@@ -28,26 +30,31 @@ async function horizontalOverflow(page: Page): Promise<number> {
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-test('home shows the shell, the live hero and every tool in order', async ({ page }) => {
+test('home shows the shell, the headline and every tool as a live tile, in order', async ({ page }) => {
     const problems = watchPage(page);
     await page.goto('/');
 
     await expect(page).toHaveTitle(SITE_NAME);
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(HERO.heading);
-    await expect(page.locator('#hero-figure')).toHaveText(leftFigure());
-    await expect(page.locator('.tool-row__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
-    await expect(page.locator('.tool-row__preview')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].preview));
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME.headline);
+    const left = formatWhole(Math.floor(supplyAt(FAKE_HEIGHT).left / SATS_PER_BTC));
+    await expect(page.locator('[data-tile-figure="left"]')).toHaveText(HOME.leftFigure(`${left} BTC`));
+    await expect(page.locator('[data-tile-figure="convert"]')).toHaveText(HOME.convertFigure('£0.00057'));
+    await expect(page.locator('.tile__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
+    for (const id of ['power', 'dca', 'address'] as const) {
+        await expect(page.locator(`[data-tile-figure="${id}"]`)).toHaveText(TOOLS[id].preview);
+    }
+    await expect(page.locator('.tile__preview svg')).toHaveCount(TOOL_IDS.length);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
-    for (const row of await page.locator('.tool-row').all()) {
+    for (const row of await page.locator('.tile').all()) {
         const box = await row.boundingBox();
         expect(box?.height).toBeGreaterThanOrEqual(44);
     }
 
-    const hero = await page.locator('.hero').boundingBox();
+    const intro = await page.locator('.intro').boundingBox();
     await page.waitForTimeout(500);
-    expect(await page.locator('.hero').boundingBox()).toEqual(hero);
+    expect(await page.locator('.intro').boundingBox()).toEqual(intro);
 
     expect(await horizontalOverflow(page)).toBe(0);
     expect(realProblems(problems)).toEqual([]);
@@ -67,8 +74,8 @@ for (const id of TOOL_IDS) {
             if (id !== 'address') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
-        if (id === 'left') await expect(page.locator('#hero-stage')).toHaveCount(1);
-        else await expect(page.locator('.result__figure')).toBeVisible();
+        await expect(page.locator('#scene-plot')).toHaveCount(1);
+        await expect(page.locator('.result__figure')).toBeVisible();
 
         expect(await horizontalOverflow(page)).toBe(0);
         expect(realProblems(problems)).toEqual([]);
@@ -79,7 +86,7 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
     const problems = watchPage(page);
     await page.goto('/');
 
-    await page.locator('.tool-row', { hasText: TOOLS.convert.name }).click();
+    await page.locator('.tile', { hasText: TOOLS.convert.name }).click();
     await expect(page).toHaveURL(/#\/convert$/);
     await expect(page).toHaveTitle(pageTitle(TOOLS.convert.name));
     const heading = page.getByRole('heading', { level: 1 });
@@ -90,7 +97,7 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
 
     await page.goBack();
     await expect(page).toHaveTitle(SITE_NAME);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(HERO.heading);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME.headline);
 
     await page.goForward();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.convert.name);
@@ -109,7 +116,7 @@ test('an unknown route goes home with one quiet note', async ({ page }) => {
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(1);
     await expect(page.locator('#announcer')).toHaveText(ROUTE.notFound);
 
-    await page.locator('.tool-row').first().click();
+    await page.locator('.tile').first().click();
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(0);
 
     await page.goto('/#/POWER');
@@ -167,7 +174,7 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
         expect(outline).toEqual({ tag: 'A', width: '2px', style: 'solid' });
     }
 
-    await page.locator('.tool-row').nth(1).focus();
+    await page.locator('.tile').nth(1).focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.power.name);
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();

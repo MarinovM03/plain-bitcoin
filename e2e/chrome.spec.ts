@@ -52,18 +52,20 @@ function pinned(page: Page): Promise<string[]> {
     );
 }
 
-test('only the top bar is pinned on a tool page, never the answer', async ({ page }) => {
+test('only the stage behind the page is pinned on a tool page, never the bar or the answer', async ({ page }) => {
     const size = page.viewportSize();
     test.skip(!size || size.height <= 512, 'Landscape phones pin nothing, checked below');
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).not.toHaveText('');
-    expect(await pinned(page)).toEqual(['topbar']);
+    expect(await pinned(page)).toEqual(['stage']);
 });
 
-test('in phone landscape nothing sticks, so the short screen never traps the page', async ({ page }) => {
+test('in phone landscape nothing but the stage is pinned, so the short screen never traps the page', async ({
+    page,
+}) => {
     const size = page.viewportSize();
     test.skip(!size || size.height > 512 || size.width < size.height, 'Landscape phones only');
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).not.toHaveText('');
-    expect(await pinned(page)).toEqual([]);
+    expect(await pinned(page)).toEqual(['stage']);
 });

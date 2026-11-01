@@ -106,6 +106,13 @@ export function formatAge(seconds: number): string {
     return `${Math.floor(s / 3_600)} h ${Math.floor((s % 3_600) / 60)} min`;
 }
 
+export function formatMinutes(seconds: number): string {
+    const minutes = Math.max(0, Math.floor(seconds / 60));
+    if (minutes < 1) return '<1 min';
+    if (minutes < 60) return `${minutes} min`;
+    return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+}
+
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' });
 const STAMP = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });

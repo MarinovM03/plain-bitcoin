@@ -12,12 +12,16 @@ export const OG_IMAGE = {
     headline: 'Plain answers to Bitcoin questions.',
     detail: 'Five small tools. Every number shows its source.',
     source: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    alt: 'Plain Bitcoin: plain answers to Bitcoin questions, next to a field of bitcoin tokens, issued ones solid.',
+    alt: 'Plain Bitcoin: plain answers to Bitcoin questions, next to 2,100 dots of 10,000 BTC each, the mined ones lit.',
 } as const;
 
 export const HOME = {
+    headline: 'Bitcoin, measured live.',
+    lead: 'Five small instruments for plain Bitcoin questions, worked out in your browser. Block and price are live.',
     promise: 'Plain answers to Bitcoin questions, worked out in your browser.',
-    toolsHeading: 'Pick a question',
+    toolsLabel: 'Explore the tools',
+    leftFigure: (left: string) => `${left} left`,
+    convertFigure: (gbp: string) => `1 sat ≈ ${gbp}`,
     cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
@@ -44,22 +48,9 @@ export const STATUS = {
     live: (source: string, clock: string) => `${source} ${clock}`,
     stale: (source: string, clock: string) => `${source} ${clock}, not live`,
     lastClose: (day: string) => `last close ${day}`,
-} as const;
-
-export const HERO = {
-    heading: 'Bitcoin left to mine',
-    figureEmpty: 'Counting',
-    link: 'All the numbers',
-    mined: (mined: string) => `${mined} of 21,000,000 BTC mined`,
-    halving: (blocks: number) =>
-        `Next halving in ${blocks.toLocaleString('en-GB')} ${blocks === 1 ? 'block' : 'blocks'}`,
-    sceneLabel:
-        'A field of 21,000 tokens of 1,000 BTC each, one terrace per halving. Issued tokens are solid, the rest are outlines, and the token being filled now glows.',
-    live: (height: string, reward: string) => `Block ${height}: ${reward} issued.`,
-    liveMany: (first: string, last: string, reward: string) => `Blocks ${first} to ${last}: ${reward} issued.`,
-    liveAgo: (height: string, reward: string, age: string) => `Block ${height}: ${reward} issued, ${age} ago.`,
-    checking: (height: string) => `Estimated block ${height}. Checking the latest block.`,
-    offline: (height: string) => `Estimated, offline: block ${height}, assuming a block every 10 minutes.`,
+    since: (age: string) => `${age} since block`,
+    estimatedSince: (age: string) => `est. ${age} since block`,
+    unknownTime: 'block time unknown',
 } as const;
 
 export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
@@ -71,19 +62,19 @@ export const TOOLS: Record<ToolId, { name: string; question: string; preview: st
     },
     power: {
         name: 'Purchasing power',
-        question: 'What is an old amount of money worth today, and as bitcoin?',
+        question: 'What is old money worth today, and as bitcoin?',
         preview: '£1,000 in 2015 → today',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     convert: {
         name: 'Converter',
-        question: 'How much is this in sats, bitcoin, pounds or dollars?',
+        question: 'Sats, bitcoin, pounds or dollars?',
         preview: '1 BTC = 100,000,000 sats',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     dca: {
         name: 'Buying on a schedule',
-        question: 'Buying a little at a time (DCA), or one lump sum?',
+        question: 'A little at a time (DCA), or one lump sum?',
         preview: '£50 a week since 2020',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
@@ -101,6 +92,21 @@ export const TOOL_PAGE = {
     resultLabel: 'Answer',
     resultEmpty: 'Your answer shows here.',
     sourcePending: 'Source and as-of date show here with each answer.',
+} as const;
+
+export const SCENE = {
+    left: 'Each dot is 10,000 BTC. White: mined before the last halving. Orange: mined since. Dim: not mined yet.',
+    power: (log: boolean) =>
+        `Left stack: kept as cash. Right stack: as bitcoin. Height is today's value${log ? ', on a log scale' : ''}.`,
+    powerEmpty: 'Two stacks compare cash and bitcoin once there is an answer.',
+    convert: (perDot: string, shown: string) => `Each dot is ${perDot}. The lit dots are ${shown}.`,
+    convertEmpty: 'Each dot is a number of sats. Type an amount to light them.',
+    dca: 'Orange: what it was worth at each buy, one mark per buy, ending today. White: money put in. Grey: one lump sum.',
+    dcaEmpty: 'The chart draws once there is an answer.',
+    address: 'Each column is one character, its height set by the character. Colour marks its part.',
+    addressBad: 'Each column is one character. The raised orange one does not fit.',
+    addressLoose: 'Each column is one character. The checksum columns do not lock into place.',
+    addressEmpty: 'Each character will stand as one column once you paste an address.',
 } as const;
 
 export const SHARE = {
@@ -127,6 +133,7 @@ export const FIELDS = {
     starting: 'Starting',
     month: 'Month',
     year: 'Year',
+    more: 'More options',
     examples: { power: '1,000', dca: '50' },
 } as const;
 
@@ -290,6 +297,18 @@ export const ADDRESS = {
         'It asks for a payment on the Lightning Network. Pay it from a Lightning wallet; it has no balance to look up.',
     headline: (type: string) => `This is a ${type}.`,
     detail: (network: string, encoding: string) => `${network}. The ${encoding} checksum is valid.`,
+    figures: {
+        p2pkh: 'Legacy',
+        p2sh: 'Script',
+        p2wpkh: 'SegWit',
+        p2wsh: 'SegWit script',
+        p2tr: 'Taproot',
+        future: 'Future SegWit',
+        invalid: 'Not valid',
+        checksum: 'Typo',
+        lightning: 'Lightning',
+        extendedPublic: 'xpub',
+    },
     types: {
         p2pkh: 'Legacy address (P2PKH)',
         p2sh: 'script address (P2SH)',
@@ -394,6 +413,18 @@ export const ADDRESS = {
 } as const;
 
 export const LEFT_PAGE = {
+    resultLabel: 'Left to mine',
+    figureEmpty: 'Counting',
+    unit: ' BTC',
+    mined: (mined: string) => `${mined} of 21,000,000 BTC mined`,
+    halving: (blocks: number) =>
+        `Next halving in ${blocks.toLocaleString('en-GB')} ${blocks === 1 ? 'block' : 'blocks'}`,
+    live: (height: string, reward: string) => `Block ${height}: ${reward} issued.`,
+    liveMany: (first: string, last: string, reward: string) => `Blocks ${first} to ${last}: ${reward} issued.`,
+    liveAgo: (height: string, reward: string, age: string) => `Block ${height}: ${reward} issued, ${age} ago.`,
+    checking: (height: string) => `Estimated block ${height}. Checking the latest block.`,
+    offline: (height: string) => `Estimated, offline: block ${height}, assuming a block every 10 minutes.`,
+    numbersHeading: 'Every number',
     left: 'Left to mine',
     issued: 'Issued by the schedule',
     share: 'Share issued',
