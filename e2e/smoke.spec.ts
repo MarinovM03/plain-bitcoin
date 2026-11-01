@@ -95,7 +95,7 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
     await page.goForward();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.convert.name);
 
-    await page.getByRole('link', { name: /All tools/ }).click();
+    await page.getByRole('link', { name: SITE_NAME }).click();
     await expect(page).toHaveURL(/#\/$/);
     expect(realProblems(problems)).toEqual([]);
 });

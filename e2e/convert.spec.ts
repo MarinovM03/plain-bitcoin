@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { CONVERT } from '../src/ui/copy.ts';
 import { realProblems } from './console.ts';
+import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const latest = JSON.parse(readFileSync('src/data/prices/latest.json', 'utf8')) as { day: string; GBP: number };
@@ -18,6 +19,10 @@ function watch(page: Page) {
     });
     return { problems, external };
 }
+
+test.beforeEach(async ({ page }) => {
+    await fakeHeightApi(page);
+});
 
 const fields = (page: Page) => ({
     sats: page.getByLabel(CONVERT.fields.sats, { exact: true }),
@@ -36,14 +41,17 @@ test('converts 100,000 sats at the live price, asking only the price API', async
     await expect(field.btc).toHaveValue('0.001');
     await expect(field.gbp).toHaveValue('57.33');
     await expect(field.usd).toHaveValue('76.78');
-    await expect(page.locator('#convert-price')).toHaveText(/^1 BTC = £57,329 = \$76,777 · mempool\.space, /);
+    await expect(page.locator('#status-gbp')).toHaveText('£57,329');
+    await expect(page.locator('#status-usd')).toHaveText('$76,777');
+    await expect(page.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
+    await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ £0.00057 · $0.00077');
     await expect(page.locator('#tool-result-label')).toHaveText(/live price, \d\d:\d\d UTC$/);
     await expect(page.locator('#tool-source')).toContainText('mempool.space, with CoinGecko');
     await expect(page.locator('[data-preset="hundredThousand"]')).toHaveAttribute('aria-pressed', 'true');
     for (const kind of ['sats', 'btc', 'gbp', 'usd'] as const) {
         await expect(field[kind]).toHaveAttribute('inputmode', kind === 'sats' ? 'numeric' : 'decimal');
     }
-    expect(external).toEqual(['https://mempool.space/api/v1/prices']);
+    expect(external.filter((url) => !url.includes('/blocks/'))).toEqual(['https://mempool.space/api/v1/prices']);
     expect(prices.calls).toHaveLength(1);
     expect(realProblems(problems)).toEqual([]);
 });
@@ -135,7 +143,7 @@ test('offline, it converts at the bundled last close and says so', async ({ page
         timeZone: 'UTC',
     }).format(Date.parse(`${latest.day}T00:00:00Z`));
     await expect(page.locator('#tool-result-label')).toHaveText(`Answer · last close, ${day}`);
-    await expect(page.locator('#convert-price')).toContainText(`last close, ${day}`);
+    await expect(page.locator('#status-source')).toHaveText(`last close ${day}`);
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics');
     const pounds = ((100_000 * latest.GBP) / 1e8).toFixed(2);
     await expect(page.locator('#tool-result')).toHaveText(`100,000 sats = £${pounds}`);

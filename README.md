@@ -14,20 +14,20 @@ One static site. No backend, no accounts, no cookies. The site never asks for ke
 
 ## Privacy: what leaves your browser, and when
 
-| Request             | When                                                                               | Where                                          |
-| ------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Latest block height | While the counter or the numbers are on screen and the tab is visible, every 45 s  | mempool.space, or blockstream.info if it fails |
-| Bitcoin price       | While the converter is open and visible, at most once a minute                     | mempool.space, or CoinGecko if it fails        |
-| One address balance | Only when you tap Look up on the address page, after a note that names the service | mempool.space                                  |
+| Request             | When                                                                                                      | Where                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Latest block height | On the home page, Bitcoin left to mine and the converter, while the tab is visible, every 45 s            | mempool.space, or blockstream.info if it fails |
+| Bitcoin price       | On the home page, Bitcoin left to mine and the converter, while the tab is visible, at most once a minute | mempool.space, or CoinGecko if it fails        |
+| One address balance | Only when you tap Look up on the address page, after a note that names the service                        | mempool.space                                  |
 
-Nothing else is sent. Purchasing power and buying on a schedule work from bundled files and make no requests. Nothing you type is stored, logged or put in the URL. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
+The block and price line under the top bar shares those two requests with the tool on the same page; there is one of each, never two. On purchasing power, buying on a schedule and address lookup it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Purchasing power and buying on a schedule work from bundled files and make no requests. Nothing you type is stored, logged or put in the URL. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
 
 If a seed phrase, private key (WIF), extended private key or a descriptor holding one is pasted into the address field, the page clears the field at once and says why. It looks through numbering, labels, punctuation, other wordlists and invisible characters, and nothing about it is sent or kept. Extended public keys are refused too, because they reveal a whole wallet.
 
 ## Real or estimated
 
-- **Real**: block height (live API), supply figures (computed from the height and the issuance schedule), checksums and address types (computed from the BIPs), the live price on the converter, the bundled CPI and daily closes.
-- **Estimated, and labelled on screen**: the block height before the first answer or when offline (one block per 10 minutes after a recorded anchor block), the next halving date (10-minute blocks), and the converter price when offline (the last bundled close).
+- **Real**: block height (live API), supply figures (computed from the height and the issuance schedule), checksums and address types (computed from the BIPs), the live price in the status line and on the converter, the bundled CPI and daily closes.
+- **Estimated, and labelled on screen**: the block height before the first answer or when offline (one block per 10 minutes after a recorded anchor block), the next halving date (10-minute blocks), and the price when offline or on a page that does not fetch it (the last bundled close).
 - Past results are history, not a forecast.
 
 ## Sources

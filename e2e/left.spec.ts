@@ -10,6 +10,10 @@ const BLOCK = formatWhole(FAKE_HEIGHT);
 
 import { fakePriceApi } from './price-api.ts';
 
+test.beforeEach(async ({ page }) => {
+    await fakePriceApi(page);
+});
+
 function watch(page: Page) {
     const problems: string[] = [];
     const scripts: string[] = [];
@@ -41,6 +45,9 @@ test('home counts down from the live height and links to every number', async ({
 
     expect(external.every(isApiRequest)).toBe(true);
     expect(chain.calls[0]).toBe('https://mempool.space/api/blocks/tip/height');
+    await expect(page.locator('#hero-supply')).toHaveText(
+        /^[\d,]+ of 21,000,000 BTC minedNext halving in [\d,]+ blocks$/,
+    );
     expect(realProblems(problems)).toEqual([]);
 });
 
@@ -108,13 +115,14 @@ test('a new block is picked up on the next poll and announced once', async ({ pa
     expect(blockCalls).toHaveLength(2);
 });
 
-test('calculator routes never load three.js or call the height API', async ({ page }) => {
+test('calculator routes never load three.js; only the converter asks for price and height', async ({ page }) => {
     const chain = await fakeHeightApi(page);
     const prices = await fakePriceApi(page);
     const { scripts, external, problems } = watch(page);
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).toHaveText(/^100,000 sats = £57\.33$/);
     await page.waitForTimeout(2500);
+    const converter = [...external];
     await page.goto('/#/dca');
     await expect(page.locator('#dca-detail')).toBeVisible();
     await page.goto('/#/power');
@@ -125,9 +133,11 @@ test('calculator routes never load three.js or call the height API', async ({ pa
     await page.waitForTimeout(1500);
 
     expect(scripts.filter((path) => /\/(three|scene|post|plain|worker)-/.test(path))).toEqual([]);
-    expect(external).toEqual(prices.calls);
+    expect(external).toEqual(converter);
     expect(prices.calls).toEqual(['https://mempool.space/api/v1/prices']);
-    expect(chain.calls).toEqual([]);
+    expect(chain.calls.filter((url) => url.endsWith('/tip/height'))).toEqual([
+        'https://mempool.space/api/blocks/tip/height',
+    ]);
     expect(realProblems(problems)).toEqual([]);
 });
 

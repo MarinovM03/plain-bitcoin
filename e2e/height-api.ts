@@ -18,7 +18,7 @@ export function leftFigure(height = FAKE_HEIGHT): string {
 
 export async function fakeHeightApi(page: Page, height = FAKE_HEIGHT): Promise<FakeChain> {
     const chain: FakeChain = { height, calls: [] };
-    await page.route(/^https:\/\/(mempool\.space|blockstream\.info)\//, (route) => {
+    await page.route(/^https:\/\/(mempool\.space|blockstream\.info)\/api\/blocks\//, (route) => {
         const url = route.request().url();
         chain.calls.push(url);
         const headers = { 'access-control-allow-origin': '*' };

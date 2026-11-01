@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
 import { FOOTER, NAV, SITE_NAME } from '../src/ui/copy.ts';
 import { fakeHeightApi } from './height-api.ts';
@@ -44,23 +44,26 @@ test('the current route is marked in the top bar', async ({ page }) => {
     }
 });
 
-test('on a phone the answer dock stays in view while the inputs are on screen', async ({ page }) => {
+function pinned(page: Page): Promise<string[]> {
+    return page.evaluate(() =>
+        [...document.querySelectorAll('body *')]
+            .filter((element) => ['sticky', 'fixed'].includes(getComputedStyle(element).position))
+            .map((element) => element.className),
+    );
+}
+
+test('only the top bar is pinned on a tool page, never the answer', async ({ page }) => {
     const size = page.viewportSize();
-    test.skip(!size || size.width >= 896 || size.height < 600, 'The dock only sticks on portrait phones');
+    test.skip(!size || size.height <= 512, 'Landscape phones pin nothing, checked below');
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).not.toHaveText('');
-    const dock = await page.locator('.tool__dock').boundingBox();
-    expect(dock).not.toBeNull();
-    expect((dock?.y ?? 0) + (dock?.height ?? 0)).toBeLessThanOrEqual(size?.height ?? 0);
-    expect(dock?.height ?? 0).toBeLessThan((size?.height ?? 0) * 0.4);
-    await expect(page.locator('#convert-sats')).toBeInViewport();
+    expect(await pinned(page)).toEqual(['topbar']);
 });
 
 test('in phone landscape nothing sticks, so the short screen never traps the page', async ({ page }) => {
     const size = page.viewportSize();
     test.skip(!size || size.height > 512 || size.width < size.height, 'Landscape phones only');
     await page.goto('/#/convert');
-    for (const selector of ['.topbar', '.tool__dock']) {
-        expect(await page.locator(selector).evaluate((element) => getComputedStyle(element).position)).toBe('static');
-    }
+    await expect(page.locator('#tool-result')).not.toHaveText('');
+    expect(await pinned(page)).toEqual([]);
 });
