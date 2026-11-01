@@ -199,5 +199,6 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         prices.setActive(owner, false);
         window.clearTimeout(settleTimer);
         share.dispose();
+        scene.dispose();
     };
 }

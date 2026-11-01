@@ -199,5 +199,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     return () => {
         window.clearTimeout(settleTimer);
         share.dispose();
+        scene.dispose();
     };
 }

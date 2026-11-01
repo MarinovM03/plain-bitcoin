@@ -436,5 +436,6 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         window.clearTimeout(settleTimer);
         form.removeEventListener('submit', onSubmit);
         share.dispose();
+        scene.dispose();
     };
 }

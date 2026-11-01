@@ -161,16 +161,15 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         lines.value.setAttribute('points', chartLines[2] ?? '');
         chart.setAttribute('aria-label', words.chartAlt);
         chart.classList.remove('dca-chart--empty');
-        const marks = buyIndices(outcome.result);
-        scene.set(
-            {
+        scene.set(() => {
+            const marks = buyIndices(outcome.result);
+            return {
                 id: 'dca',
                 value: marks.map((i) => points[i]?.value ?? 0),
                 invested: marks.map((i) => points[i]?.invested ?? 0),
                 lump: marks.map((i) => points[i]?.lumpValue ?? 0),
-            },
-            SCENE.dca,
-        );
+            };
+        }, SCENE.dca);
     }
 
     function renderNotes(words: DcaText): void {
@@ -274,5 +273,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         disposed = true;
         window.clearTimeout(settleTimer);
         share.dispose();
+        scene.dispose();
     };
 }

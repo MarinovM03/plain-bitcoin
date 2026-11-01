@@ -81,6 +81,8 @@ test('a start before the prices begin moves to the first close and says so', asy
 
 test('recomputes within a frame', async ({ page }) => {
     await openDca(page);
+    // The stage starts once after load; on a two-core CI runner its start-up competes with a one-shot timing.
+    await expect(page.locator('#stage')).toHaveAttribute('data-tier', /./);
     await page.locator('#dca-start-year').selectOption('2010');
     const ms = await page.evaluate(() => {
         const input = document.querySelector<HTMLInputElement>('#dca-amount');

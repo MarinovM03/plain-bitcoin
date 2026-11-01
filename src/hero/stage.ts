@@ -43,7 +43,8 @@ async function directDriver(onReply: (reply: EngineReply) => void): Promise<Driv
 
 export function runStage(root: HTMLElement, bus: StageBus): void {
     const syncPulses = (snapshot: StageSnapshot) => {
-        root.dataset.pulses = String(snapshot.pulses);
+        const pulses = String(snapshot.pulses);
+        if (root.dataset.pulses !== pulses) root.dataset.pulses = pulses;
     };
     syncPulses(bus.current());
     bus.subscribe(syncPulses);
