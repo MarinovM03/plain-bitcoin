@@ -5,7 +5,7 @@ import { convert } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
 import { supplyAt } from '../model/supply.ts';
-import { addressText, convertText, dcaText, leftCard, powerText, priceLabel, rateLine } from './cardText.ts';
+import { addressText, convertText, dcaText, leftCard, powerText, priceLabel } from './cardText.ts';
 import { siteAddress } from './index.ts';
 
 const BASE: PowerResult = {
@@ -136,7 +136,6 @@ describe('convertText', () => {
             `Price: ${priceLabel(LAST_CLOSE)}`,
         );
         expect(priceLabel({ ...LIVE, stale: true })).toBe('mempool.space, 30 Oct 2026, 19:20 UTC, not updating');
-        expect(rateLine(LIVE)).toBe('1 BTC = £57,329 = $76,777');
     });
 });
 

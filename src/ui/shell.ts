@@ -2,6 +2,7 @@ import { hrefFor } from '../app/routes.ts';
 import { TOOL_IDS } from '../tools/index.ts';
 import { FOOTER, HOME, NAV, NOSCRIPT, SITE_NAME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
+import { renderStatus } from './status.ts';
 
 function followLink(className: string, text: string): SafeHtml {
     return html`<a class="${className}" href="${FOOTER.followUrl}" rel="noopener noreferrer">${text} <span aria-hidden="true">↗</span></a>`;
@@ -18,6 +19,7 @@ export function renderHeader(): SafeHtml {
             <ul class="nav__list">${links}</ul>
         </nav>
         ${followLink('topbar__follow', FOOTER.handle)}
+        ${renderStatus()}
     </div>
 </header>`;
 }
@@ -37,15 +39,10 @@ export function renderFooter(): SafeHtml {
             <p class="footer__promise">${HOME.promise}</p>
             <p class="footer__privacy">${FOOTER.privacy}</p>
         </div>
-        <nav class="footer__tools" aria-labelledby="footer-tools-heading">
-            <h2 id="footer-tools-heading" class="footer__heading">${FOOTER.toolsHeading}</h2>
+        <nav class="footer__tools" aria-label="${FOOTER.toolsLabel}">
             <ul class="footer__list">${links}</ul>
         </nav>
-        <section class="footer__social" aria-labelledby="footer-follow-heading">
-            <h2 id="footer-follow-heading" class="footer__heading">${FOOTER.followHeading}</h2>
-            <p class="footer__note">${FOOTER.followNote}</p>
-            ${followLink('footer__follow', FOOTER.follow)}
-        </section>
+        ${followLink('footer__follow', FOOTER.follow)}
     </div>
 </footer>`;
 }

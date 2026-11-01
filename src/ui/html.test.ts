@@ -39,15 +39,16 @@ describe('renderToolPage', () => {
         for (const id of TOOL_IDS.filter((tool) => tool !== 'left')) {
             const markup = renderToolPage(id).value;
             for (const part of [
-                'class="eyebrow"',
-                'class="tool__inputs panel"',
-                'class="tool__dock result"',
+                'class="tool__title"',
+                'class="tool__inputs"',
+                'class="result"',
                 'class="share-bar"',
-                'class="source-strip"',
+                'class="tool__source"',
                 'class="source-line"',
             ]) {
                 expect(markup).toContain(part);
             }
+            for (const gone of ['eyebrow', 'panel', 'tool__dock']) expect(markup).not.toContain(gone);
             expect(markup).toContain(escapeHtml(TOOLS[id].privacy));
         }
     });

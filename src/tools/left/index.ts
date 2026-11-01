@@ -1,4 +1,4 @@
-import { HEIGHT_ANCHOR, type Tip } from '../../data/height.ts';
+import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
 import { drawFlatField } from '../../hero/flat.ts';
 import { tokenState } from '../../hero/layout.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
@@ -9,7 +9,7 @@ import { type CardArt, type ShareCard, siteAddress } from '../../share/index.ts'
 import { LEFT_PAGE } from '../../ui/copy.ts';
 import { afterFirstPaint, find, link, whenIdle } from '../../util/dom.ts';
 import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, formatWhole } from '../../util/format.ts';
-import { heightFeed, tipAge, watchActive } from './counter.ts';
+import { tipAge, watchActive } from './counter.ts';
 
 const MEMPOOL = 'https://mempool.space/';
 

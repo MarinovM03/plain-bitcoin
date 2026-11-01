@@ -2,24 +2,21 @@ import { SHARE, TOOL_PAGE } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
 export function resultBlock(options: { id: string; label: string; empty: string; extra?: SafeHtml | '' }): SafeHtml {
-    return html`<section class="tool__dock result" aria-labelledby="${options.id}-label">
-    <div class="result__head">
-        <p id="${options.id}-label" class="result__label">${options.label}</p>
-        ${postLink()}
-    </div>
+    return html`<section class="result" aria-labelledby="${options.id}-label">
+    <p id="${options.id}-label" class="result__label">${options.label}</p>
     <p id="${options.id}" class="result__figure"><span class="result__empty">${options.empty}</span></p>
     <p id="${options.id}-detail" class="result__detail"></p>
     <p id="${options.id}-status" class="visually-hidden" aria-live="polite"></p>
     <div class="result__actions">
         ${shareBar()}
-        ${options.extra ?? ''}
+        ${postLink()}
     </div>
+    ${options.extra ?? ''}
 </section>`;
 }
 
-export function sourceStrip(privacy: string, text: string = TOOL_PAGE.sourcePending): SafeHtml {
-    return html`<div class="source-strip">
-    <p class="eyebrow">${TOOL_PAGE.sourceHeading}</p>
+export function sourceLine(privacy: string, text: string = TOOL_PAGE.sourcePending): SafeHtml {
+    return html`<div class="tool__source">
     <p id="tool-source" class="source-line">${text}</p>
     <p class="privacy-line">${privacy}</p>
 </div>`;

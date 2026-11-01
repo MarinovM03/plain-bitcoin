@@ -17,19 +17,8 @@ export const OG_IMAGE = {
 
 export const HOME = {
     promise: 'Plain answers to Bitcoin questions, worked out in your browser.',
-    promiseDetail: 'Five tools. Every number shows its source and when it was checked.',
-    toolsKicker: 'Tools',
     toolsHeading: 'Pick a question',
-    open: 'Open',
-    startHeading: 'Start here',
-    facts: [
-        { figure: '21M BTC', text: 'Bitcoin has a fixed supply: never more than 21 million BTC.' },
-        {
-            figure: '10 min',
-            text: 'New coins come with each block, about every 10 minutes. The amount halves every 210,000 blocks.',
-        },
-        { figure: '100M sats', text: 'One bitcoin is 100,000,000 sats, so you can own a small part of one.' },
-    ],
+    cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
         'Never share a seed phrase or private key. No honest tool asks for one.',
@@ -47,11 +36,23 @@ export const NAV = {
     } satisfies Record<ToolId, string>,
 } as const;
 
+export const STATUS = {
+    label: 'Bitcoin status',
+    block: (height: string) => `Block ${height}`,
+    estimated: ' est.',
+    price: '1 BTC = ',
+    live: (source: string, clock: string) => `${source} ${clock}`,
+    stale: (source: string, clock: string) => `${source} ${clock}, not live`,
+    lastClose: (day: string) => `last close ${day}`,
+} as const;
+
 export const HERO = {
-    eyebrow: 'Live supply',
     heading: 'Bitcoin left to mine',
     figureEmpty: 'Counting',
-    link: 'Issued so far and the next halving',
+    link: 'All the numbers',
+    mined: (mined: string) => `${mined} of 21,000,000 BTC mined`,
+    halving: (blocks: number) =>
+        `Next halving in ${blocks.toLocaleString('en-GB')} ${blocks === 1 ? 'block' : 'blocks'}`,
     sceneLabel:
         'A field of 21,000 tokens of 1,000 BTC each, one terrace per halving. Issued tokens are solid, the rest are outlines, and the token being filled now glows.',
     live: (height: string, reward: string) => `Block ${height}: ${reward} issued.`,
@@ -61,54 +62,45 @@ export const HERO = {
     offline: (height: string) => `Estimated, offline: block ${height}, assuming a block every 10 minutes.`,
 } as const;
 
-export const TOOLS: Record<ToolId, { name: string; kind: string; question: string; preview: string; privacy: string }> =
-    {
-        left: {
-            name: 'Bitcoin left to mine',
-            kind: 'Live supply',
-            question: 'How much bitcoin is still to be mined?',
-            preview: 'Counted from the latest block',
-            privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
-        },
-        power: {
-            name: 'Purchasing power',
-            kind: 'Cash against bitcoin',
-            question: 'What is an old amount of money worth today, and in bitcoin?',
-            preview: '£1,000 in 2015, worth today',
-            privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
-        },
-        convert: {
-            name: 'Converter',
-            kind: 'Units and price',
-            question: 'How much is this in sats, bitcoin, pounds or dollars?',
-            preview: '1 BTC = 100,000,000 sats',
-            privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
-        },
-        dca: {
-            name: 'Buying on a schedule',
-            kind: 'Past prices',
-            question: 'How does buying a little at a time (DCA) compare with one lump sum?',
-            preview: '£50 a week or one lump sum',
-            privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
-        },
-        address: {
-            name: 'Address lookup',
-            kind: 'Read-only check',
-            question: 'What kind of bitcoin address is this, and is it typed right?',
-            preview: 'Type, typo check, public balance',
-            privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
-        },
-    };
+export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
+    left: {
+        name: 'Bitcoin left to mine',
+        question: 'How much bitcoin is still to be mined?',
+        preview: '21,000,000 BTC, ever',
+        privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
+    },
+    power: {
+        name: 'Purchasing power',
+        question: 'What is an old amount of money worth today, and as bitcoin?',
+        preview: '£1,000 in 2015 → today',
+        privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
+    },
+    convert: {
+        name: 'Converter',
+        question: 'How much is this in sats, bitcoin, pounds or dollars?',
+        preview: '1 BTC = 100,000,000 sats',
+        privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
+    },
+    dca: {
+        name: 'Buying on a schedule',
+        question: 'Buying a little at a time (DCA), or one lump sum?',
+        preview: '£50 a week since 2020',
+        privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
+    },
+    address: {
+        name: 'Address lookup',
+        question: 'What kind of address is this, and is it typed right?',
+        preview: 'bc1… · 1… · 3…',
+        privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
+    },
+};
 
 export const TOOL_PAGE = {
-    back: 'All tools',
     inputsLabel: 'Your numbers',
     addressLabel: 'Your address',
     resultLabel: 'Answer',
     resultEmpty: 'Your answer shows here.',
     sourcePending: 'Source and as-of date show here with each answer.',
-    sourceHeading: 'Source and privacy',
-    moreHeading: 'Worked out',
 } as const;
 
 export const SHARE = {
@@ -201,15 +193,8 @@ export const CONVERT = {
         pizza: '10,000 BTC',
     },
     presetHints: { sat: 'Smallest', pizza: 'Pizza Day' } as Partial<Record<string, string>>,
-    referenceHeading: 'For reference',
-    reference: {
-        units: '1 BTC',
-        unitsValue: '100,000,000 sats',
-        sat: '1 sat',
-        price: '1 BTC',
-        cap: 'Most there will ever be',
-        capValue: '21,000,000 BTC',
-    },
+    unitsLine: '1 BTC = 100,000,000 sats',
+    perSat: (gbp: string, usd: string) => `1 sat ≈ ${gbp} · ${usd}`,
     labelLive: (clock: string) => `live price, ${clock}`,
     empty: 'Type an amount in any field.',
     tooBig: 'That is more than 21,000,000 BTC, the most there will ever be.',
@@ -217,7 +202,6 @@ export const CONVERT = {
     invalid: 'Only plain numbers, like 100,000 or 0.01.',
     headline: (from: string, to: string) => `${from} = ${to}`,
     detail: (first: string, second: string) => `Also ${first} or ${second}.`,
-    rate: (gbp: string, usd: string) => `1 BTC = ${gbp} = ${usd}`,
     live: (api: string, stamp: string) => `${api}, ${stamp}`,
     notUpdating: (api: string, stamp: string) => `${api}, ${stamp}, not updating`,
     lastClose: (day: string) => `last close, ${day}`,
@@ -410,7 +394,6 @@ export const ADDRESS = {
 } as const;
 
 export const LEFT_PAGE = {
-    numbersHeading: 'The numbers',
     left: 'Left to mine',
     issued: 'Issued by the schedule',
     share: 'Share issued',
@@ -450,9 +433,7 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    toolsHeading: 'All tools',
-    followHeading: 'Follow',
-    followNote: 'New answer cards and tools, posted on X.',
+    toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',
     handle: '@PlainBTC',
     followUrl: 'https://x.com/PlainBTC',

@@ -9,9 +9,9 @@ export function renderHero(options: { link: boolean } = { link: true }): SafeHtm
     return html`<section class="hero${options.link ? '' : ' hero--page'}" aria-labelledby="hero-heading">
     <div id="hero-stage" class="hero__stage"></div>
     <div class="hero__text">
-        <p class="hero__eyebrow"><span class="hero__dot" aria-hidden="true"></span>${HERO.eyebrow}</p>
         <h1 id="hero-heading" class="hero__heading" tabindex="-1">${HERO.heading}</h1>
         <p id="hero-figure" class="hero__figure"><span class="hero__figure-empty">${HERO.figureEmpty}</span></p>
+        <p id="hero-supply" class="hero__supply"></p>
         <p id="hero-note" class="hero__note"></p>
         ${link}
     </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Tip } from '../../data/height.ts';
-import { arrivalLine, tipAge, tipLine } from './counter.ts';
+import { arrivalLine, supplyLines, tipAge, tipLine } from './counter.ts';
 
 const NOW = Date.UTC(2026, 9, 30, 18, 0, 0);
 
@@ -48,5 +48,12 @@ describe('arrivalLine', () => {
 
     it('adds across a halving using each block’s own subsidy', () => {
         expect(arrivalLine(1_050_000, 2)).toBe('Blocks 1,049,999 to 1,050,000: 4.6875 BTC issued.');
+    });
+});
+
+describe('supplyLines', () => {
+    it('shows whole bitcoin mined and the blocks to the next halving', () => {
+        expect(supplyLines(1_049_999)).toEqual(['20,343,750 of 21,000,000 BTC mined', 'Next halving in 1 block']);
+        expect(supplyLines(840_000)).toEqual(['19,687,503 of 21,000,000 BTC mined', 'Next halving in 210,000 blocks']);
     });
 });

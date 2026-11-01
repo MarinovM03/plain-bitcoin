@@ -100,10 +100,6 @@ export function priceLabel(quote: PriceQuote): string {
     return quote.stale ? CONVERT.notUpdating(quote.source, stamp) : CONVERT.live(quote.source, stamp);
 }
 
-export function rateLine(quote: PriceQuote): string {
-    return CONVERT.rate(formatMoney(quote.value.gbp, 'GBP'), formatMoney(quote.value.usd, 'USD'));
-}
-
 export interface ConvertText {
     headline: string;
     detail: string;

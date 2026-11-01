@@ -1,5 +1,5 @@
 import type { Prices } from '../model/convert.ts';
-import latest from './prices/latest.json';
+import latest from './prices/latest.json' with { type: 'json' };
 
 export const PRICE_APIS = [
     { name: 'mempool.space', url: 'https://mempool.space/api/v1/prices' },

@@ -1,19 +1,13 @@
-import { createHeightFeed, type HeightFeed, type Tip } from '../../data/height.ts';
+import { heightFeed, type Tip } from '../../data/height.ts';
 import { type HeroHandle, type HeroShot, mountHero } from '../../hero/index.ts';
-import { supplyAt } from '../../model/supply.ts';
+import { SATS_PER_BTC, supplyAt } from '../../model/supply.ts';
 import { HERO } from '../../ui/copy.ts';
 import { afterFirstPaint } from '../../util/dom.ts';
 import { btcParts, formatAge, formatBtcExact, formatWhole } from '../../util/format.ts';
 
-let feed: HeightFeed | null = null;
-
-export function heightFeed(): HeightFeed {
-    feed ??= createHeightFeed({
-        fetch: (url, init) => window.fetch(url, init),
-        now: () => Date.now(),
-        isOnline: () => navigator.onLine,
-    });
-    return feed;
+export function supplyLines(height: number): [string, string] {
+    const supply = supplyAt(height);
+    return [HERO.mined(formatWhole(Math.floor(supply.issued / SATS_PER_BTC))), HERO.halving(supply.blocksToHalving)];
 }
 
 export function tipAge(tip: Tip, now = Date.now()): string | null {
@@ -64,7 +58,8 @@ export function mountCounter(root: HTMLElement, shot: HeroShot, announce: (messa
     const stage = root.querySelector<HTMLElement>('#hero-stage');
     const figure = root.querySelector<HTMLElement>('#hero-figure');
     const note = root.querySelector<HTMLElement>('#hero-note');
-    if (!hero || !stage || !figure || !note) return () => {};
+    const supply = root.querySelector<HTMLElement>('#hero-supply');
+    if (!hero || !stage || !figure || !note || !supply) return () => {};
 
     const heights = heightFeed();
     const owner = {};
@@ -78,6 +73,7 @@ export function mountCounter(root: HTMLElement, shot: HeroShot, announce: (messa
             span('hero__fraction', parts.fraction ? `.${parts.fraction}` : ''),
             span('hero__unit', ' BTC'),
         );
+        supply?.replaceChildren(...supplyLines(tip.height).map((line) => span('hero__supply-line', line)));
     }
 
     function renderNote(): void {
@@ -92,22 +88,25 @@ export function mountCounter(root: HTMLElement, shot: HeroShot, announce: (messa
     renderFigure();
     renderNote();
     let shown = supplyAt(tip.height).issued;
+    let scene: HeroHandle | null = null;
     let disposed = false;
     let stop = () => {};
+
+    const unsubscribe = heights.subscribe((next, change) => {
+        tip = next;
+        renderFigure();
+        renderNote();
+        const issued = supplyAt(next.height).issued;
+        if (issued !== shown) scene?.setIssued(issued, change.blocks > 0);
+        shown = issued;
+        if (change.blocks > 0) announce(arrivalLine(next.height, change.blocks));
+    });
 
     // Live requests and the hero wait for the first paint, so neither competes with it on a slow phone.
     afterFirstPaint(() => {
         if (disposed) return;
-        const scene: HeroHandle = mountHero(stage, shot, shown);
-        const unsubscribe = heights.subscribe((next, change) => {
-            tip = next;
-            renderFigure();
-            renderNote();
-            const issued = supplyAt(next.height).issued;
-            if (issued !== shown) scene.setIssued(issued, change.blocks > 0);
-            shown = issued;
-            if (change.blocks > 0) announce(arrivalLine(next.height, change.blocks));
-        });
+        const mounted = mountHero(stage, shot, shown);
+        scene = mounted;
         const unwatch = watchActive(hero, (active) => {
             heights.setActive(owner, active);
             setTicking(active);
@@ -115,13 +114,13 @@ export function mountCounter(root: HTMLElement, shot: HeroShot, announce: (messa
         });
         stop = () => {
             unwatch();
-            unsubscribe();
-            scene.dispose();
+            mounted.dispose();
         };
     });
 
     return () => {
         disposed = true;
+        unsubscribe();
         stop();
         setTicking(false);
     };

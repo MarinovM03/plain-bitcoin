@@ -52,14 +52,14 @@ function legendItem(kind: string, label: string): SafeHtml {
 
 export function renderDcaDetail(): SafeHtml {
     const rows = DCA_ROWS.map(
-        (row) => html`<div class="stat${SENTENCE_ROWS.has(row) ? ' stat--wide stat--text' : ''}">
+        (row) => html`<div class="stat${SENTENCE_ROWS.has(row) ? ' stat--text' : ''}">
             <dt>${DCA.rows[row]}</dt>
             <dd id="dca-${row}"></dd>
         </div>`,
     );
     return html`<div id="dca-detail" class="tool__more dca-detail" hidden>
-    <section class="panel dca-detail__chart" aria-labelledby="dca-chart-label">
-        <h2 id="dca-chart-label" class="panel__title">${DCA.chartLabel}</h2>
+    <section class="details dca-detail__chart" aria-labelledby="dca-chart-label">
+        <h2 id="dca-chart-label" class="details__title">${DCA.chartLabel}</h2>
         <svg id="dca-chart" class="dca-chart" viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" preserveAspectRatio="none" role="img" aria-label="">
             <line class="dca-chart__base" x1="0" x2="${CHART_WIDTH}" y1="${CHART_HEIGHT}" y2="${CHART_HEIGHT}" />
             <polyline class="dca-chart__line dca-chart__line--invested" points="" />
@@ -72,12 +72,12 @@ export function renderDcaDetail(): SafeHtml {
             ${legendItem('lump', DCA.legend.lump)}
         </ul>
     </section>
-    <section class="panel dca-detail__numbers" aria-labelledby="dca-numbers-label">
-        <h2 id="dca-numbers-label" class="panel__title">${DCA.numbersHeading}</h2>
-        <dl class="stats stats--two">${rows}</dl>
+    <section class="details dca-detail__numbers" aria-labelledby="dca-numbers-label">
+        <h2 id="dca-numbers-label" class="details__title">${DCA.numbersHeading}</h2>
+        <dl class="stats">${rows}</dl>
     </section>
-    <section class="panel panel--quiet dca-detail__how" aria-labelledby="dca-how-label">
-        <h2 id="dca-how-label" class="panel__title">${POWER.howHeading}</h2>
+    <section class="details dca-detail__how" aria-labelledby="dca-how-label">
+        <h2 id="dca-how-label" class="details__title">${POWER.howHeading}</h2>
         <div id="dca-notes" class="dca-detail__notes"></div>
         <p class="formula">${DCA.formula}</p>
         ${noteLine(POWER.caution)}

@@ -2,7 +2,7 @@ import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.
 import { convert, type ParseFailure, parseToSats, pasteFits, SATS_PER_BTC, type Unit } from '../../model/convert.ts';
 import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
-import { type ConvertText, convertText, priceLabel, rateLine } from '../../share/cardText.ts';
+import { type ConvertText, convertText, priceLabel } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
 import {
     CONVERT_PRESETS,
@@ -12,14 +12,7 @@ import {
 } from '../../ui/convert-view.ts';
 import { CONVERT, TOOL_PAGE } from '../../ui/copy.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
-import {
-    formatFiatPrecise,
-    formatMoney,
-    formatShortDay,
-    formatUtcClock,
-    formatUtcStamp,
-    isoDayMs,
-} from '../../util/format.ts';
+import { formatFiatPrecise, formatShortDay, formatUtcClock, formatUtcStamp, isoDayMs } from '../../util/format.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
@@ -35,9 +28,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         CONVERT_UNITS.map((unit) => [unit, find<HTMLInputElement>(root, `#convert-${unit}`)]),
     ) as Record<Unit, HTMLInputElement>;
     const presetButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
-    const priceLine = find(root, '#convert-price');
     const refSat = find(root, '#convert-ref-sat');
-    const refPrice = find(root, '#convert-ref-price');
     const note = find(root, '#convert-note');
     const label = find(root, '#tool-result-label');
     const figure = find(root, '#tool-result');
@@ -76,10 +67,11 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function renderPrice(): void {
-        priceLine.textContent = `${rateLine(quote)} · ${priceLabel(quote)}`;
         const { gbp, usd } = quote.value;
-        refSat.textContent = `${formatFiatPrecise(gbp / SATS_PER_BTC, 'GBP')} · ${formatFiatPrecise(usd / SATS_PER_BTC, 'USD')}`;
-        refPrice.textContent = `${formatMoney(gbp, 'GBP')} · ${formatMoney(usd, 'USD')}`;
+        refSat.textContent = CONVERT.perSat(
+            formatFiatPrecise(gbp / SATS_PER_BTC, 'GBP'),
+            formatFiatPrecise(usd / SATS_PER_BTC, 'USD'),
+        );
     }
 
     function renderSource(): void {

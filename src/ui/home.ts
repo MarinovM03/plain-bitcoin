@@ -6,49 +6,34 @@ import { html, type SafeHtml } from './html.ts';
 
 function renderToolList(): SafeHtml {
     const rows = TOOL_IDS.map(
-        (id, index) => html`<li class="tool-list__item tool-list__item--${id}">
+        (id, index) => html`<li class="tool-list__item">
         <a class="tool-row" href="${hrefFor(id)}">
             <span class="tool-row__name">${TOOLS[id].name}</span>
             <span class="tool-row__question">${TOOLS[id].question}</span>
             <span class="tool-row__preview">${TOOLS[id].preview}</span>
-            <span class="tool-row__kind">${TOOLS[id].kind}</span>
             <span class="tool-row__index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
-            <span class="tool-row__cta" aria-hidden="true">${HOME.open} →</span>
+            <span class="tool-row__arrow" aria-hidden="true">→</span>
         </a>
     </li>`,
     );
     return html`<section class="tools" aria-labelledby="tools-heading">
-    <div class="section-head">
-        <p class="eyebrow">${HOME.toolsKicker}</p>
-        <h2 id="tools-heading" class="section-head__title">${HOME.toolsHeading}</h2>
-    </div>
-    <ul class="tool-list">${rows}</ul>
+    <h2 id="tools-heading" class="home__heading">${HOME.toolsHeading}</h2>
+    <ol class="tool-list">${rows}</ol>
 </section>`;
 }
 
-function renderIntro(): SafeHtml {
-    const facts = HOME.facts.map(
-        (fact) => html`<li class="fact">
-            <span class="fact__figure">${fact.figure}</span>
-            <span class="fact__text">${fact.text}</span>
-        </li>`,
-    );
-    const cautions = HOME.cautions.map((line) => html`<li class="intro__caution">${line}</li>`);
-    return html`<section class="intro panel" aria-labelledby="start-heading">
-    <div class="intro__lead">
-        <h2 id="start-heading" class="eyebrow">${HOME.startHeading}</h2>
-        <p class="intro__promise">${HOME.promise}</p>
-        <p class="intro__detail">${HOME.promiseDetail}</p>
-    </div>
-    <ul class="intro__facts">${facts}</ul>
-    <ul class="intro__cautions">${cautions}</ul>
+function renderCautions(): SafeHtml {
+    const lines = HOME.cautions.map((line) => html`<li class="cautions__item">${line}</li>`);
+    return html`<section class="cautions" aria-labelledby="cautions-heading">
+    <h2 id="cautions-heading" class="home__heading">${HOME.cautionsHeading}</h2>
+    <ul class="cautions__list">${lines}</ul>
 </section>`;
 }
 
 export function renderHome(): SafeHtml {
     return html`${renderHero()}
 <div class="home">
-    ${renderIntro()}
     ${renderToolList()}
+    ${renderCautions()}
 </div>`;
 }

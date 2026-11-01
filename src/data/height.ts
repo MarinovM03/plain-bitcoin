@@ -201,3 +201,14 @@ export function createHeightFeed(options: FeedOptions): HeightFeed {
         },
     };
 }
+
+let feed: HeightFeed | null = null;
+
+export function heightFeed(): HeightFeed {
+    feed ??= createHeightFeed({
+        fetch: (url, init) => window.fetch(url, init),
+        now: () => Date.now(),
+        isOnline: () => navigator.onLine,
+    });
+    return feed;
+}

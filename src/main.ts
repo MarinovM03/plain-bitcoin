@@ -6,11 +6,13 @@ import { bindFields } from './ui/field-behaviour.ts';
 import { renderHome } from './ui/home.ts';
 import { html } from './ui/html.ts';
 import { markCurrent } from './ui/shell.ts';
+import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
 import { byId } from './util/dom.ts';
 
 const main = byId('main');
 const announcer = byId('announcer');
+const status = mountStatus(byId('status'));
 const announce = (message: string) => {
     announcer.textContent = message;
 };
@@ -34,6 +36,7 @@ startRouter(({ route, initial, notFound }) => {
     }
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
     markCurrent(route);
+    status.setRoute(route);
     bindFields(main);
 
     if (route === 'home' || route === 'left') {
