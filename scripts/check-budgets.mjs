@@ -8,7 +8,7 @@ const BUDGETS = {
     initialJs: 35 * KB,
     css: 15 * KB,
     fonts: 80 * KB,
-    hero: 170 * KB,
+    stage: 170 * KB,
 };
 
 function gzipSize(path) {
@@ -22,10 +22,11 @@ const initial = [
 const styles = [...html.matchAll(/<link rel="stylesheet"[^>]*href="\/([^"]+\.css)"/g)].map(([, path]) => path);
 const assets = readdirSync(new URL('assets/', dist));
 const fonts = readdirSync(new URL('fonts/', dist)).filter((name) => name.endsWith('.woff2'));
-const worker = assets.filter((name) => /^worker-.+\.js$/.test(name));
-const mainThreadHero = assets.filter((name) => /^(three|scene|post)-.+\.js$/.test(name));
+const stage = assets.filter((name) => /^(stage|worker)-.+\.js$/.test(name));
+const scenes = assets.filter((name) => /^(scene-|still-).+\.js$/.test(name));
 
 const sum = (paths) => paths.reduce((total, path) => total + gzipSize(path), 0);
+const inAssets = (names) => names.map((name) => `assets/${name}`);
 const rows = [
     ['Initial JS (gzip)', sum(initial), BUDGETS.initialJs],
     ['CSS (gzip)', sum(styles), BUDGETS.css],
@@ -34,15 +35,17 @@ const rows = [
         fonts.reduce((total, name) => total + statSync(new URL(`fonts/${name}`, dist)).size, 0),
         BUDGETS.fonts,
     ],
-    ['Hero worker (gzip)', sum(worker.map((name) => `assets/${name}`)), BUDGETS.hero],
-    ['Hero main-thread fallback (gzip)', sum(mainThreadHero.map((name) => `assets/${name}`)), BUDGETS.hero],
+    ['Stage, worker, every scene and still (gzip)', sum(inAssets([...stage, ...scenes])), BUDGETS.stage],
 ];
 
-let failed = initial.length === 0 || styles.length === 0 || worker.length === 0;
+let failed = initial.length === 0 || styles.length === 0 || stage.length !== 2;
 for (const [label, size, limit] of rows) {
     const ok = size <= limit;
     failed ||= !ok;
     console.log(`${ok ? 'ok  ' : 'OVER'} ${label}: ${(size / KB).toFixed(2)} kB of ${limit / KB} kB`);
+}
+for (const name of [...stage, ...scenes]) {
+    console.log(`     ${name.replace(/-[\w-]{8}\.js$/, '')}: ${(gzipSize(`assets/${name}`) / KB).toFixed(2)} kB`);
 }
 if (failed) {
     console.error('Bundle budget check failed.');

@@ -1,0 +1,59 @@
+.stage {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 70% 55% at 78% 8%, color-mix(in srgb, var(--fiat) 11%, transparent), transparent 72%),
+        radial-gradient(ellipse 60% 45% at 8% 96%, color-mix(in srgb, var(--btc) 7%, transparent), transparent 70%),
+        var(--ink);
+}
+
+@supports (height: 100lvh) {
+    .stage {
+        bottom: auto;
+        height: 100lvh;
+    }
+}
+
+.stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle, color-mix(in srgb, var(--paper) 22%, transparent) 0 1.1px, transparent 1.8px) 0 0 / 9px
+        9px;
+    -webkit-mask-image:
+        radial-gradient(ellipse 55% 40% at 72% 22%, #000, transparent 75%),
+        radial-gradient(ellipse 45% 35% at 18% 70%, #000, transparent 72%);
+    mask-image:
+        radial-gradient(ellipse 55% 40% at 72% 22%, #000, transparent 75%),
+        radial-gradient(ellipse 45% 35% at 18% 70%, #000, transparent 72%);
+}
+
+.stage__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 400ms var(--ease);
+}
+
+.stage__canvas.is-ready {
+    opacity: 1;
+}
+
+.topbar,
+main,
+.footer {
+    position: relative;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stage__canvas {
+        transition: none;
+    }
+}

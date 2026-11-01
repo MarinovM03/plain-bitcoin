@@ -4,7 +4,7 @@ import { TOKENS } from './src/styles/tokens.ts';
 import { OG_IMAGE, SHARE, SITE_DESCRIPTION, SITE_NAME } from './src/ui/copy.ts';
 import { renderHome } from './src/ui/home.ts';
 import { escapeHtml } from './src/ui/html.ts';
-import { renderAnnouncer, renderFooter, renderHeader, renderNoscript } from './src/ui/shell.ts';
+import { renderAnnouncer, renderFooter, renderHeader, renderNoscript, renderStage } from './src/ui/shell.ts';
 
 const DEFAULT_SITE_URL = 'https://plainbitcoin.org';
 
@@ -116,6 +116,7 @@ function shell(siteUrl: string): Plugin {
         meta('name', 'twitter:image:alt', OG_IMAGE.alt),
     ].join('\n');
     const body = [
+        renderStage(),
         renderHeader(),
         `<main id="main">${renderHome()}${renderNoscript()}</main>`,
         renderFooter(),
@@ -140,12 +141,12 @@ export default defineConfig(({ mode }) => {
         worker: { format: 'es' },
         build: {
             target: 'es2022',
-            // three.js alone is about 565 kB minified; it loads lazily for the hero and nowhere else.
-            chunkSizeWarningLimit: 600,
             rolldownOptions: {
                 output: {
-                    // three.js changes far less often than the hero, so it caches in its own chunk across releases.
-                    codeSplitting: { groups: [{ name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/ }] },
+                    chunkFileNames: (chunk) =>
+                        /[\\/]hero[\\/]scenes[\\/]/.test(chunk.facadeModuleId ?? '')
+                            ? 'assets/scene-[name]-[hash].js'
+                            : 'assets/[name]-[hash].js',
                 },
             },
         },
