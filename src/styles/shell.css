@@ -21,19 +21,13 @@ main,
 
 .topbar {
     --brand-row: 3.25rem;
+    --status-row: 2rem;
     position: sticky;
-    top: calc(-1 * var(--brand-row) - env(safe-area-inset-top, 0px));
+    top: calc(-1 * (var(--brand-row) + var(--status-row)) - env(safe-area-inset-top, 0px));
     z-index: 20;
     padding-top: env(safe-area-inset-top);
-    border-bottom: 1px solid var(--edge);
-    background: color-mix(in srgb, var(--ink) 90%, transparent);
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    .topbar {
-        -webkit-backdrop-filter: saturate(140%) blur(14px);
-        backdrop-filter: saturate(140%) blur(14px);
-    }
+    border-bottom: 1px solid var(--line);
+    background: var(--ink);
 }
 
 .topbar__inner {
@@ -41,6 +35,7 @@ main,
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
         "brand follow"
+        "status status"
         "nav nav";
     align-items: center;
     column-gap: 1rem;
@@ -67,7 +62,6 @@ main,
     height: 0.625rem;
     border-radius: 50%;
     background: var(--btc);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--btc) 22%, transparent);
 }
 
 .topbar__follow {
@@ -76,13 +70,10 @@ main,
     align-items: center;
     gap: 0.375rem;
     min-height: var(--tap);
-    padding-inline: 0.875rem;
-    border: 1px solid var(--edge);
-    border-radius: 999px;
-    background: var(--panel);
+    padding-inline: 0.5rem;
+    color: var(--paper);
     font-size: var(--step-small);
     font-weight: 600;
-    transition: border-color var(--duration) var(--ease);
 }
 
 .topbar__follow span {
@@ -114,14 +105,12 @@ main,
     align-items: center;
     min-height: var(--tap);
     padding-inline: 1rem;
-    border: 1px solid var(--edge);
+    border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--panel);
     color: var(--muted);
     font-size: var(--step-small);
     font-weight: 600;
     white-space: nowrap;
-    transition: border-color var(--duration) var(--ease);
 }
 
 .nav__link[aria-current="page"] {
@@ -133,7 +122,6 @@ main,
 @media (hover: hover) {
     .nav__link:not([aria-current="page"]):hover,
     .topbar__follow:hover {
-        border-color: var(--muted);
         color: var(--paper);
     }
 }
@@ -145,9 +133,14 @@ main,
 
     .topbar__inner {
         grid-template-columns: auto minmax(0, 1fr) auto;
-        grid-template-areas: "brand nav follow";
-        min-height: 4rem;
+        grid-template-areas:
+            "brand nav follow"
+            "status status status";
         column-gap: 2rem;
+    }
+
+    .wordmark {
+        min-height: 4rem;
     }
 
     .nav {
@@ -165,7 +158,6 @@ main,
         position: relative;
         padding-inline: 0.875rem;
         border-color: transparent;
-        background: none;
     }
 
     .nav__link[aria-current="page"] {
@@ -181,12 +173,6 @@ main,
         height: 2px;
         border-radius: 2px;
         background: var(--btc);
-    }
-}
-
-@media (hover: hover) and (min-width: 64rem) {
-    .nav__link:not([aria-current="page"]):hover {
-        border-color: transparent;
     }
 }
 

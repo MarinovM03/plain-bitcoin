@@ -8,9 +8,9 @@
     min-height: var(--tap);
     margin-inline-end: 0.25rem;
     padding: 0 0.875rem;
-    border: 1px solid var(--edge);
+    border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--panel-high);
+    background: var(--ink);
     color: var(--paper);
     font: 600 var(--step-small) / 1.2 var(--font-body);
     cursor: pointer;
@@ -49,9 +49,9 @@
 
 .address-parts__text {
     padding: 0.875rem 1rem;
-    border: 1px solid var(--edge);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--well);
+    background: var(--ink);
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: var(--step-lead);
@@ -68,7 +68,7 @@
 .address-parts__legend {
     display: grid;
     margin: 0;
-    border: 1px solid var(--edge);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     overflow: hidden;
 }
@@ -79,12 +79,12 @@
     gap: 0.75rem;
     align-items: baseline;
     padding: 0.625rem 0.875rem;
-    background: var(--panel-high);
+    background: transparent;
     font-size: var(--step-small);
 }
 
 .address-parts__row + .address-parts__row {
-    border-top: 1px solid var(--edge);
+    border-top: 1px solid var(--line);
 }
 
 .address-parts__row dt {
@@ -141,24 +141,4 @@
     text-decoration: underline;
     text-decoration-color: var(--line);
     text-underline-offset: 0.2em;
-}
-
-@media (min-width: 56rem) {
-    .address-more {
-        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-        align-items: start;
-    }
-
-    .address-parts {
-        grid-column: 1;
-    }
-
-    .lookup {
-        grid-column: 2;
-        grid-row: 1;
-    }
-
-    .address-parts[hidden] + .lookup {
-        grid-column: 1 / -1;
-    }
 }

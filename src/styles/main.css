@@ -2,7 +2,8 @@
 @import "./fonts.css";
 @import "./base.css";
 @import "./shell.css";
-@import "./panel.css";
+@import "./status.css";
+@import "./details.css";
 @import "./hero.css";
 @import "./home.css";
 @import "./tool-list.css";

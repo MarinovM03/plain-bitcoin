@@ -27,7 +27,8 @@ body {
 h1,
 h2,
 p,
-ul {
+ul,
+ol {
     margin: 0;
 }
 
@@ -35,7 +36,8 @@ p {
     text-wrap: pretty;
 }
 
-ul {
+ul,
+ol {
     padding: 0;
     list-style: none;
 }

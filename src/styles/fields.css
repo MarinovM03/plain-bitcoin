@@ -19,15 +19,15 @@
     position: relative;
     display: flex;
     align-items: center;
-    min-height: 3.25rem;
-    border: 1px solid var(--edge);
+    min-height: 3rem;
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--well);
+    background: var(--ink);
     transition: border-color var(--duration) var(--ease);
 }
 
 .field__control:focus-within {
-    border-color: color-mix(in srgb, var(--btc) 60%, var(--edge));
+    border-color: color-mix(in srgb, var(--btc) 60%, var(--line));
     outline: 2px solid var(--paper);
     outline-offset: 2px;
 }
@@ -36,7 +36,7 @@
 .field__select {
     width: 100%;
     min-width: 0;
-    height: 3.25rem;
+    height: 3rem;
     margin: 0;
     padding: 0 0.875rem;
     border: 0;
@@ -70,7 +70,7 @@
 }
 
 .field__select option {
-    background: var(--ink-raised);
+    background: var(--raised);
     color: var(--paper);
 }
 
@@ -90,9 +90,9 @@
     display: flex;
     gap: 0.25rem;
     padding: 0.25rem;
-    border: 1px solid var(--edge);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--well);
+    background: var(--ink);
 }
 
 .segmented__option {
@@ -151,7 +151,7 @@
 
 .presets {
     padding-top: var(--space-m);
-    border-top: 1px solid var(--edge);
+    border-top: 1px solid var(--line);
 }
 
 .presets .field__label {
@@ -169,15 +169,34 @@
     gap: 0.5rem;
 }
 
+@media (max-width: 40rem) {
+    .presets__list {
+        flex-wrap: nowrap;
+        margin-inline: calc(-1 * var(--space-m));
+        padding-inline: var(--space-m);
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+    }
+
+    .presets__list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .chip {
+        flex: none;
+    }
+}
+
 .chip {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     min-height: var(--tap);
     padding: 0 0.875rem;
-    border: 1px solid var(--edge);
+    border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--well);
+    background: var(--ink);
     color: var(--paper);
     font: 500 var(--step-small) / 1.2 var(--font-body);
     cursor: pointer;

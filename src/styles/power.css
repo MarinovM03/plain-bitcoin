@@ -36,7 +36,7 @@
     --decade: 0;
     height: 0.875rem;
     border-radius: 999px;
-    background: var(--well);
+    background: var(--ink);
     overflow: hidden;
 }
 
@@ -47,7 +47,7 @@
             transparent 0 calc(100% * var(--decade) - 1px),
             var(--line) calc(100% * var(--decade) - 1px) calc(100% * var(--decade))
         ),
-        var(--well);
+        var(--ink);
 }
 
 .bar__fill {
@@ -107,23 +107,4 @@
     stroke-width: 2;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
-}
-
-@media (min-width: 56rem) {
-    .power-detail {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .power-detail__how {
-        grid-column: 1 / -1;
-    }
-
-    .power-detail__part:has(.spark) {
-        grid-template-rows: auto minmax(5rem, 1fr) auto;
-        align-content: stretch;
-    }
-
-    .spark {
-        height: 100%;
-    }
 }

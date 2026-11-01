@@ -1,44 +1,30 @@
 .tool-list {
-    display: grid;
-    gap: var(--space-s);
+    border-top: 1px solid var(--line);
+}
+
+.tool-list__item {
+    border-bottom: 1px solid var(--line);
 }
 
 .tool-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
     grid-template-areas:
-        "kind index"
-        "name name"
-        "question question"
-        "preview cta";
-    gap: 0.375rem 1rem;
-    height: 100%;
+        "index name arrow"
+        ". question arrow"
+        ". preview arrow";
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
     min-height: var(--tap);
-    padding: 1.125rem 1.25rem;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius-lg);
-    background: var(--panel);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper) 4%, transparent);
-    transition:
-        border-color var(--duration) var(--ease),
-        background-color var(--duration) var(--ease);
-}
-
-.tool-row__kind {
-    grid-area: kind;
-    color: var(--btc);
-    font-family: var(--font-mono);
-    font-size: var(--step-tiny);
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    padding: 1.125rem 0;
 }
 
 .tool-row__index {
     grid-area: index;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: var(--step-tiny);
+    font-size: var(--step-small);
+    font-variant-numeric: tabular-nums;
 }
 
 .tool-row__name {
@@ -59,83 +45,43 @@
 
 .tool-row__preview {
     grid-area: preview;
-    align-self: end;
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--edge);
+    margin-top: 0.25rem;
+    color: var(--btc);
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: var(--step-small);
-    line-height: 1.3;
     font-variant-numeric: tabular-nums;
 }
 
-.tool-row__cta {
-    grid-area: cta;
-    align-self: end;
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--edge);
-    color: var(--btc);
-    font-size: var(--step-small);
-    font-weight: 700;
-    white-space: nowrap;
+.tool-row__arrow {
+    grid-area: arrow;
+    align-self: center;
+    color: var(--muted);
+    font-size: var(--step-lead);
 }
 
 .tool-row:focus-visible {
     outline-offset: 2px;
 }
 
-.tool-row:active {
-    background-color: var(--panel-high);
-}
-
 @media (hover: hover) {
-    .tool-row:hover {
-        border-color: color-mix(in srgb, var(--btc) 45%, var(--edge));
-        background-color: var(--panel-high);
+    .tool-row:hover .tool-row__name,
+    .tool-row:hover .tool-row__arrow {
+        color: var(--btc);
     }
 }
 
-@media (min-width: 48rem) {
-    .tool-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-m);
-    }
-
-    .tool-list__item--left {
-        grid-column: 1 / -1;
-    }
-
+@media (min-width: 56rem) {
     .tool-row {
-        min-height: 12.5rem;
-        padding: 1.5rem 1.75rem;
+        grid-template-columns: 3rem minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr) auto;
+        grid-template-areas: "index name question preview arrow";
+        gap: 1.5rem;
+        align-items: center;
+        padding: 1.375rem 0;
     }
 
     .tool-row__preview {
-        font-size: var(--step-lead);
-    }
-
-    .tool-list__item--left .tool-row {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-        grid-template-areas:
-            "kind kind index"
-            "name preview cta"
-            "question preview cta";
-        min-height: 0;
-        column-gap: 2rem;
-    }
-
-    .tool-list__item--left .tool-row__preview,
-    .tool-list__item--left .tool-row__cta {
-        align-self: center;
         margin-top: 0;
-        padding-top: 0;
-        border-top: 0;
-    }
-
-    .tool-list__item--left .tool-row__name {
-        font-size: var(--step-heading);
-        line-height: 1.1;
+        text-align: right;
     }
 }

@@ -1,107 +1,31 @@
 .home {
     display: grid;
     gap: var(--space-xl);
-    margin-top: var(--space-m);
+    max-width: var(--measure-wide);
+    margin-top: var(--space-l);
 }
 
-.intro__lead {
-    display: grid;
-    gap: 0.5rem;
-    align-content: start;
-}
-
-.intro__promise {
-    max-width: 22ch;
-    font-family: var(--font-display);
+.home__heading {
+    margin-bottom: var(--space-s);
+    color: var(--muted);
+    font-size: var(--step-small);
     font-weight: 600;
-    font-size: clamp(1.375rem, 1.1rem + 1.2vw, 2rem);
-    line-height: 1.2;
-    letter-spacing: -0.01em;
 }
 
-.intro__detail {
-    max-width: 40ch;
-    color: var(--muted);
-    font-size: var(--step-small);
-}
-
-.intro__facts {
-    display: grid;
-    gap: 1px;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    background: var(--edge);
-    overflow: hidden;
-}
-
-.fact {
-    display: grid;
-    grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr);
-    gap: 0.75rem;
-    align-items: baseline;
-    padding: 0.875rem;
-    background: var(--panel-high);
-}
-
-.fact__figure {
-    color: var(--btc);
-    font-family: var(--font-mono);
-    font-weight: 500;
-    font-size: var(--step-lead);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
-.fact__text {
-    color: var(--muted);
-    font-size: var(--step-small);
-    line-height: 1.45;
-}
-
-.intro__cautions {
+.cautions__list {
     display: grid;
     gap: 0.625rem;
 }
 
-.intro__caution {
+.cautions__item {
     padding-left: 0.75rem;
     border-left: 2px solid var(--btc);
     font-size: var(--step-small);
     line-height: 1.45;
 }
 
-@media (min-width: 64rem) {
-    .home {
-        margin-top: var(--space-l);
-    }
-
-    .intro {
-        grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-        column-gap: var(--space-l);
-    }
-
-    .intro__lead {
-        grid-row: span 2;
-        align-content: space-between;
-    }
-
-    .intro__facts {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .fact {
-        grid-template-columns: minmax(0, 1fr);
-        align-content: start;
-        gap: 0.5rem;
-        padding: 1.125rem 1.25rem;
-    }
-
-    .fact__figure {
-        font-size: clamp(1.5rem, 0.9rem + 1.2vw, 2rem);
-        line-height: 1.1;
-    }
-
-    .intro__cautions {
+@media (min-width: 48rem) {
+    .cautions__list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: var(--space-m);
     }
