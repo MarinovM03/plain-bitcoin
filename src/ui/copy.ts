@@ -95,15 +95,17 @@ export const TOOL_PAGE = {
 } as const;
 
 export const SCENE = {
-    left: 'Each dot is 10,000 BTC. White: mined before the last halving. Orange: mined since. Dim: not mined yet.',
+    left: 'Each dot is 10,000 BTC, filled from the bottom. Each band is one halving era; orange is the one being mined now, dim is not mined yet. Tap a band for its dates.',
     power: (log: boolean) =>
-        `Left stack: kept as cash. Right stack: as bitcoin. Height is today's value${log ? ', on a log scale' : ''}.`,
+        `Left: kept as cash. Right: put into bitcoin. Each stack is filled to today's value${log ? ', on a log scale' : ''}.`,
     powerEmpty: 'Two stacks compare cash and bitcoin once there is an answer.',
-    convert: (perDot: string, shown: string) => `Each dot is ${perDot}. The lit dots are ${shown}.`,
+    convert: (perDot: string, shown: string) =>
+        `Each dot is ${perDot}; the grid zooms by ten as the amount does. The lit dots are ${shown}.`,
     convertEmpty: 'Each dot is a number of sats. Type an amount to light them.',
     dca: 'Orange: what it was worth at each buy, one mark per buy, ending today. White: money put in. Grey: one lump sum.',
     dcaEmpty: 'The chart draws once there is an answer.',
-    address: 'Each column is one character, its height set by the character. Colour marks its part.',
+    address:
+        'Each column is one character, its height set by the character. Colour marks its part once the type is recognised.',
     addressBad: 'Each column is one character. The raised orange one does not fit.',
     addressLoose: 'Each column is one character. The checksum columns do not lock into place.',
     addressEmpty: 'Each character will stand as one column once you paste an address.',
@@ -229,6 +231,7 @@ export const DCA = {
     presets: { y2020: 'January 2020', fiveYears: 'Five years ago', oneYear: 'A year ago' },
     empty: 'Type an amount for each buy to see the answer.',
     badFee: 'The fee must be less than 100%.',
+    tooBig: 'That would buy more bitcoin than will ever exist. Try a smaller amount.',
     loadFailed: 'The price history did not load. Check the connection and try again.',
     afterData: (day: string) => `The prices end on ${day}. Pick an earlier start.`,
     headline: (amount: string, every: string, since: string, worth: string, lump: string) =>

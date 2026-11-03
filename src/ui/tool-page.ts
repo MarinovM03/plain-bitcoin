@@ -8,7 +8,7 @@ import {
 } from './address-view.ts';
 import { renderConvertDetail, renderConvertInputs, renderConvertMore } from './convert-view.ts';
 import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, POWER, SCENE, TOOL_PAGE, TOOLS } from './copy.ts';
-import { renderDcaChart, renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
+import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { moreOptions, noteLine, resultBlock, sceneWindow, shareSection, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs, renderPowerMore } from './power-view.ts';
@@ -20,7 +20,6 @@ interface Calculator {
     more: [string, SafeHtml];
     detail: SafeHtml;
     caption: string;
-    still?: SafeHtml;
 }
 
 const EARLIEST_MONTH: Month = { year: 2010, month: 7 };
@@ -52,7 +51,6 @@ function calculator(id: CalculatorId): Calculator {
                 more: [FIELDS.more, renderDcaMore(EARLIEST_MONTH, thisMonth())],
                 detail: renderDcaDetail(),
                 caption: SCENE.dcaEmpty,
-                still: renderDcaChart(),
             };
         case 'address':
             return {
@@ -76,7 +74,7 @@ function renderCalculator(id: CalculatorId): SafeHtml {
     const parts = calculator(id);
     return html`<article class="tool tool--${id}">
     <div class="tool__screen">
-        ${sceneWindow({ head: head(id), caption: parts.caption, ...(parts.still ? { still: parts.still } : {}) })}
+        ${sceneWindow({ head: head(id), caption: parts.caption })}
         <form class="tool__panel tool__inputs" aria-label="${address ? TOOL_PAGE.addressLabel : TOOL_PAGE.inputsLabel}" novalidate>
             <div class="tool__fields">${parts.inputs}</div>
             ${resultBlock({

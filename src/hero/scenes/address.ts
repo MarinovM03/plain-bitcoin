@@ -1,4 +1,13 @@
-import { type CharRole, emptyLayout, type Ink, inkIndex, type Layout, plotBox, type SceneData } from './types.ts';
+import {
+    type CharRole,
+    emptyLayout,
+    type Ink,
+    inkIndex,
+    type Layout,
+    plotBox,
+    type SceneData,
+    type Viewport,
+} from './types.ts';
 
 const BECH32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -49,14 +58,19 @@ function jitter(i: number): number {
     return x - Math.floor(x) - 0.5;
 }
 
-export function addressLayout(data: SceneData, aspect: number): Layout {
+/**
+ * Each character stands as a column whose height is its place in the alphabet, grouped in fours like a printed
+ * address. Parts take their colour once the type is recognised; a character that fails is raised in orange and a
+ * checksum that does not match is left loose.
+ */
+export function addressLayout(data: SceneData, view: Viewport): Layout {
     const address = data.id === 'address' ? data : null;
     const empty = !address || address.state === 'empty' || address.text.length === 0;
     const text = empty ? '' : address.text.slice(0, MAX_CHARS);
     const count = empty ? PLACEHOLDER : text.length;
     const levels = empty ? [] : charLevels(text);
     const roles = address && address.roles.length > 0 ? address.roles : bech32Roles(text);
-    const box = plotBox(aspect);
+    const box = plotBox(view.aspect, { top: 0.16 });
     let best = { perRow: 16, cell: 0 };
     for (const perRow of ROW_CHOICES) {
         const rows = Math.ceil(count / perRow);
@@ -70,7 +84,8 @@ export function addressLayout(data: SceneData, aspect: number): Layout {
     const height = (rows * (LEVELS + 2) - 2) * cell;
     const left = box.x + (box.w - width) / 2;
     const top = box.y + (box.h - height) / 2;
-    const layout = emptyLayout(count * LEVELS, `address:${perRow}`);
+    const state = empty ? 'empty' : (address?.state ?? 'empty');
+    const layout = emptyLayout(count * LEVELS, `address:${perRow}:${state}`);
     for (let c = 0; c < count; c += 1) {
         const row = Math.floor(c / perRow);
         const col = c % perRow;
@@ -89,7 +104,29 @@ export function addressLayout(data: SceneData, aspect: number): Layout {
             layout.y[i] = base - d * cell - (bad ? cell * 1.2 : 0) + (loose ? jitter(i + 99) * cell * 0.7 : 0);
             layout.ink[i] = inkIndex(shown ? ink : 'faint');
             layout.r[i] = shown ? cell * 0.36 : 0;
+            layout.order[i] = count > 1 ? c / (count - 1) : 0;
         }
     }
+    const label = !empty && address?.kind ? address.kind : '';
+    if (label)
+        layout.guides = [
+            {
+                kind: 'label',
+                x: left,
+                y: top - cell * 2.2,
+                text: label,
+                align: 'start',
+                tone: state === 'valid' ? 'btc' : 'paper',
+            },
+            {
+                kind: 'label',
+                x: left + width,
+                y: top - cell * 2.2,
+                text: `${text.length} characters`,
+                align: 'end',
+                tone: 'muted',
+            },
+        ];
+    layout.summary = `state=${state};chars=${empty ? 0 : text.length}`;
     return layout;
 }

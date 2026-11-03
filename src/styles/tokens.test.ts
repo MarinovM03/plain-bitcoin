@@ -65,6 +65,14 @@ describe('design tokens', () => {
         }
     });
 
+    it('keeps scene labels AA on their scrim even over a max-tension dot or the orange pulse', () => {
+        const scrim = Number.parseFloat(TOKENS.scrim) / 100;
+        for (const brightest of [TOKENS.paper, TOKENS.btc, TOKENS.fiat]) {
+            const chip = mix(brightest, TOKENS.ink, scrim);
+            for (const text of TEXT) expect(contrast(text, chip)).toBeGreaterThanOrEqual(4.5);
+        }
+    });
+
     it('keeps ink readable on the orange and paper buttons', () => {
         expect(contrast(TOKENS.ink, TOKENS.btc)).toBeGreaterThanOrEqual(4.5);
         expect(contrast(TOKENS.ink, TOKENS.paper)).toBeGreaterThanOrEqual(4.5);

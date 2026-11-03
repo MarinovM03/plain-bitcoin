@@ -1,24 +1,22 @@
-import { createFrameMonitor, type Quality } from './degrade.ts';
-import { createRenderer, type Renderer, SoftwareRendererError } from './gl.ts';
+import { createLadder, type Ladder, type Quality, settingsFor } from './degrade.ts';
+import { createRenderer, type Renderer, SoftwareRendererError, type WeatherFrame } from './gl.ts';
 import { inkRgba } from './inks.ts';
-import { createPoints, MORPH_SECONDS, retarget } from './morph.ts';
+import { easeToward, type FrameMode, frameInterval, frameMode, moodSettling, stepSeconds } from './loop.ts';
+import { createPoints, MORPH_SECONDS, morphFor, retarget } from './morph.ts';
 import type { Layout } from './scenes/types.ts';
-import type { Weather } from './weather.ts';
+import { type ChainState, chainWeather, type Weather } from './weather.ts';
 
-const FPS = 30;
-const INTRO_SECONDS = 4;
-const FADE_SECONDS = 1.2;
+const INTRO_SECONDS = 1.6;
 const PULSE_SECONDS = 3.4;
-const TENSION_SECONDS = 2.5;
 const LIGHT_SECONDS = 1.2;
 const ALPHA_SECONDS = 0.35;
-const DPR_CAP = 1.5;
 const REBUILD_SCATTER = 0.3;
 const TWEAK_SCATTER = 0.06;
+const REPORT_MS = 1000;
 const NOWHERE = [-1e5, -1e5, 0, 0] as const;
-const REPORT_EVERY = FPS;
 
 export type Rect = [number, number, number, number];
+export type StageTier = 'full' | 'phone';
 
 export interface View {
     width: number;
@@ -29,18 +27,27 @@ export interface View {
 export type EngineCanvas = HTMLCanvasElement | OffscreenCanvas;
 
 export type EngineMessage =
-    | { type: 'init'; canvas: EngineCanvas; allowSoftware: boolean; quality: Quality; reduced: boolean; view: View }
+    | {
+          type: 'init';
+          canvas: EngineCanvas;
+          allowSoftware: boolean;
+          tier: StageTier;
+          pinned: boolean;
+          reduced: boolean;
+          view: View;
+      }
     | { type: 'view'; view: View }
-    | { type: 'scene'; layout: Layout | null; rebuild: boolean; snap: boolean; rect: Rect }
-    | { type: 'rect'; rect: Rect }
+    | { type: 'scene'; layout: Layout | null; rev: number; fresh: boolean; snap: boolean; rect: Rect; calm: Rect }
+    | { type: 'rect'; rect: Rect; calm: Rect }
     | { type: 'scroll'; y: number; away: boolean }
-    | { type: 'chain'; weather: Weather; pulse: [number, number] | null }
+    | { type: 'chain'; chain: ChainState | null; pulse: [number, number] | null }
     | { type: 'pointer'; x: number; y: number }
     | { type: 'visible'; visible: boolean }
-    | { type: 'reduced'; reduced: boolean };
+    | { type: 'reduced'; reduced: boolean }
+    | { type: 'lose' };
 
 export type EngineReply =
-    | { type: 'drawn'; frames: number; live: boolean }
+    | { type: 'drawn'; frames: number; live: boolean; settled: number | null; fps: number; mode: FrameMode }
     | { type: 'quality'; quality: Quality }
     | { type: 'failed'; software: boolean };
 
@@ -57,104 +64,162 @@ function smooth(t: number): number {
     return x * x * (3 - 2 * x);
 }
 
+type Mood = Pick<Weather, 'tension' | 'density' | 'warp' | 'contrast' | 'drift' | 'warmth'>;
+const MOOD_KEYS = ['tension', 'density', 'warp', 'contrast', 'drift', 'warmth'] as const;
+
 export function createEngine(reply: (message: EngineReply) => void): (message: EngineMessage) => void {
     const colors = inkRgba();
     const points = createPoints();
     let renderer: Renderer | null = null;
     let canvas: EngineCanvas | null = null;
-    let monitor = createFrameMonitor('full');
+    let tier: StageTier = 'full';
+    let pinned = false;
+    let ladder: Ladder = createLadder('full');
     let quality: Quality = 'full';
     let reduced = false;
     let visible = true;
+    let lost = false;
     let view: View = { width: 1, height: 1, pixelRatio: 1 };
+
     let frames = 0;
-    let reported = { frames: 0, live: false };
+    let reported = { frames: -1, live: false, settled: null as number | null, at: 0 };
     let raf = 0;
+    let timer = 0;
     let requestedAt = 0;
     let lastDraw = 0;
-    let lost = false;
     let dirty = true;
-    let flow = 0;
+    let windowStart = 0;
+    let windowFrames = 0;
+    let fps = 0;
+    let lastMode: FrameMode = 'sleep';
+
+    let chain: ChainState | null = null;
+    let chained = false;
+    let time = 0;
     let intro = 0;
-    let fade = 0;
     let seed = 0;
     let seedFrom = 0;
     let seedTo = 0;
-    let tension = 0;
-    let tensionFrom = 0;
-    let tensionTo = 0;
-    let tensionT = 1;
-    let chained = false;
+    let mood: Mood | null = null;
     let pulse = -1;
     let origin: [number, number] = [0, 0];
     const light = { x: 0, y: 0, i: 0 };
+    let scrollY = 0;
+    let away = false;
     let alpha = 1;
     let alphaTarget = 1;
-    let away = false;
-    let scrollY = 0;
+
+    let layout: Layout | null = null;
+    let rev: number | null = null;
     let morph = 1;
     let scatter = 0;
     let hasPoints = false;
     let docRect: Rect = [...NOWHERE];
+    let calmRect: Rect = [...NOWHERE];
 
+    const settings = () => settingsFor(quality, tier);
     const calm = () => reduced || quality === 'still';
+
+    function target(): Weather {
+        return chainWeather(chain, Date.now());
+    }
 
     function settleAll(): void {
         intro = INTRO_SECONDS;
-        fade = 1;
         morph = 1;
         pulse = -1;
         seed = seedTo;
-        tension = tensionTo;
-        tensionT = 1;
+        mood = pick(target());
         light.i = 0;
         alpha = alphaTarget;
     }
 
-    function busy(): boolean {
-        if (dirty) return true;
+    function pick(weather: Weather): Mood {
+        return {
+            tension: weather.tension,
+            density: weather.density,
+            warp: weather.warp,
+            contrast: weather.contrast,
+            drift: weather.drift,
+            warmth: weather.warmth,
+        };
+    }
+
+    function moodMoving(goal: Mood): boolean {
+        return mood !== null && moodSettling(mood.tension, goal.tension);
+    }
+
+    function animating(): boolean {
         if (calm()) return false;
         return (
             intro < INTRO_SECONDS ||
-            fade < 1 ||
             morph < 1 ||
             pulse >= 0 ||
-            tensionT < 1 ||
             light.i > 0.01 ||
-            Math.abs(alpha - alphaTarget) > 0.001
+            Math.abs(alpha - alphaTarget) > 0.001 ||
+            moodMoving(pick(target()))
         );
     }
 
-    function request(): void {
-        if (raf || lost || !visible || !renderer || quality === 'plain') return;
+    function loopState() {
+        return { visible, reduced, quality, dirty, animating: animating(), lost: lost || !renderer };
+    }
+
+    function cancel(): void {
+        cancelFrame(raf);
+        clearTimeout(timer);
+        raf = 0;
+        timer = 0;
+    }
+
+    function schedule(): void {
+        if (raf || timer) return;
+        const mode = frameMode(loopState(), settings());
+        if (mode === 'sleep') {
+            lastDraw = 0;
+            report(true);
+            return;
+        }
         requestedAt = performance.now();
-        raf = nextFrame(tick);
+        const wait = lastDraw > 0 ? lastDraw + frameInterval(mode, settings()) - requestedAt - 4 : 0;
+        if (wait > 12) {
+            timer = setTimeout(() => {
+                timer = 0;
+                raf = nextFrame(tick);
+            }, wait) as unknown as number;
+        } else {
+            raf = nextFrame(tick);
+        }
     }
 
     function invalidate(): void {
         dirty = true;
-        request();
+        schedule();
+    }
+
+    function onScreen(rect: Rect): Rect {
+        return [rect[0], rect[1] - scrollY, rect[2], rect[3]];
     }
 
     function plotRect(): Rect {
-        return [docRect[0], docRect[1] - scrollY, docRect[2], docRect[3]];
+        return onScreen(docRect);
     }
 
     function resize(): void {
         if (!renderer) return;
-        const scale = Math.min(view.pixelRatio || 1, DPR_CAP);
-        renderer.resize(view.width, view.height, scale, quality === 'full' ? 1 : 0.5);
+        const scale = Math.min(view.pixelRatio || 1, settings().dprCap);
+        renderer.resize(view.width, view.height, scale);
         invalidate();
     }
 
     function advance(dt: number): void {
+        const goal = pick(target());
         if (calm()) {
             settleAll();
             return;
         }
-        flow += dt * (0.45 + tension);
+        time += dt;
         intro = Math.min(INTRO_SECONDS, intro + dt);
-        fade = Math.min(1, fade + dt / FADE_SECONDS);
         morph = Math.min(1, morph + dt / MORPH_SECONDS);
         if (pulse >= 0) {
             pulse += dt / PULSE_SECONDS;
@@ -164,44 +229,58 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
                 seed = seedTo;
             }
         }
-        if (tensionT < 1) {
-            tensionT = Math.min(1, tensionT + dt / TENSION_SECONDS);
-            tension = tensionFrom + (tensionTo - tensionFrom) * smooth(tensionT);
-        }
+        const current: Mood = mood ?? goal;
+        const eased = { ...goal };
+        for (const key of MOOD_KEYS) eased[key] = easeToward(current[key], goal[key], dt);
+        mood = eased;
         light.i = Math.max(0, light.i - dt / LIGHT_SECONDS);
         const step = dt / ALPHA_SECONDS;
         alpha = alpha < alphaTarget ? Math.min(alphaTarget, alpha + step) : Math.max(alphaTarget, alpha - step);
     }
 
-    function draw(): void {
-        if (!renderer) return;
-        const rect = plotRect();
-        renderer.draw(
-            {
-                flow,
-                seed,
-                tension,
-                intro: smooth(fade) * (0.55 + 0.45 * smooth(intro / 2)),
-                pulse: [origin[0], origin[1], pulse],
-                light: [light.x, light.y, light.i],
-                calm: hasPoints && !(away && alpha <= 0) ? rect : NOWHERE,
-            },
-            hasPoints ? { plot: rect, morph, scatter, alpha } : null,
-        );
-        frames += 1;
-        const live = hasPoints && !away;
-        if (frames === 1 || live !== reported.live || frames - reported.frames >= REPORT_EVERY) report(live);
+    function weatherFrame(): WeatherFrame {
+        const now = mood ?? pick(target());
+        const shown = hasPoints && !(away && alpha <= 0);
+        return {
+            time: calm() ? 0 : time,
+            seed,
+            warp: now.warp,
+            drift: now.drift,
+            density: now.density,
+            contrast: now.contrast,
+            warmth: now.warmth,
+            scroll: scrollY,
+            intro: smooth(intro / INTRO_SECONDS),
+            pulse: [origin[0], origin[1], pulse],
+            light: [light.x, light.y, light.i],
+            calm: shown ? onScreen(calmRect) : NOWHERE,
+        };
     }
 
-    function report(live: boolean): void {
-        if (reported.frames === frames && reported.live === live) return;
-        reported = { frames, live };
-        reply({ type: 'drawn', frames, live });
+    function draw(): void {
+        if (!renderer) return;
+        renderer.draw(weatherFrame(), hasPoints ? { plot: plotRect(), morph, scatter, alpha } : null);
+        frames += 1;
+    }
+
+    function settledRev(): number | null {
+        if (!hasPoints || rev === null || away) return null;
+        return morph >= 1 ? rev : null;
+    }
+
+    function report(force = false): void {
+        const live = hasPoints && !away;
+        const settled = settledRev();
+        const now = performance.now();
+        const changed = live !== reported.live || settled !== reported.settled;
+        const due = frames !== reported.frames && (force || now - reported.at >= REPORT_MS);
+        if (!changed && !due) return;
+        reported = { frames, live, settled, at: now };
+        reply({ type: 'drawn', frames, live, settled, fps, mode: lastMode });
     }
 
     function teardown(): void {
-        cancelFrame(raf);
-        raf = 0;
+        cancel();
         renderer?.dispose();
         renderer = null;
     }
@@ -217,44 +296,52 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         resize();
     }
 
-    function sample(value: number): boolean {
-        const next = monitor.sample(value);
-        if (!next) return false;
-        applyQuality(next);
-        return true;
+    function measure(now: number, mode: FrameMode, interval: number): void {
+        if (!windowStart) windowStart = now;
+        windowFrames += 1;
+        if (now - windowStart >= 1000) {
+            fps = Math.round((windowFrames * 1000) / (now - windowStart));
+            windowStart = now;
+            windowFrames = 0;
+        }
+        if (pinned) return;
+        const next =
+            mode === 'once'
+                ? ladder.still(now - requestedAt)
+                : interval > 0
+                  ? ladder.sample(interval, frameInterval(mode, settings()))
+                  : null;
+        if (next) applyQuality(next);
     }
 
     function tick(now: number): void {
         raf = 0;
         if (lost || !visible || !renderer) return;
         if (!renderer.ready) {
-            request();
-            return;
-        }
-        if (!calm() && lastDraw && now - lastDraw < 1000 / FPS - 4) {
             raf = nextFrame(tick);
             return;
         }
-        const frameMs = lastDraw ? now - lastDraw : 0;
-        const latency = now - requestedAt;
-        lastDraw = now;
-        dirty = false;
-        advance(frameMs ? Math.min(0.1, frameMs / 1000) : 0);
-        draw();
-        if (quality === 'still' && sample(latency)) return;
-        if (quality !== 'still' && !reduced && frameMs > 0 && sample(frameMs)) return;
-        if (busy()) request();
-        else {
-            lastDraw = 0;
-            report(hasPoints && !away);
+        const mode = frameMode(loopState(), settings());
+        // Never faster than asked: an early vsync waits for the next one.
+        if (lastDraw > 0 && mode !== 'once' && now - lastDraw < frameInterval(mode, settings()) * 0.92) {
+            raf = nextFrame(tick);
+            return;
         }
+        lastMode = mode;
+        const interval = lastDraw > 0 ? now - lastDraw : 0;
+        advance(stepSeconds(lastDraw, now));
+        dirty = false;
+        draw();
+        lastDraw = mode === 'once' ? 0 : now;
+        measure(now, mode, mode === 'once' ? 0 : interval);
+        report();
+        if (renderer) schedule();
     }
 
     function onLost(event: Event): void {
         event.preventDefault();
         lost = true;
-        cancelFrame(raf);
-        raf = 0;
+        cancel();
     }
 
     function onRestored(): void {
@@ -262,6 +349,8 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         renderer?.restore();
         resize();
         renderer?.upload(points);
+        lastDraw = 0;
+        invalidate();
     }
 
     function init(message: Extract<EngineMessage, { type: 'init' }>): void {
@@ -272,14 +361,53 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
             reply({ type: 'failed', software: error instanceof SoftwareRendererError });
             return;
         }
-        quality = message.quality;
-        monitor = createFrameMonitor(quality);
+        tier = message.tier;
+        pinned = message.pinned;
+        quality = 'full';
+        ladder = createLadder('full');
         reduced = message.reduced;
         view = message.view;
         canvas.addEventListener('webglcontextlost', onLost as EventListener);
         canvas.addEventListener('webglcontextrestored', onRestored);
         if (reduced) settleAll();
+        reply({ type: 'quality', quality });
         resize();
+    }
+
+    function setScene(message: Extract<EngineMessage, { type: 'scene' }>): void {
+        const next = message.layout;
+        const kind = morphFor(layout, next, message.fresh);
+        retarget(points, next, morph, scatter, colors, kind);
+        renderer?.upload(points);
+        scatter = kind.kind === 'tweak' ? TWEAK_SCATTER : kind.kind === 'rebuild' ? REBUILD_SCATTER : 0;
+        morph = calm() || message.snap ? 1 : 0;
+        layout = next;
+        rev = next ? message.rev : null;
+        hasPoints = (next?.count ?? 0) > 0;
+        docRect = message.rect;
+        calmRect = message.calm;
+        invalidate();
+        report();
+    }
+
+    function setChain(message: Extract<EngineMessage, { type: 'chain' }>): void {
+        chain = message.chain;
+        const next = target();
+        if (message.pulse && chained && !calm()) {
+            seedFrom = seed;
+            seedTo = next.seed;
+            pulse = 0;
+            origin = message.pulse;
+        } else if (pulse < 0) {
+            seed = next.seed;
+            seedFrom = next.seed;
+            seedTo = next.seed;
+        } else {
+            seedTo = next.seed;
+        }
+        if (!chained || calm()) mood = pick(next);
+        chained = true;
+        invalidate();
     }
 
     return (message) => {
@@ -291,18 +419,12 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
                 view = message.view;
                 resize();
                 return;
-            case 'scene': {
-                retarget(points, message.layout, morph, scatter, colors, message.rebuild);
-                renderer?.upload(points);
-                scatter = message.rebuild ? REBUILD_SCATTER : TWEAK_SCATTER;
-                morph = calm() || message.snap ? 1 : 0;
-                hasPoints = (message.layout?.count ?? 0) > 0 || points.count > 0;
-                docRect = message.rect;
-                invalidate();
+            case 'scene':
+                setScene(message);
                 return;
-            }
             case 'rect':
                 docRect = message.rect;
+                calmRect = message.calm;
                 invalidate();
                 return;
             case 'scroll':
@@ -311,56 +433,38 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
                     away = message.away;
                     alphaTarget = away ? 0 : 1;
                     if (!chained || calm()) alpha = alphaTarget;
-                    invalidate();
-                } else if (alpha > 0) {
-                    invalidate();
+                    report();
                 }
-                return;
-            case 'chain': {
-                const next = message.weather;
-                if (message.pulse && chained && !calm()) {
-                    seedFrom = seed;
-                    seedTo = next.seed;
-                    pulse = 0;
-                    origin = message.pulse;
-                } else {
-                    seed = next.seed;
-                    seedFrom = next.seed;
-                    seedTo = next.seed;
-                }
-                if (!chained || calm()) {
-                    tension = next.tension;
-                    tensionTo = next.tension;
-                } else if (Math.abs(next.tension - tensionTo) > 0.002) {
-                    tensionFrom = tension;
-                    tensionTo = next.tension;
-                    tensionT = 0;
-                }
-                chained = true;
                 invalidate();
                 return;
-            }
+            case 'chain':
+                setChain(message);
+                return;
             case 'pointer':
                 if (calm()) return;
                 light.x = message.x;
                 light.y = message.y;
                 light.i = 1;
-                request();
+                schedule();
                 return;
             case 'visible':
                 visible = message.visible;
                 if (!visible) {
-                    cancelFrame(raf);
-                    raf = 0;
+                    cancel();
                     lastDraw = 0;
-                } else if (busy()) {
-                    request();
+                    ladder.reset();
+                    report(true);
+                } else {
+                    invalidate();
                 }
                 return;
             case 'reduced':
                 reduced = message.reduced;
                 if (reduced) settleAll();
                 invalidate();
+                return;
+            case 'lose':
+                renderer?.simulateLoss();
                 return;
         }
     };

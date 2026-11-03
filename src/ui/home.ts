@@ -11,6 +11,7 @@ import { HOME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
 const WEEKS = 52;
+const WEEK_MS = 7 * 86_400_000;
 
 function renderTile(id: ToolId): SafeHtml {
     return html`<li class="tiles__item tiles__item--${id}">
@@ -57,6 +58,10 @@ function previewData(id: ToolId, height: number): SceneData {
         case 'dca':
             return {
                 id,
+                fiat: 'GBP',
+                worth: '',
+                alt: '',
+                t: Array.from({ length: WEEKS }, (_, week) => week * WEEK_MS),
                 value: [],
                 invested: Array.from({ length: WEEKS }, (_, week) => week + 1),
                 lump: Array.from({ length: WEEKS }, () => WEEKS),

@@ -21,7 +21,7 @@ async function ready(page: Page, id: ToolId): Promise<void> {
     if (id === 'address') await page.locator('#address-input').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
     const answer = id === 'left' ? '#left-figure' : '#tool-result-figure';
     await expect(page.locator(answer)).toHaveText(/\d|[A-Z][a-z]/);
-    await expect(page.locator('#scene-plot svg')).toHaveCount(1);
+    await expect(page.locator('#scene-plot > svg.still')).toHaveCount(1);
 }
 
 async function boxes(page: Page, id: ToolId) {
@@ -40,7 +40,7 @@ async function boxes(page: Page, id: ToolId) {
                 parts: {
                     status: box('#status'),
                     scene: box('.scene'),
-                    graph: box(dca ? '#dca-chart' : '#scene-plot'),
+                    graph: box(dca ? '#scene-plot .dca-chart' : '#scene-plot'),
                     input: left ? null : box(input),
                     figure: box(left ? '#left-figure' : '#tool-result-figure'),
                     answer: box(left ? '#left-supply' : '#tool-result'),

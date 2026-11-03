@@ -1,21 +1,5 @@
-.dca-chart {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    transition: opacity 400ms var(--ease);
-}
-
 .dca-chart--empty {
     opacity: 0;
-}
-
-.dca-chart__base {
-    stroke: var(--line);
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
 }
 
 .dca-chart__line {

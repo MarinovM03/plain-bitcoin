@@ -15,9 +15,6 @@ export const DCA_ROWS = ['invested', 'bought', 'worth', 'average', 'buys', 'fall
 
 const SENTENCE_ROWS: ReadonlySet<string> = new Set(['buys', 'fall', 'lump']);
 
-export const CHART_WIDTH = 300;
-export const CHART_HEIGHT = 120;
-
 export function renderDcaInputs(): SafeHtml {
     return html`<div class="field-row">
     ${amountField({ id: 'dca-amount', label: FIELDS.eachBuy, decimals: 2, placeholder: FIELDS.examples.dca, value: '50' })}
@@ -45,15 +42,6 @@ export function renderDcaMore(min: Month, max: Month): SafeHtml {
     <div class="presets__list">${presets}</div>
 </fieldset>
 ${amountField({ id: 'dca-fee', label: DCA.fee, decimals: 2, placeholder: '0' })}`;
-}
-
-export function renderDcaChart(): SafeHtml {
-    return html`<svg id="dca-chart" class="dca-chart" viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" preserveAspectRatio="none" role="img" aria-label="">
-    <line class="dca-chart__base" x1="0" x2="${CHART_WIDTH}" y1="${CHART_HEIGHT}" y2="${CHART_HEIGHT}" />
-    <polyline class="dca-chart__line dca-chart__line--lump" points="" />
-    <polyline class="dca-chart__line dca-chart__line--invested" points="" />
-    <polyline class="dca-chart__line dca-chart__line--value" points="" />
-</svg>`;
 }
 
 export function renderDcaDetail(): SafeHtml {

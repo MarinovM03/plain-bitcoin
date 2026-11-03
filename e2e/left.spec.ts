@@ -73,7 +73,9 @@ test('the numbers panel shows every figure for the live height', async ({ page }
     await expect(panel.locator('#left-max')).toHaveText('20,999,999.9769 BTC');
     await expect(page.locator('#tool-source')).toContainText('mempool.space, checked');
     await expect(page.getByText(LEFT_PAGE.honesty)).toBeVisible();
-    await expect(page.locator('#scene-caption')).toHaveText(/^Each dot is 10,000 BTC\./);
+    await expect(page.locator('#scene-caption')).toHaveText(
+        /^Each dot is 10,000 BTC, filled from the bottom\. Each band is one halving era;/,
+    );
     expect(realProblems(problems)).toEqual([]);
 });
 

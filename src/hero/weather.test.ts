@@ -1,34 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { minutesSince, weather } from './weather.ts';
+import { chainWeather, minutesSince, UNKNOWN_MINUTES } from './weather.ts';
 
 const NOW = Date.UTC(2026, 10, 1, 12, 0);
+const at = (minutes: number, estimated = false) =>
+    chainWeather({ height: 974_148, blockTime: NOW - minutes * 60_000, estimated }, NOW);
 
-describe('weather', () => {
-    it('is calm right after a block and builds tension as the gap grows', () => {
-        const at = (minutes: number) =>
-            weather({ height: 974_148, blockTime: NOW - minutes * 60_000, estimated: false }, NOW).tension;
-        expect(at(0)).toBe(0);
-        expect(at(10)).toBeGreaterThan(0.5);
-        expect(at(10)).toBeLessThan(at(30));
-        expect(at(120)).toBeLessThan(1);
+describe('chainWeather', () => {
+    it('is calm right after a block and builds tension monotonically as the gap grows, 1 to 25 minutes', () => {
+        const keys = ['tension', 'density', 'warp', 'contrast', 'drift', 'warmth'] as const;
+        let previous = at(1);
+        for (let minutes = 2; minutes <= 25; minutes += 1) {
+            const next = at(minutes);
+            for (const key of keys) expect(next[key], `${key} at ${minutes} min`).toBeGreaterThan(previous[key]);
+            previous = next;
+        }
+        expect(at(0).tension).toBe(0);
+        expect(at(1).tension).toBeLessThan(0.1);
+        expect(at(25).tension).toBeGreaterThan(0.85);
+        expect(at(240).tension).toBeLessThan(1);
     });
 
-    it('takes its seed from the block height alone, so the same block always draws the same field', () => {
-        const a = weather({ height: 974_148, blockTime: NOW, estimated: false }, NOW);
-        const b = weather({ height: 974_148, blockTime: NOW - 500_000, estimated: true }, NOW + 9_000);
-        const next = weather({ height: 974_149, blockTime: NOW, estimated: false }, NOW);
+    it('takes its signature from the block height alone, so the same block always draws the same field', () => {
+        const a = chainWeather({ height: 974_148, blockTime: NOW, estimated: false }, NOW);
+        const b = chainWeather({ height: 974_148, blockTime: NOW - 500_000, estimated: true }, NOW + 9_000);
+        const next = chainWeather({ height: 974_149, blockTime: NOW, estimated: false }, NOW);
         expect(a.seed).toBe(b.seed);
         expect(next.seed).not.toBe(a.seed);
-        expect(Math.abs(next.seed - a.seed)).toBeLessThan(1);
     });
 
-    it('never reads a block time in the future as negative minutes', () => {
+    it('is pure: the same state and clock give the same weather every time', () => {
+        expect(at(7)).toEqual(at(7));
+    });
+
+    it('marks estimated time as estimated and never reads a future block as negative minutes', () => {
+        expect(at(5, true).estimated).toBe(true);
+        expect(at(5).estimated).toBe(false);
         expect(minutesSince(NOW + 60_000, NOW)).toBe(0);
         expect(minutesSince(null, NOW)).toBeNull();
+        expect(minutesSince(Number.NaN, NOW)).toBeNull();
     });
 
-    it('falls back to a fixed, labelled-elsewhere ten minutes when no block time is known', () => {
-        expect(weather(null, NOW)).toEqual(weather({ height: 0, blockTime: null, estimated: true }, NOW));
-        expect(weather(null, NOW).minutes).toBe(10);
+    it('falls back to a fixed ten minutes, flagged as estimated, when nothing is known', () => {
+        expect(chainWeather(null, NOW)).toEqual(chainWeather({ height: 0, blockTime: null, estimated: true }, NOW));
+        expect(chainWeather(null, NOW).minutes).toBe(UNKNOWN_MINUTES);
+        expect(chainWeather(null, NOW).estimated).toBe(true);
+        const broken = chainWeather({ height: Number.NaN, blockTime: Number.NaN, estimated: false }, NOW);
+        expect(Object.values(broken).every((value) => typeof value === 'boolean' || Number.isFinite(value))).toBe(true);
     });
 });
