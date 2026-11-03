@@ -14,9 +14,11 @@ One static site. No backend, no accounts, no cookies. The site never asks for ke
 
 ## The live stage
 
-Behind every page sits one drawing surface. Its halftone field is drawn from real chain data only: the block height sets its pattern, the minutes since the last block slowly thicken it, and a real new block sends one wave across it from the block number in the status line. Otherwise it moves only when you change an input or move a mouse over it, and when nothing changes it stops drawing. Each tool shows its answer on the same surface: 2,100 dots of 10,000 BTC each for Bitcoin left to mine, two stacks for purchasing power, a grid of sats for the converter, one mark per buy for buying on a schedule, and one column per character for an address. The text under each picture says what it shows.
+Behind every page sits one drawing surface, a halftone field of dots in two layers with a little paper grain. It always drifts, slowly, while the page is visible. That drift is ambient motion, not live activity: it does not stand for transactions, a mempool or anything else, and no number on the page comes from it. Its mood comes from real chain data only. The block height sets its pattern, the minutes since the last block slowly make it denser and slightly warmer (marked "est." in the status line when the time is estimated), and a real new block sends one orange wave across it from the block number in the status line. Nothing else pulses.
 
-The stage fetches nothing. It only receives the block height, the block time and the tool's own result from the page, and it never sees anything you type except the address you are checking, which stays on the page. It loads after the page has painted; the answer and the inputs work before it arrives. With reduced motion it draws single still frames, on Save-Data, without WebGL or on slow hardware it shows the same pictures as plain SVG with a static background, and the buying-on-a-schedule chart is a real SVG chart in every case.
+Each tool draws its answer on the same surface, with plain scale marks: 2,100 dots of 10,000 BTC each, filled from the bottom, with one band per halving era (tap a band for its dates) for Bitcoin left to mine; two stacks filled to today's value, on a labelled log scale when one is ten times the other, for purchasing power; a counting grid of 1,000 dots that zooms by powers of ten for the converter; one mark per buy against dated axes, ending on the answer, for buying on a schedule; and one column per character for an address. Every picture is worked out once from the same result as the answer, so the picture and the number always agree. The text under each picture says what it shows.
+
+The stage fetches nothing. It only receives the block height, the block time and the tool's own result from the page, and it never sees anything you type except the address you are checking, which stays on the page. It loads after the page has painted; the answer and the inputs work before it arrives. It draws at about 20 to 24 frames a second, and stops drawing in a background tab. With reduced motion it draws one still frame from the current chain state and redraws only when that changes. On Save-Data, without WebGL or on slow hardware it steps down to fewer frames, then to still frames, then to the same pictures as plain SVG over a static dot background; the buying-on-a-schedule chart is a real SVG chart in every case.
 
 ## Privacy: what leaves your browser, and when
 
@@ -114,11 +116,11 @@ Run these on real phones before each launch. The automated tests cover the same 
 - **Keypads**: amount fields open the number keypad; the address field does not autocorrect or capitalise.
 - **Share sheet**: Share card opens the system share sheet with the PNG and the sentence (iOS Safari, Android Chrome); posting to X works; Post on X opens the X app or site with the sentence.
 - **Paste**: the Paste button on the address page fills the field (iOS shows its own Paste prompt).
-- **Stage**: scrolling is never trapped; the field fades from behind the details as you scroll and stops drawing in a background tab.
+- **Stage**: scrolling is never trapped; the field keeps a slow drift, the tool picture hands over to its still as you scroll, and nothing draws in a background tab.
 - **Offline**: with flight mode on after the first load, the counter says "estimated, offline" and the converter uses the last close, both labelled.
 - **Safari**: Web Inspector, Network: each font file downloads once; no console errors.
 - **Save-Data / Low Data Mode**: the stage shows the plain SVG pictures instead of WebGL.
-- **Reduced motion**: with Reduce Motion on, the stage draws still frames only and pages do not animate.
+- **Reduced motion**: with Reduce Motion on, the stage draws one still frame per change and pages do not animate.
 
 ## Layout
 

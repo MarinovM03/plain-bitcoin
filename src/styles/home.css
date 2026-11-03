@@ -57,7 +57,18 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     overflow: hidden;
+    isolation: isolate;
     transition: border-color var(--duration) var(--ease);
+}
+
+/* Glass sits behind the words only, so the preview is a clear window onto the field and the stage drawn in it. */
+.tile::before {
+    content: "";
+    z-index: -1;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: -0.75rem -0.75rem -0.75rem -0.5rem;
+    border-left: 1px solid var(--line);
 }
 
 .tile__preview {
@@ -71,6 +82,11 @@
     display: block;
     width: 100%;
     height: 100%;
+    transition: opacity 300ms var(--ease);
+}
+
+.tile__preview[data-live] > svg {
+    opacity: 0;
 }
 
 .tile__figure {
@@ -118,6 +134,14 @@
     height: 8.5rem;
 }
 
+.tiles__item--left .tile::before {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+    margin: 0 -0.75rem -0.75rem;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+}
+
 @media (hover: hover) {
     .tile:hover {
         border-color: color-mix(in srgb, var(--btc) 70%, var(--line));
@@ -159,6 +183,15 @@
             "text";
         height: 100%;
         padding: 1rem;
+    }
+
+    .tile::before,
+    .tiles__item--left .tile::before {
+        grid-column: 1;
+        grid-row: 2 / span 2;
+        margin: 0 -1rem -1rem;
+        border-top: 1px solid var(--line);
+        border-left: 0;
     }
 
     .tile__preview,

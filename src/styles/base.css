@@ -77,7 +77,7 @@ a {
 .topbar,
 .tool__panel,
 .tool__below,
-.tile,
+.tile::before,
 .footer {
     background: var(--raised);
 }
@@ -86,7 +86,7 @@ a {
     .topbar,
     .tool__panel,
     .tool__below,
-    .tile,
+    .tile::before,
     .footer {
         background: color-mix(in srgb, var(--raised) var(--glass), transparent);
         -webkit-backdrop-filter: blur(18px) saturate(140%);
