@@ -1,14 +1,13 @@
 import { createLadder, type Ladder, type Quality, settingsFor } from './degrade.ts';
 import { createRenderer, type Renderer, SoftwareRendererError, type WeatherFrame } from './gl.ts';
 import { inkRgba } from './inks.ts';
-import { type FrameMode, frameInterval, frameMode, stepSeconds } from './loop.ts';
+import { easeToward, type FrameMode, frameInterval, frameMode, moodSettling, stepSeconds } from './loop.ts';
 import { createPoints, MORPH_SECONDS, morphFor, retarget } from './morph.ts';
 import type { Layout } from './scenes/types.ts';
 import { type ChainState, chainWeather, type Weather } from './weather.ts';
 
 const INTRO_SECONDS = 1.6;
 const PULSE_SECONDS = 3.4;
-const SETTLE_SECONDS = 2.5;
 const LIGHT_SECONDS = 1.2;
 const ALPHA_SECONDS = 0.35;
 const REBUILD_SCATTER = 0.3;
@@ -65,8 +64,8 @@ function smooth(t: number): number {
     return x * x * (3 - 2 * x);
 }
 
-type Mood = Pick<Weather, 'density' | 'warp' | 'contrast' | 'drift' | 'warmth'>;
-const MOOD_KEYS = ['density', 'warp', 'contrast', 'drift', 'warmth'] as const;
+type Mood = Pick<Weather, 'tension' | 'density' | 'warp' | 'contrast' | 'drift' | 'warmth'>;
+const MOOD_KEYS = ['tension', 'density', 'warp', 'contrast', 'drift', 'warmth'] as const;
 
 export function createEngine(reply: (message: EngineReply) => void): (message: EngineMessage) => void {
     const colors = inkRgba();
@@ -137,6 +136,7 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
 
     function pick(weather: Weather): Mood {
         return {
+            tension: weather.tension,
             density: weather.density,
             warp: weather.warp,
             contrast: weather.contrast,
@@ -146,7 +146,7 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
     }
 
     function moodMoving(goal: Mood): boolean {
-        return mood !== null && MOOD_KEYS.some((key) => Math.abs((mood?.[key] ?? 0) - goal[key]) > 0.004);
+        return mood !== null && moodSettling(mood.tension, goal.tension);
     }
 
     function animating(): boolean {
@@ -229,15 +229,10 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
                 seed = seedTo;
             }
         }
-        const k = 1 - Math.exp(-dt / (SETTLE_SECONDS / 3));
         const current: Mood = mood ?? goal;
-        mood = {
-            density: current.density + (goal.density - current.density) * k,
-            warp: current.warp + (goal.warp - current.warp) * k,
-            contrast: current.contrast + (goal.contrast - current.contrast) * k,
-            drift: current.drift + (goal.drift - current.drift) * k,
-            warmth: current.warmth + (goal.warmth - current.warmth) * k,
-        };
+        const eased = { ...goal };
+        for (const key of MOOD_KEYS) eased[key] = easeToward(current[key], goal[key], dt);
+        mood = eased;
         light.i = Math.max(0, light.i - dt / LIGHT_SECONDS);
         const step = dt / ALPHA_SECONDS;
         alpha = alpha < alphaTarget ? Math.min(alphaTarget, alpha + step) : Math.max(alphaTarget, alpha - step);

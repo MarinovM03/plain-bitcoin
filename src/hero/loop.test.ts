@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LITE, STILL, TIER_SETTINGS } from './degrade.ts';
-import { frameInterval, frameMode, MAX_STEP_S, stepSeconds } from './loop.ts';
+import { easeToward, frameInterval, frameMode, MAX_STEP_S, moodSettling, stepSeconds } from './loop.ts';
+import { tensionAt } from './weather.ts';
 
 const base = { visible: true, reduced: false, quality: 'full', dirty: false, animating: false, lost: false } as const;
 const full = TIER_SETTINGS.full;
@@ -34,5 +35,37 @@ describe('render loop gate', () => {
         expect(stepSeconds(0, 5_000)).toBe(0);
         expect(stepSeconds(1_000, 1_050)).toBeCloseTo(0.05);
         expect(stepSeconds(1_000, 60_000)).toBe(MAX_STEP_S);
+    });
+
+    it('treats the slow creep of the chain mood as ambient even at 6 fps, and a block reset as active', () => {
+        // The CI case: estimated tip just after a block, so tension climbs at its steepest, on a slow software GPU.
+        for (const fps of [6, 20, 30]) {
+            const frame = 1000 / fps;
+            let now = 0;
+            let mood = tensionAt(0);
+            for (let i = 0; i < fps * 30; i += 1) {
+                now += frame;
+                mood = easeToward(mood, tensionAt(now / 60_000), stepSeconds(now - frame, now));
+            }
+            expect(moodSettling(mood, tensionAt(now / 60_000)), `${fps} fps`).toBe(false);
+        }
+        expect(moodSettling(tensionAt(14), tensionAt(0))).toBe(true);
+    });
+
+    it('settles from the startup jump (10-minute fallback to a fresh block) within 6 s at any rate down to 4 fps', () => {
+        for (const fps of [4, 6, 20]) {
+            const frame = 1000 / fps;
+            let now = 0;
+            let mood = tensionAt(10);
+            let ambientAt = Number.POSITIVE_INFINITY;
+            for (let i = 0; i < fps * 20; i += 1) {
+                now += frame;
+                const goal = tensionAt(now / 60_000);
+                mood = easeToward(mood, goal, stepSeconds(now - frame, now));
+                if (!moodSettling(mood, goal)) ambientAt = Math.min(ambientAt, now);
+                else ambientAt = Number.POSITIVE_INFINITY;
+            }
+            expect(ambientAt, `${fps} fps`).toBeLessThan(6_000);
+        }
     });
 });

@@ -31,10 +31,27 @@ export function frameInterval(mode: FrameMode, settings: LevelSettings): number 
     return 0;
 }
 
-/** Longest step the clock may take between two frames, so a resumed tab never jumps the field forward. */
-export const MAX_STEP_S = 0.1;
+/** Longest step the clock may take between two frames: real time down to 4 fps, so a slow GPU samples the drift less often but never slows it; a resumed tab restarts the clock and never jumps. */
+export const MAX_STEP_S = 0.25;
 
 export function stepSeconds(lastDraw: number, now: number): number {
     if (!(lastDraw > 0) || !(now > lastDraw)) return 0;
     return Math.min(MAX_STEP_S, (now - lastDraw) / 1000);
+}
+
+/** Time constant of the field's mood easing towards what the chain state asks for. */
+export const MOOD_SECONDS = 0.83;
+/**
+ * How far, in tension (0..1), the eased mood may trail its goal and still count as ambient. The goal itself creeps
+ * as minutes pass; trailing that creep is the ambient state, at any frame rate. Only a real jump, such as the reset
+ * after a new block or the first chain reading, is an animation worth the active rate.
+ */
+export const MOOD_EPSILON = 0.02;
+
+export function easeToward(current: number, goal: number, dt: number): number {
+    return current + (goal - current) * (1 - Math.exp(-Math.max(0, dt) / MOOD_SECONDS));
+}
+
+export function moodSettling(currentTension: number, goalTension: number): boolean {
+    return Math.abs(goalTension - currentTension) > MOOD_EPSILON;
 }
