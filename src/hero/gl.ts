@@ -1,7 +1,7 @@
 import { TOKENS } from '../styles/tokens.ts';
-import { type Points, STRIDE } from './morph.ts';
+import { type Points, STAGGER, STRIDE } from './morph.ts';
 import { MAX_POINTS } from './scenes/types.ts';
-import { BLIT_FRAGMENT, FULLSCREEN_VERTEX, POINTS_FRAGMENT, POINTS_VERTEX, WEATHER_FRAGMENT } from './shaders.ts';
+import { FIELD_FRAGMENT, FULLSCREEN_VERTEX, HALFTONE_FRAGMENT, POINTS_FRAGMENT, POINTS_VERTEX } from './shaders.ts';
 import { isSoftwareRenderer } from './tier.ts';
 
 export class SoftwareRendererError extends Error {
@@ -13,9 +13,14 @@ type Vec3 = readonly [number, number, number];
 type Vec4 = readonly [number, number, number, number];
 
 export interface WeatherFrame {
-    flow: number;
+    time: number;
     seed: number;
-    tension: number;
+    warp: number;
+    drift: number;
+    density: number;
+    contrast: number;
+    warmth: number;
+    scroll: number;
     intro: number;
     pulse: Vec3;
     light: Vec3;
@@ -29,13 +34,25 @@ export interface PointsFrame {
     alpha: number;
 }
 
+export interface Surface {
+    /** Canvas size in device pixels. */
+    width: number;
+    height: number;
+    /** Front halftone cell, in device pixels: a whole number so every dot sits on the pixel grid. */
+    cellDev: number;
+    /** Field texture size: one texel per cell. */
+    cells: [number, number];
+}
+
 export interface Renderer {
     readonly ready: boolean;
-    resize(width: number, height: number, scale: number, weatherScale: number): void;
+    resize(cssWidth: number, cssHeight: number, scale: number): Surface;
     upload(points: Points): void;
     draw(weather: WeatherFrame, points: PointsFrame | null): void;
     restore(): void;
     dispose(): void;
+    /** Test hook: drop and bring back the context, as a GPU reset would. */
+    simulateLoss(): void;
 }
 
 const CONTEXT: WebGLContextAttributes = {
@@ -48,13 +65,16 @@ const CONTEXT: WebGLContextAttributes = {
     powerPreference: 'low-power',
 };
 
-const WEATHER_UNIFORMS = [
-    'uView',
+const FIELD_UNIFORMS = ['uCells', 'uCell', 'uTime', 'uSeed', 'uWarp', 'uDrift', 'uScroll'] as const;
+const HALFTONE_UNIFORMS = [
+    'uField',
+    'uCells',
+    'uCellDev',
+    'uRes',
     'uScale',
-    'uCell',
-    'uFlow',
-    'uSeed',
-    'uTension',
+    'uDensity',
+    'uContrast',
+    'uWarmth',
     'uIntro',
     'uPulse',
     'uLight',
@@ -64,14 +84,13 @@ const WEATHER_UNIFORMS = [
     'uFiat',
     'uBtc',
 ] as const;
-const POINT_UNIFORMS = ['uView', 'uPlot', 'uScale', 'uMorph', 'uScatter', 'uAlpha'] as const;
+const POINT_UNIFORMS = ['uView', 'uPlot', 'uScale', 'uMorph', 'uScatter', 'uAlpha', 'uStagger'] as const;
 const POINT_ATTRIBUTES = [
     ['aPath', 4, 0],
     ['aRadius', 2, 4],
     ['aFrom', 4, 6],
     ['aTo', 4, 10],
-    ['aSeed', 1, 14],
-    ['aWave', 1, 15],
+    ['aSeed', 3, 14],
 ] as const;
 
 export function hexRgb(hex: string): Vec3 {
@@ -79,13 +98,21 @@ export function hexRgb(hex: string): Vec3 {
     return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
 }
 
+/** Front cell in CSS pixels: finer on a phone, where the field is seen up close. */
+export function cellCss(cssWidth: number): number {
+    return cssWidth < 640 ? 8 : 10;
+}
+
+export function surfaceFor(cssWidth: number, cssHeight: number, scale: number): Surface {
+    const width = Math.max(1, Math.round(cssWidth * scale));
+    const height = Math.max(1, Math.round(cssHeight * scale));
+    const cellDev = Math.max(3, Math.round(cellCss(cssWidth) * scale));
+    return { width, height, cellDev, cells: [Math.ceil(width / cellDev) + 1, Math.ceil(height / cellDev) + 1] };
+}
+
 interface Program {
     program: WebGLProgram;
     uniforms: Map<string, WebGLUniformLocation | null>;
-}
-
-function cellSize(width: number): number {
-    return width < 640 ? 8 : 10;
 }
 
 export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allowSoftware: boolean): Renderer {
@@ -99,8 +126,8 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
     }
 
     let parallel = gl.getExtension('KHR_parallel_shader_compile');
-    let weather: Program;
-    let blit: Program;
+    let field: Program;
+    let halftone: Program;
     let points: Program;
     let corners: WebGLBuffer | null = null;
     let pointBuffer: WebGLBuffer | null = null;
@@ -108,7 +135,8 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
     let texture: WebGLTexture | null = null;
     let linked = false;
     let pointCount = 0;
-    let view = { width: 1, height: 1, scale: 1, weatherScale: 1 };
+    let size: Surface = surfaceFor(1, 1, 1);
+    let css = { width: 1, height: 1, scale: 1 };
     const ink = hexRgb(TOKENS.ink);
     const dot = hexRgb(TOKENS.paper);
     const fiat = hexRgb(TOKENS.fiat);
@@ -134,8 +162,8 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
 
     function build(): void {
         parallel = gl.getExtension('KHR_parallel_shader_compile');
-        weather = program(FULLSCREEN_VERTEX, WEATHER_FRAGMENT, 'aCorner');
-        blit = program(FULLSCREEN_VERTEX, BLIT_FRAGMENT, 'aCorner');
+        field = program(FULLSCREEN_VERTEX, FIELD_FRAGMENT, 'aCorner');
+        halftone = program(FULLSCREEN_VERTEX, HALFTONE_FRAGMENT, 'aCorner');
         points = program(POINTS_VERTEX, POINTS_FRAGMENT, 'aPath');
         corners = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, corners);
@@ -150,24 +178,26 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
     }
 
     function finishLink(): boolean {
-        const all = [weather, blit, points];
+        const all = [field, halftone, points];
         if (parallel && !all.every(({ program: p }) => gl.getProgramParameter(p, parallel?.COMPLETION_STATUS_KHR ?? 0)))
             return false;
         for (const { program: p } of all) {
             if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('Stage shaders did not link');
         }
-        for (const name of WEATHER_UNIFORMS) weather.uniforms.set(name, gl.getUniformLocation(weather.program, name));
+        for (const name of FIELD_UNIFORMS) field.uniforms.set(name, gl.getUniformLocation(field.program, name));
+        for (const name of HALFTONE_UNIFORMS)
+            halftone.uniforms.set(name, gl.getUniformLocation(halftone.program, name));
         for (const name of POINT_UNIFORMS) points.uniforms.set(name, gl.getUniformLocation(points.program, name));
-        blit.uniforms.set('uTexture', gl.getUniformLocation(blit.program, 'uTexture'));
         linked = true;
         return true;
     }
 
-    function ensureTarget(width: number, height: number): void {
+    function ensureTarget(): void {
+        const [w, h] = size.cells;
         if (!texture) texture = gl.createTexture();
         if (!target) target = gl.createFramebuffer();
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -184,15 +214,36 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    function drawWeather(frame: WeatherFrame, scale: number): void {
-        const u = (name: string) => weather.uniforms.get(name) ?? null;
-        gl.useProgram(weather.program);
-        gl.uniform2f(u('uView'), view.width, view.height);
-        gl.uniform1f(u('uScale'), scale);
-        gl.uniform1f(u('uCell'), cellSize(view.width));
-        gl.uniform1f(u('uFlow'), frame.flow);
+    function drawField(frame: WeatherFrame): void {
+        const u = (name: string) => field.uniforms.get(name) ?? null;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+        gl.viewport(0, 0, size.cells[0], size.cells[1]);
+        gl.useProgram(field.program);
+        gl.uniform2f(u('uCells'), size.cells[0], size.cells[1]);
+        gl.uniform1f(u('uCell'), size.cellDev / css.scale);
+        gl.uniform1f(u('uTime'), frame.time);
         gl.uniform1f(u('uSeed'), frame.seed);
-        gl.uniform1f(u('uTension'), frame.tension);
+        gl.uniform1f(u('uWarp'), frame.warp);
+        gl.uniform1f(u('uDrift'), frame.drift);
+        gl.uniform1f(u('uScroll'), frame.scroll);
+        fullscreen();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    function drawHalftone(frame: WeatherFrame): void {
+        const u = (name: string) => halftone.uniforms.get(name) ?? null;
+        gl.viewport(0, 0, size.width, size.height);
+        gl.useProgram(halftone.program);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.uniform1i(u('uField'), 0);
+        gl.uniform2f(u('uCells'), size.cells[0], size.cells[1]);
+        gl.uniform1f(u('uCellDev'), size.cellDev);
+        gl.uniform2f(u('uRes'), size.width, size.height);
+        gl.uniform1f(u('uScale'), css.scale);
+        gl.uniform1f(u('uDensity'), frame.density);
+        gl.uniform1f(u('uContrast'), frame.contrast);
+        gl.uniform1f(u('uWarmth'), frame.warmth);
         gl.uniform1f(u('uIntro'), frame.intro);
         gl.uniform3fv(u('uPulse'), frame.pulse);
         gl.uniform3fv(u('uLight'), frame.light);
@@ -208,18 +259,19 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         if (pointCount === 0 || frame.alpha <= 0) return;
         const u = (name: string) => points.uniforms.get(name) ?? null;
         gl.useProgram(points.program);
-        gl.uniform2f(u('uView'), view.width, view.height);
+        gl.uniform2f(u('uView'), css.width, css.height);
         gl.uniform4fv(u('uPlot'), frame.plot);
-        gl.uniform1f(u('uScale'), view.scale);
+        gl.uniform1f(u('uScale'), css.scale);
         gl.uniform1f(u('uMorph'), frame.morph);
         gl.uniform1f(u('uScatter'), frame.scatter);
         gl.uniform1f(u('uAlpha'), frame.alpha);
+        gl.uniform1f(u('uStagger'), STAGGER);
         gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-        const locations = POINT_ATTRIBUTES.map(([name, size, offset]) => {
+        const locations = POINT_ATTRIBUTES.map(([name, components, offset]) => {
             const location = gl.getAttribLocation(points.program, name);
             if (location < 0) return location;
             gl.enableVertexAttribArray(location);
-            gl.vertexAttribPointer(location, size, gl.FLOAT, false, STRIDE * 4, offset * 4);
+            gl.vertexAttribPointer(location, components, gl.FLOAT, false, STRIDE * 4, offset * 4);
             return location;
         });
         gl.enable(gl.BLEND);
@@ -235,16 +287,13 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         get ready() {
             return linked || finishLink();
         },
-        resize(width, height, scale, weatherScale) {
-            view = { width, height, scale, weatherScale };
-            canvas.width = Math.max(1, Math.round(width * scale));
-            canvas.height = Math.max(1, Math.round(height * scale));
-            if (weatherScale < 1) {
-                ensureTarget(
-                    Math.max(1, Math.round(width * scale * weatherScale)),
-                    Math.max(1, Math.round(height * scale * weatherScale)),
-                );
-            }
+        resize(cssWidth, cssHeight, scale) {
+            css = { width: cssWidth, height: cssHeight, scale };
+            size = surfaceFor(cssWidth, cssHeight, scale);
+            canvas.width = size.width;
+            canvas.height = size.height;
+            ensureTarget();
+            return size;
         },
         upload(state) {
             gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
@@ -253,40 +302,22 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         },
         draw(frame, pointFrame) {
             if (!linked || gl.isContextLost()) return;
-            const reduced = view.weatherScale < 1 && target !== null;
-            if (reduced) {
-                gl.bindFramebuffer(gl.FRAMEBUFFER, target);
-                gl.viewport(
-                    0,
-                    0,
-                    Math.round(view.width * view.scale * view.weatherScale),
-                    Math.round(view.height * view.scale * view.weatherScale),
-                );
-                drawWeather(frame, view.scale * view.weatherScale);
-                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-                gl.viewport(0, 0, canvas.width, canvas.height);
-                gl.useProgram(blit.program);
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, texture);
-                gl.uniform1i(blit.uniforms.get('uTexture') ?? null, 0);
-                fullscreen();
-            } else {
-                gl.viewport(0, 0, canvas.width, canvas.height);
-                drawWeather(frame, view.scale);
-            }
+            drawField(frame);
+            drawHalftone(frame);
             if (pointFrame) drawPoints(pointFrame);
         },
         restore() {
             build();
-            if (view.weatherScale < 1) {
-                ensureTarget(
-                    Math.max(1, Math.round(view.width * view.scale * view.weatherScale)),
-                    Math.max(1, Math.round(view.height * view.scale * view.weatherScale)),
-                );
-            }
+            ensureTarget();
         },
         dispose() {
             gl.getExtension('WEBGL_lose_context')?.loseContext();
+        },
+        simulateLoss() {
+            const lose = gl.getExtension('WEBGL_lose_context');
+            if (!lose) return;
+            lose.loseContext();
+            setTimeout(() => lose.restoreContext(), 300);
         },
     };
 }
