@@ -173,7 +173,13 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         big.textContent = formatMoney(result.equivalentNow, fiat);
         detail.textContent = text.bitcoin;
         scene.set(
-            { id: 'power', cash: result.amount, bitcoin: result.btcValueNow },
+            {
+                id: 'power',
+                cash: result.amount,
+                bitcoin: result.btcValueNow,
+                cashLabel: text.cashValue,
+                bitcoinLabel: text.bitcoinValue,
+            },
             SCENE.power(barScale([result.amount, result.btcValueNow]).log),
         );
         renderBars(result, text);

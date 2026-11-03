@@ -44,7 +44,7 @@ test('home shows the shell, the headline and every tool as a live tile, in order
     for (const id of ['power', 'dca', 'address'] as const) {
         await expect(page.locator(`[data-tile-figure="${id}"]`)).toHaveText(TOOLS[id].preview);
     }
-    await expect(page.locator('.tile__preview svg')).toHaveCount(TOOL_IDS.length);
+    await expect(page.locator('.tile__preview > svg.still')).toHaveCount(TOOL_IDS.length);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
     for (const row of await page.locator('.tile').all()) {

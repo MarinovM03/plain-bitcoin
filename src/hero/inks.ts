@@ -8,6 +8,7 @@ export const INK_FILL: Record<Ink, readonly [string, number]> = {
     fiat: [TOKENS.fiat, 0.95],
     ghost: [TOKENS.muted, 0.45],
     ember: [TOKENS.btc, 1],
+    dim: [TOKENS.paper, 0.48],
 };
 
 export function inkRgba(): [number, number, number, number][] {

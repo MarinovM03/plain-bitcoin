@@ -33,8 +33,11 @@ test('answers £50 a week since January 2020 from bundled closes only, with the 
         new RegExp(`^Worth ${money} today: [\\d.]+ BTC bought on 1 Jan 2020$`),
     );
     await expect(page.locator('#dca-notes')).toContainText(DCA.feesNone);
-    await expect(page.locator('.dca-chart__line--lump')).toHaveAttribute('points', /^0,[\d.]+ /);
-    await expect(page.locator('#dca-chart')).toHaveAttribute('aria-label', /^Line chart\./);
+    await expect(page.locator('#scene-plot .dca-chart__line--lump')).toHaveAttribute('points', /^[\d.]+,[\d.]+ /);
+    await expect(page.locator('#scene-plot .dca-chart')).toHaveAttribute('aria-label', /^Line chart\./);
+    await expect(page.locator('#scene-plot .guide-label--btc')).toHaveText(
+        (await page.locator('#tool-result-figure').textContent()) ?? '',
+    );
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics reference price, daily closes to');
     await expect(page.locator('#tool-result-status')).toHaveText(/^£50 a week since Jan 2020/);
     expect(external).toEqual([]);
@@ -66,6 +69,19 @@ test('a fee comes off every buy, and an impossible fee says so', async ({ page }
     await expect(page.locator('#tool-result')).toHaveText(DCA.badFee);
     await expect(page.locator('#dca-detail')).toBeHidden();
     await expect(page.locator('[data-share="card"]')).toBeDisabled();
+});
+
+test('an amount that would buy more bitcoin than exists says so, and clears the old answer and chart', async ({
+    page,
+}) => {
+    const { problems } = await openDca(page);
+    await page.locator('#dca-amount').fill('9,999,999,999');
+    await expect(page.locator('#tool-result')).toHaveText(DCA.tooBig);
+    await expect(page.locator('#tool-result-figure')).toHaveText('—');
+    await expect(page.locator('#scene-plot .dca-chart')).toHaveClass(/dca-chart--empty/);
+    await page.locator('#dca-amount').fill('50');
+    await expect(page.locator('#tool-result')).toHaveText(/^£50 a week since Jan 2020/);
+    expect(realProblems(problems)).toEqual([]);
 });
 
 test('a start before the prices begin moves to the first close and says so', async ({ page }) => {

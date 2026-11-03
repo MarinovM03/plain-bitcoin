@@ -13,11 +13,14 @@ export function resultBlock(options: { id: string; label: string; empty: string 
 </section>`;
 }
 
-export function sceneWindow(options: { head: SafeHtml; caption: string; still?: SafeHtml }): SafeHtml {
+export function sceneWindow(options: { head: SafeHtml; caption: string }): SafeHtml {
     return html`<div class="scene">
     ${options.head}
-    <div id="scene-plot" class="scene__plot" aria-hidden="true"${options.still ? html` data-still="own"` : ''}>${options.still ?? ''}</div>
-    <p id="scene-caption" class="scene__caption">${options.caption}</p>
+    <div id="scene-plot" class="scene__plot" aria-hidden="true"></div>
+    <div class="scene__foot">
+        <p id="scene-caption" class="scene__caption">${options.caption}</p>
+        <p class="scene__callout" aria-live="polite" hidden></p>
+    </div>
 </div>`;
 }
 

@@ -59,10 +59,12 @@ describe('renderToolPage', () => {
         for (const [button] of buttons) expect(button).toContain('disabled');
     });
 
-    it('keeps the DCA chart as a real SVG in the scene, with the lump-sum line', () => {
-        const markup = renderToolPage('dca').value;
-        expect(markup).toContain('data-still="own"');
-        expect(markup).toContain('dca-chart__line--lump');
+    it('gives every calculator one scene window: a plot the stage paints, a caption and a callout slot', () => {
+        for (const id of ['power', 'convert', 'dca', 'address'] as const) {
+            const markup = renderToolPage(id).value;
+            expect(markup).toContain('<div id="scene-plot" class="scene__plot" aria-hidden="true"></div>');
+            expect(markup).toContain('class="scene__callout"');
+        }
     });
 
     it('puts the scene, a counting figure and an empty numbers panel on the Bitcoin left page', () => {

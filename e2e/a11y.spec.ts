@@ -20,7 +20,7 @@ async function open(page: Page, route: string) {
     await page.goto(`/?hero=plain#/${route}`);
     if (route === 'address') await page.locator('#address-input').fill(TAPROOT);
     if (route !== '' && route !== 'left') await expect(page.locator('[data-share="copy"]')).toBeEnabled();
-    if (route === '') await expect(page.locator('.tile__preview svg')).toHaveCount(TOOL_IDS.length);
+    if (route === '') await expect(page.locator('.tile__preview > svg.still')).toHaveCount(TOOL_IDS.length);
     if (route === 'left') await expect(page.locator('#left-note')).not.toBeEmpty();
     const live = route === '' || route === 'left' || route === 'convert';
     if (live) await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');

@@ -276,15 +276,21 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
             checksumBad: false,
         } as const;
         if (analysis.kind === 'address') {
-            big.textContent = ADDRESS.figures[analysis.type];
-            scene.set({ ...empty, text: analysis.text, roles: charRoles(analysis), state: 'valid' }, SCENE.address);
+            const kind = ADDRESS.figures[analysis.type];
+            big.textContent = kind;
+            scene.set(
+                { ...empty, text: analysis.text, roles: charRoles(analysis), state: 'valid', kind },
+                SCENE.address,
+            );
             return;
         }
         if (analysis.kind === 'invalid') {
-            big.textContent = analysis.reason === 'checksum' ? ADDRESS.figures.checksum : ADDRESS.figures.invalid;
+            const kind = analysis.reason === 'checksum' ? ADDRESS.figures.checksum : ADDRESS.figures.invalid;
+            big.textContent = kind;
             scene.set(
                 {
                     ...empty,
+                    kind,
                     text: analysis.text,
                     roles: charRoles(analysis),
                     state: 'invalid',

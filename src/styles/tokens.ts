@@ -7,6 +7,7 @@ export const TOKENS = {
     btc: '#f7931a',
     fiat: '#7db7e8',
     glass: '86%',
+    scrim: '88%',
 
     fontBody: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontDisplay: '"Fraunces", Georgia, "Times New Roman", serif',

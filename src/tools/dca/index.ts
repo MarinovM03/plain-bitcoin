@@ -1,3 +1,4 @@
+import { MAX_SATS } from '../../model/convert.ts';
 import {
     buyDays,
     type DailyCloses,
@@ -8,13 +9,12 @@ import {
     FREQUENCIES,
     type Frequency,
 } from '../../model/dca.ts';
-import { lineChart } from '../../model/scale.ts';
 import { CardFiles } from '../../share/actions.ts';
 import { bindShareBar } from '../../share/bar.ts';
 import { type DcaText, dcaText } from '../../share/cardText.ts';
 import { siteAddress } from '../../share/index.ts';
 import { DCA, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
-import { CHART_HEIGHT, CHART_WIDTH, DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
+import { DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { parseAmount } from '../../util/amount-input.ts';
@@ -24,7 +24,6 @@ import { type Month, monthValue, parseMonth, shiftMonth } from '../../util/month
 import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
-const CHART_SAMPLES = 240;
 const DAY_MS = 86_400_000;
 
 interface DailySeries extends DailyCloses {
@@ -67,13 +66,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
     const panel = find(root, '#dca-detail');
-    const chart = find<SVGSVGElement>(root, '#dca-chart');
     const notes = find(root, '#dca-notes');
-    const lines = {
-        invested: find<SVGPolylineElement>(chart, '.dca-chart__line--invested'),
-        lump: find<SVGPolylineElement>(chart, '.dca-chart__line--lump'),
-        value: find<SVGPolylineElement>(chart, '.dca-chart__line--value'),
-    };
 
     const scene = linkScene(root);
     const site = siteAddress(siteUrl);
@@ -136,8 +129,10 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
         panel.hidden = true;
-        chart.classList.add('dca-chart--empty');
-        scene.set({ id: 'dca', value: [], invested: [], lump: [] }, SCENE.dcaEmpty);
+        scene.set(
+            { id: 'dca', fiat: currency(), worth: '', alt: '', t: [], value: [], invested: [], lump: [] },
+            SCENE.dcaEmpty,
+        );
         share.setEnabled(false);
         settle(message);
     }
@@ -148,23 +143,19 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         return DCA.empty;
     }
 
-    function renderChart(words: DcaText, outcome: Extract<DcaOutcome, { ok: true }>): void {
-        const { points } = outcome.result;
-        const chartLines = lineChart(
-            [points.map((p) => p.invested), points.map((p) => p.lumpValue), points.map((p) => p.value)],
-            CHART_WIDTH,
-            CHART_HEIGHT,
-            CHART_SAMPLES,
-        ).lines;
-        lines.invested.setAttribute('points', chartLines[0] ?? '');
-        lines.lump.setAttribute('points', chartLines[1] ?? '');
-        lines.value.setAttribute('points', chartLines[2] ?? '');
-        chart.setAttribute('aria-label', words.chartAlt);
-        chart.classList.remove('dca-chart--empty');
+    // The chart and the answer read the same result: one payload, the last mark is the figure above.
+    function renderChart(words: DcaText, outcome: Extract<DcaOutcome, { ok: true }>, fiat: Fiat): void {
+        const { result } = outcome;
+        const { points } = result;
+        const first = isoDayMs(result.start);
         scene.set(() => {
-            const marks = buyIndices(outcome.result);
+            const marks = buyIndices(result);
             return {
                 id: 'dca',
+                fiat,
+                worth: words.rows.worth,
+                alt: words.chartAlt,
+                t: marks.map((i) => first + i * DAY_MS),
                 value: marks.map((i) => points[i]?.value ?? 0),
                 invested: marks.map((i) => points[i]?.invested ?? 0),
                 lump: marks.map((i) => points[i]?.lumpValue ?? 0),
@@ -211,13 +202,18 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             showMessage(messageFor(outcome, series));
             return;
         }
+        // More sats than can ever exist cannot be written down honestly, and would not fit a safe integer.
+        if (outcome.result.sats > MAX_SATS || outcome.result.lumpSum.sats > MAX_SATS) {
+            showMessage(DCA.tooBig);
+            return;
+        }
         text = dcaText(outcome.result, fiat, site);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
         big.textContent = text.rows.worth;
         detail.textContent = text.detail;
         for (const row of DCA_ROWS) find(panel, `#dca-${row}`).textContent = text.rows[row];
-        renderChart(text, outcome);
+        renderChart(text, outcome, fiat);
         renderNotes(text);
         renderSource(series, fiat);
         panel.hidden = false;
