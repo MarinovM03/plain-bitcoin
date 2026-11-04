@@ -4,7 +4,6 @@ export interface SceneState {
     scene: string | undefined;
     rev: string | undefined;
     settled: string | undefined;
-    live: boolean;
     pending: boolean;
     summary: string | undefined;
 }
@@ -20,22 +19,19 @@ export async function sceneState(page: Page): Promise<SceneState> {
             scene: scene?.dataset.scene,
             rev: scene?.dataset.rev,
             settled: scene?.dataset.settled,
-            live: scene?.dataset.live !== undefined,
             pending: scene?.dataset.pending !== undefined,
             summary: scene?.dataset.summary,
         };
     });
 }
 
-/** Waits until the layer on screen shows the newest payload the tool sent. */
-export async function settled(page: Page, live = false): Promise<SceneState> {
+/** Waits until the gauge on screen shows the newest payload the tool sent. */
+export async function settled(page: Page): Promise<SceneState> {
     await expect
         .poll(
             async () => {
                 const state = await sceneState(page);
-                return (
-                    !state.pending && state.rev !== undefined && state.settled === state.rev && (!live || state.live)
-                );
+                return !state.pending && state.rev !== undefined && state.settled === state.rev;
             },
             { timeout: 15_000 },
         )

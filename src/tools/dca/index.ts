@@ -1,18 +1,9 @@
+import type { DcaMarks } from '../../hero/bus.ts';
 import { MAX_SATS } from '../../model/convert.ts';
-import {
-    buyDays,
-    type DailyCloses,
-    type DcaOutcome,
-    type DcaResult,
-    dayNumber,
-    dca,
-    FREQUENCIES,
-    type Frequency,
-} from '../../model/dca.ts';
-import { CardFiles } from '../../share/actions.ts';
-import { bindShareBar } from '../../share/bar.ts';
-import { type DcaText, dcaText } from '../../share/cardText.ts';
-import { siteAddress } from '../../share/index.ts';
+import { type DailyCloses, type DcaOutcome, dca, FREQUENCIES, type Frequency } from '../../model/dca.ts';
+import { bindShareBar } from '../../postcard/bar.ts';
+import { siteAddress } from '../../postcard/site.ts';
+import { type DcaText, dcaText } from '../../postcard/words.ts';
 import { DCA, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
 import { DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
@@ -22,6 +13,7 @@ import { find, link } from '../../util/dom.ts';
 import { type Fiat, formatDay, isoDayMs } from '../../util/format.ts';
 import { type Month, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
 import { linkScene } from '../scene.ts';
+import { dcaMarks } from './marks.ts';
 
 const SETTLE_MS = 700;
 const DAY_MS = 86_400_000;
@@ -34,15 +26,6 @@ const LOADERS: Record<Fiat, () => Promise<DailySeries>> = {
     GBP: () => import('../../data/prices/daily-gbp.json').then((module) => module.default),
     USD: () => import('../../data/prices/daily-usd.json').then((module) => module.default),
 };
-
-function buyIndices(result: DcaResult): number[] {
-    const first = dayNumber(result.start);
-    const last = dayNumber(result.lastBuy);
-    if (first === null || last === null) return [];
-    const indices = buyDays(result.frequency, first, last).map((day) => day - first);
-    const end = result.points.length - 1;
-    return indices.at(-1) === end ? indices : [...indices, end];
-}
 
 function lastDayMs(series: DailyCloses): number {
     return isoDayMs(series.start) + (series.closes.length - 1) * DAY_MS;
@@ -70,15 +53,14 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
 
     const scene = linkScene(root);
     const site = siteAddress(siteUrl);
-    const files = new CardFiles(site);
     const loaded = new Map<Fiat, DailySeries>();
     let text: DcaText | null = null;
     let settleTimer = 0;
     let request = 0;
     let disposed = false;
     const share = bindShareBar(root, {
-        files,
-        card: () => text?.card ?? null,
+        postcard: () => text?.postcard ?? null,
+        site,
         onStatus: (message) => {
             window.clearTimeout(settleTimer);
             status.textContent = message;
@@ -115,7 +97,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         window.clearTimeout(settleTimer);
         settleTimer = window.setTimeout(() => {
             status.textContent = message;
-            if (text) files.get(text.card).catch(() => {});
         }, SETTLE_MS);
     }
 
@@ -143,24 +124,9 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         return DCA.empty;
     }
 
-    // The chart and the answer read the same result: one payload, the last mark is the figure above.
-    function renderChart(words: DcaText, outcome: Extract<DcaOutcome, { ok: true }>, fiat: Fiat): void {
-        const { result } = outcome;
-        const { points } = result;
-        const first = isoDayMs(result.start);
-        scene.set(() => {
-            const marks = buyIndices(result);
-            return {
-                id: 'dca',
-                fiat,
-                worth: words.rows.worth,
-                alt: words.chartAlt,
-                t: marks.map((i) => first + i * DAY_MS),
-                value: marks.map((i) => points[i]?.value ?? 0),
-                invested: marks.map((i) => points[i]?.invested ?? 0),
-                lump: marks.map((i) => points[i]?.lumpValue ?? 0),
-            };
-        }, SCENE.dca);
+    // The chart, the answer and the postcard read the same marks: the last one is the figure above.
+    function renderChart(words: DcaText, marks: DcaMarks, fiat: Fiat): void {
+        scene.set({ id: 'dca', fiat, worth: words.rows.worth, alt: words.chartAlt, ...marks }, SCENE.dca);
     }
 
     function renderNotes(words: DcaText): void {
@@ -207,13 +173,14 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             showMessage(DCA.tooBig);
             return;
         }
-        text = dcaText(outcome.result, fiat, site);
+        const marks = dcaMarks(outcome.result);
+        text = dcaText(outcome.result, fiat, marks);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
         big.textContent = text.rows.worth;
         detail.textContent = text.detail;
         for (const row of DCA_ROWS) find(panel, `#dca-${row}`).textContent = text.rows[row];
-        renderChart(text, outcome, fiat);
+        renderChart(text, marks, fiat);
         renderNotes(text);
         renderSource(series, fiat);
         panel.hidden = false;

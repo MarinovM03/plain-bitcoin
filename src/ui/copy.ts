@@ -3,38 +3,49 @@ import type { Fiat } from '../util/format.ts';
 
 export const SITE_NAME = 'Plain Bitcoin';
 
-export const SITE_DESCRIPTION = 'A few honest Bitcoin tools, fast and plain. Everything runs in your browser.';
+export const PRODUCT =
+    'Plain Bitcoin is a living chain instrument that prints shareable postcards of plain Bitcoin truths.';
+
+export const SITE_DESCRIPTION =
+    'A living chain instrument that prints shareable postcards of plain Bitcoin truths. Everything runs in your browser.';
 
 export const OG_IMAGE = {
     path: 'og.png',
     width: 1200,
-    height: 630,
-    headline: 'Plain answers to Bitcoin questions.',
-    detail: 'Five small tools. Every number shows its source.',
+    height: 628,
+    kicker: 'Plain Bitcoin · the instrument',
+    number: '21,000,000',
+    line: 'Bitcoin, measured live. Every answer prints as a postcard.',
     source: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    alt: 'Plain Bitcoin: plain answers to Bitcoin questions, next to 2,100 dots of 10,000 BTC each, the mined ones lit.',
+    alt: 'Plain Bitcoin postcard: 21,000,000, Bitcoin measured live, with the supply bar issued in white and still to mine in orange.',
 } as const;
 
 export const HOME = {
+    kicker: 'The instrument · five gauges',
     headline: 'Bitcoin, measured live.',
-    lead: 'Five small instruments for plain Bitcoin questions, worked out in your browser. Block and price are live.',
-    promise: 'Plain answers to Bitcoin questions, worked out in your browser.',
-    toolsLabel: 'Explore the tools',
+    lead: 'One instrument reading the chain. The lines behind it take their mood from real block timing, and every answer prints as a postcard.',
+    promise: 'A living chain instrument that prints postcards of plain Bitcoin truths.',
+    toolsLabel: 'The gauges',
     leftFigure: (left: string) => `${left} left`,
-    convertFigure: (gbp: string) => `1 sat ≈ ${gbp}`,
+    convertFigure: (gbp: string) => `1 sat = ${gbp}`,
+    powerFigure: (then: string, now: string) => `${then} in 2015 → ${now} as bitcoin`,
+    dcaFigure: (worth: string) => `£50 a week since 2020 → ${worth}`,
+    addressFigure: 'Taproot · typed right',
     cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
         'Never share a seed phrase or private key. No honest tool asks for one.',
     ],
+    printLabel: 'Print this reading',
+    postcardLine: (issued: string) => `Bitcoin, measured live. ${issued} of 21,000,000 BTC issued.`,
 } as const;
 
 export const NAV = {
     label: 'Tools',
     short: {
-        left: 'Left to mine',
-        power: 'Purchasing power',
-        convert: 'Converter',
+        left: 'Left',
+        power: 'Power',
+        convert: 'Convert',
         dca: 'DCA',
         address: 'Address',
     } satisfies Record<ToolId, string>,
@@ -48,9 +59,10 @@ export const STATUS = {
     live: (source: string, clock: string) => `${source} ${clock}`,
     stale: (source: string, clock: string) => `${source} ${clock}, not live`,
     lastClose: (day: string) => `last close ${day}`,
-    since: (age: string) => `${age} since block`,
-    estimatedSince: (age: string) => `est. ${age} since block`,
+    since: (age: string) => `${age} since last block`,
+    estimatedSince: (age: string) => `est. ${age} since last block`,
     unknownTime: 'block time unknown',
+    dial: 'Time since the last block, against the 10-minute target',
 } as const;
 
 export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
@@ -86,6 +98,8 @@ export const TOOLS: Record<ToolId, { name: string; question: string; preview: st
     },
 };
 
+export const GAUGE_LABEL = (index: number, name: string) => `Gauge ${String(index).padStart(2, '0')} · ${name}`;
+
 export const TOOL_PAGE = {
     inputsLabel: 'Your numbers',
     addressLabel: 'Your address',
@@ -95,33 +109,71 @@ export const TOOL_PAGE = {
 } as const;
 
 export const SCENE = {
-    left: 'Each dot is 10,000 BTC, filled from the bottom. Each band is one halving era; orange is the one being mined now, dim is not mined yet. Tap a band for its dates.',
+    left: 'Left: all 21 million, a band per halving era. Right: the last 2 million, ten times larger. White is issued, orange still to mine. Tap a band for its dates.',
     power: (log: boolean) =>
-        `Left: kept as cash. Right: put into bitcoin. Each stack is filled to today's value${log ? ', on a log scale' : ''}.`,
-    powerEmpty: 'Two stacks compare cash and bitcoin once there is an answer.',
-    convert: (perDot: string, shown: string) =>
-        `Each dot is ${perDot}; the grid zooms by ten as the amount does. The lit dots are ${shown}.`,
-    convertEmpty: 'Each dot is a number of sats. Type an amount to light them.',
-    dca: 'Orange: what it was worth at each buy, one mark per buy, ending today. White: money put in. Grey: one lump sum.',
+        `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
+    powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
+    convert: (perCell: string, shown: string) =>
+        `Each cell is ${perCell}; the grid zooms by ten as the amount does. The orange cells are ${shown}.`,
+    convertEmpty: 'Each cell is a number of sats. Type an amount to fill them.',
+    dca: 'Orange: worth at each buy, ending today. White: money put in. Dashed steel: one lump sum on day one.',
     dcaEmpty: 'The chart draws once there is an answer.',
-    address:
-        'Each column is one character, its height set by the character. Colour marks its part once the type is recognised.',
-    addressBad: 'Each column is one character. The raised orange one does not fit.',
-    addressLoose: 'Each column is one character. The checksum columns do not lock into place.',
-    addressEmpty: 'Each character will stand as one column once you paste an address.',
+    address: 'Each cell is one character, coloured by its part once the checksum proves the type.',
+    addressBad: 'Each cell is one character. The orange one cannot be part of this address.',
+    addressLoose: 'Each cell is one character. The checksum cells do not lock into place.',
+    addressEmpty: 'Each character will stand in its own cell once you paste an address.',
+} as const;
+
+export const GAUGE = {
+    left: {
+        max: '21M',
+        zoomFloor: '19M',
+        mined: (share: string) => `${share} mined`,
+        era: (era: number, reward: string) => `Era ${era} · ${reward}`,
+        eraOnward: (era: number) => `Era ${era} on`,
+        now: ' · now',
+    },
+    power: {
+        cash: 'Kept as cash',
+        bitcoin: 'As bitcoin',
+        log: 'Log scale · ×10 a line',
+    },
+    convert: {
+        perCell: (unit: string) => `1 cell = ${unit}`,
+        blocks: (blocks: number, total: string) => `${blocks} blocks of 100 = ${total}`,
+    },
+    dca: {
+        short: { value: 'Worth', invested: 'Put in', lump: 'Lump sum' },
+    },
+    address: {
+        stamp: (kind: string, valid: boolean) => `${kind}${valid ? ' · checksum valid' : ''}`,
+        count: (count: number) => `${count} characters`,
+    },
 } as const;
 
 export const SHARE = {
     label: 'Share',
-    card: 'Share card',
+    print: 'Print postcard',
     download: 'Download',
-    copy: 'Copy text',
-    copied: 'Copied',
-    copyFailed: 'Copy failed',
-    failed: 'Could not make the card. Try Copy text instead.',
-    downloaded: 'Card saved as a PNG.',
-    handle: '@PlainBTC',
     post: 'Post on X',
+    copyImage: 'Copy image',
+    share: 'Share…',
+    wide: 'Wide',
+    square: 'Square',
+    format: 'Postcard shape',
+    close: 'Close',
+    tray: 'Print tray',
+    printing: 'Printing…',
+    printed: 'Printed. Copy it, save it or post it.',
+    copied: 'Image copied.',
+    copyUnsupported: "Copy isn't supported here — use Download.",
+    postCopied: 'Image copied — paste it into your post.',
+    postNoImage: 'Download the image first, then add it to your post.',
+    downloaded: 'Postcard saved as a PNG.',
+    failed: 'Could not print the postcard. Try again.',
+    handle: '@PlainBTC',
+    via: 'via @PlainBTC',
+    madeHere: 'Made in your browser. Nothing is uploaded.',
 } as const;
 
 export const FIELDS = {
@@ -184,10 +236,6 @@ export const POWER = {
     priceSource: 'Coin Metrics reference price',
     priceTo: (month: string) => `, month-end closes to ${month}.`,
     fxNote: "Pounds use the Federal Reserve's last USD/GBP rate of each month.",
-    cardDetail: (value: string) => `As bitcoin: ${value} today.`,
-    cardDetailFall: (value: string, fall: string) => `As bitcoin: ${value} today, after a ${fall} fall on the way.`,
-    cardSource: (cpi: string, cpiMonth: string, closeMonth: string) =>
-        `CPI: ${cpi} to ${cpiMonth} · Bitcoin: Coin Metrics close, ${closeMonth}`,
 } as const;
 
 export const CONVERT = {
@@ -220,7 +268,6 @@ export const CONVERT = {
     sourceFallback: 'mempool.space, with CoinGecko if it does not answer',
     sourceClose: (day: string) => ` daily close for ${day}, used until a live price answers. `,
     sourceUnits: '1 BTC = 100,000,000 sats.',
-    cardSource: (price: string) => `Price: ${price}`,
 } as const;
 
 export const DCA = {
@@ -268,12 +315,6 @@ export const DCA = {
     source: 'Coin Metrics reference price',
     sourceTo: (day: string) => `, daily closes to ${day}. All dates UTC.`,
     fxNote: "Pounds use the Federal Reserve's USD/GBP rate for each day.",
-    cardDetail: (invested: string, buys: string, fall: string) =>
-        `${invested} put in over ${buys}. Worst fall on the way: ${fall}.`,
-    cardDetailNoFall: (invested: string, buys: string) => `${invested} put in over ${buys}.`,
-    cardSource: (day: string, fees: string) => `Bitcoin: Coin Metrics daily closes to ${day} · ${fees}`,
-    cardFees: (percent: string) => `${percent} fee per buy`,
-    cardNoFees: 'fees not included',
 } as const;
 
 export const ADDRESS = {
@@ -411,8 +452,7 @@ export const ADDRESS = {
         `${count.toLocaleString('en-GB')} ${count === 1 ? 'transaction' : 'transactions'}, ${change}`,
     source: (spec: string) => `Checked in your browser with the ${spec} checksum. Nothing was sent.`,
     sourceIdle: 'Decoded in your browser: Base58Check, Bech32 (BIP 173) and Bech32m (BIP 350).',
-    cardToggle: 'Show the full address on the card',
-    cardSource: (spec: string) => `Checked in the browser, nothing sent · ${spec}`,
+    cardSource: (spec: string) => `Checked in your browser, nothing sent · ${spec}`,
 } as const;
 
 export const LEFT_PAGE = {
@@ -454,11 +494,42 @@ export const LEFT_PAGE = {
         `estimated offline from block ${height} (${stamp}) at one block every 10 minutes. `,
     supplyLabel: 'Supply: ',
     supplySource: "worked out from Bitcoin's issuance schedule, 50 BTC a block halving every 210,000 blocks.",
-    shareOffline: 'Sharing waits for a live block height.',
-    cardHeadline: (left: string, height: string) => `${left} left to mine. Block ${height}.`,
-    cardDetail: (issued: string, halving: string) =>
-        `${issued} issued by the schedule. Next halving at block ${halving}.`,
-    cardSource: (api: string, stamp: string) => `Block height: ${api}, ${stamp} · Supply: the issuance schedule`,
+} as const;
+
+export const POSTCARD = {
+    estimated: ' est.',
+    home: { kicker: 'Plain Bitcoin · block height' },
+    left: {
+        kicker: (height: string) => `Left to mine · block ${height}`,
+        line: (left: string) => `${left} BTC are still to be mined.`,
+        source: (height: string, api: string, stamp: string) =>
+            `Block ${height} · height via ${api} · ${stamp} · supply from the issuance schedule`,
+        estimate: (height: string) =>
+            `Block ${height} · estimated at one block every 10 minutes · supply from the issuance schedule`,
+    },
+    power: {
+        kicker: (month: string) => `Purchasing power · close ${month}`,
+        line: (headline: string, bitcoin: string) => `${headline} As bitcoin, ${bitcoin}.`,
+        source: (cpi: string, cpiMonth: string, closeMonth: string) =>
+            `CPI: ${cpi} to ${cpiMonth} · Bitcoin: Coin Metrics close, ${closeMonth} · calculated in your browser`,
+    },
+    convert: {
+        kicker: (amount: string) => `Converter · ${amount}`,
+        source: (price: string) => `Price: ${price} · 1 BTC = 100,000,000 sats`,
+    },
+    dca: {
+        kicker: (day: string) => `Buying on a schedule · to ${day}`,
+        line: (amount: string, every: string, since: string, worth: string, lump: string) =>
+            `${amount} ${every} since ${since} is worth ${worth} today. One lump sum: ${lump}.`,
+        source: (day: string, fees: string) =>
+            `Bitcoin: Coin Metrics daily closes to ${day} · ${fees} · calculated in your browser`,
+        fees: (percent: string) => `${percent} fee per buy`,
+        noFees: 'fees not included',
+    },
+    address: {
+        kicker: (encoding: string) => `Address check · ${encoding}`,
+        line: (type: string, network: string) => `This is a ${type} address, typed right. ${network}.`,
+    },
 } as const;
 
 export const ROUTE = {
@@ -467,6 +538,7 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
+    motion: 'The moving lines are ambient motion, not live activity. Their mood comes from real block timing; orange sweeps through only when a real block arrives.',
     toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',
     handle: '@PlainBTC',

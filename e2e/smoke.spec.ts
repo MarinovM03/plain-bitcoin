@@ -41,10 +41,10 @@ test('home shows the shell, the headline and every tool as a live tile, in order
     await expect(page.locator('[data-tile-figure="left"]')).toHaveText(HOME.leftFigure(`${left} BTC`));
     await expect(page.locator('[data-tile-figure="convert"]')).toHaveText(HOME.convertFigure('£0.00057'));
     await expect(page.locator('.tile__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
-    for (const id of ['power', 'dca', 'address'] as const) {
-        await expect(page.locator(`[data-tile-figure="${id}"]`)).toHaveText(TOOLS[id].preview);
-    }
-    await expect(page.locator('.tile__preview > svg.still')).toHaveCount(TOOL_IDS.length);
+    await expect(page.locator('[data-tile-figure="power"]')).toHaveText(/^£1,000 in 2015 → £[\d,]+ as bitcoin$/);
+    await expect(page.locator('[data-tile-figure="dca"]')).toHaveText(/^£50 a week since 2020 → £[\d,]+$/);
+    await expect(page.locator('[data-tile-figure="address"]')).toHaveText(HOME.addressFigure);
+    await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(TOOL_IDS.length);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
     for (const row of await page.locator('.tile').all()) {
@@ -52,9 +52,9 @@ test('home shows the shell, the headline and every tool as a live tile, in order
         expect(box?.height).toBeGreaterThanOrEqual(44);
     }
 
-    const intro = await page.locator('.intro').boundingBox();
+    const intro = await page.locator('.overview').boundingBox();
     await page.waitForTimeout(500);
-    expect(await page.locator('.intro').boundingBox()).toEqual(intro);
+    expect(await page.locator('.overview').boundingBox()).toEqual(intro);
 
     expect(await horizontalOverflow(page)).toBe(0);
     expect(realProblems(problems)).toEqual([]);
@@ -69,7 +69,8 @@ for (const id of TOOL_IDS) {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
         await expect(page.getByText(TOOLS[id].question)).toBeVisible();
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
-        await expect(page.locator('.share-bar button')).toHaveCount(3);
+        await expect(page.locator('.share-bar button')).toHaveCount(2);
+        await expect(page.locator('.share-bar [data-share-post]')).toHaveCount(1);
         for (const button of await page.locator('.share-bar button').all()) {
             if (id !== 'address') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
@@ -163,7 +164,7 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
 }) => {
     test.skip(isMobile, 'Keyboard focus is checked on desktop');
     await page.goto('/');
-    const links = await page.locator('a').count();
+    const links = await page.locator('a, button:not([disabled])').count();
     for (let i = 0; i < links; i += 1) {
         await page.keyboard.press('Tab');
         const outline = await page.evaluate(() => {
@@ -171,7 +172,8 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
             const style = getComputedStyle(active);
             return { tag: active.tagName, width: style.outlineWidth, style: style.outlineStyle };
         });
-        expect(outline).toEqual({ tag: 'A', width: '2px', style: 'solid' });
+        expect(['A', 'BUTTON']).toContain(outline.tag);
+        expect({ width: outline.width, style: outline.style }).toEqual({ width: '2px', style: 'solid' });
     }
 
     await page.locator('.tile').nth(1).focus();

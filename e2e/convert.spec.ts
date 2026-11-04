@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { CONVERT } from '../src/ui/copy.ts';
+import { CONVERT, SHARE } from '../src/ui/copy.ts';
 import { realProblems } from './console.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
@@ -87,7 +87,7 @@ test('what is typed before the tool finishes loading still drives the answer', a
     const held = new Promise<void>((resolve) => {
         release = resolve;
     });
-    await page.route(/\/assets\/convert-[^/]+\.js$/, async (route) => {
+    await page.route(/\/assets\/tool-convert-[^/]+\.js$/, async (route) => {
         await held;
         await route.continue();
     });
@@ -106,7 +106,7 @@ test('refuses impossible amounts and pasted garbage calmly', async ({ page }) =>
     await field.btc.fill('21000001');
     await expect(page.locator('#convert-note')).toHaveText(CONVERT.tooBig);
     await expect(field.sats).toHaveValue('');
-    await expect(page.locator('[data-share="card"]')).toBeDisabled();
+    await expect(page.locator('[data-share="print"]')).toBeDisabled();
 
     await field.btc.fill('');
     await expect(page.locator('#tool-result')).toHaveText(CONVERT.empty);
@@ -156,13 +156,14 @@ test('every field and preset is reachable by keyboard', async ({ page, isMobile 
     await page.goto('/#/convert');
     await page.locator('h1').focus();
     const order: string[] = [];
-    for (let i = 0; i < 11; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
         await page.keyboard.press('Tab');
         order.push(await page.evaluate(() => document.activeElement?.id || document.activeElement?.textContent || ''));
     }
     expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-gbp', 'convert-usd']);
-    expect(order[4]).toBe(CONVERT.presetsLabel);
-    expect(order.slice(5)).toEqual(
+    expect(order.slice(4, 7)).toEqual([SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
+    expect(order[7]).toBe(CONVERT.presetsLabel);
+    expect(order.slice(8)).toEqual(
         Object.entries(CONVERT.presets).map(([preset, label]) => label + (CONVERT.presetHints[preset] ?? '')),
     );
     await page.keyboard.press('Enter');

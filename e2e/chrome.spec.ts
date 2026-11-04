@@ -15,7 +15,7 @@ test('the top bar links to every tool and to @PlainBTC on X', async ({ page }) =
     for (const id of TOOL_IDS) {
         await expect(nav.getByRole('link', { name: NAV.short[id], exact: true })).toHaveAttribute('href', `#/${id}`);
     }
-    const follow = page.locator('.topbar').getByRole('link', { name: FOOTER.handle });
+    const follow = page.locator('.bezel').getByRole('link', { name: FOOTER.handle });
     await expect(follow).toBeVisible();
     await expect(follow).toHaveAttribute('href', FOOTER.followUrl);
     await expect(follow).toHaveAttribute('rel', 'noopener noreferrer');
@@ -39,7 +39,7 @@ test('the current route is marked in the top bar', async ({ page }) => {
     for (const id of TOOL_IDS) {
         await nav.getByRole('link', { name: NAV.short[id], exact: true }).click();
         await expect(page).toHaveURL(new RegExp(`#/${id}$`));
-        await expect(nav.locator('[aria-current="page"]')).toHaveText(NAV.short[id]);
+        await expect(nav.locator('[aria-current="page"] .mode__name')).toHaveText(NAV.short[id]);
         await expect(page.getByRole('link', { name: SITE_NAME })).not.toHaveAttribute('aria-current', 'page');
     }
 });

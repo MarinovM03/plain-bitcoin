@@ -9,19 +9,21 @@ export type Quality = (typeof LEVELS)[number];
 export interface LevelSettings {
     /** Ambient frame rate while nothing but the weather moves. 0 = no ambient frames. */
     ambientFps: number;
-    /** Frame rate while a scene morphs, a pulse travels or the pointer light fades. */
+    /** Frame rate while a block pulse travels, the mood resets or the pointer bend eases out. */
     activeFps: number;
-    /** Device pixels per CSS pixel, before the device ratio is applied. */
+    /** Highest device pixel ratio honoured. */
     dprCap: number;
+    /** Internal render scale on top of that: the body is drawn smaller and upscaled, which also keeps it soft. */
+    renderScale: number;
 }
 
 export const TIER_SETTINGS: Record<'full' | 'phone', LevelSettings> = {
-    full: { ambientFps: 24, activeFps: 30, dprCap: 1.5 },
-    phone: { ambientFps: 20, activeFps: 30, dprCap: 1.25 },
+    full: { ambientFps: 30, activeFps: 30, dprCap: 1.5, renderScale: 0.75 },
+    phone: { ambientFps: 20, activeFps: 24, dprCap: 1.25, renderScale: 0.6 },
 };
 
-export const LITE: LevelSettings = { ambientFps: 15, activeFps: 24, dprCap: 1 };
-export const STILL: LevelSettings = { ambientFps: 0, activeFps: 30, dprCap: 1 };
+export const LITE: LevelSettings = { ambientFps: 15, activeFps: 20, dprCap: 1, renderScale: 0.5 };
+export const STILL: LevelSettings = { ambientFps: 0, activeFps: 30, dprCap: 1, renderScale: 0.5 };
 
 export function settingsFor(quality: Quality, tier: 'full' | 'phone'): LevelSettings {
     if (quality === 'full') return TIER_SETTINGS[tier];

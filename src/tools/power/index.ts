@@ -1,10 +1,9 @@
 import { POWER_SERIES, powerData } from '../../data/power.ts';
 import { type PowerOutcome, type PowerResult, purchasingPower, sortedMonths, worstStart } from '../../model/power.ts';
 import { barScale, sparkline } from '../../model/scale.ts';
-import { CardFiles } from '../../share/actions.ts';
-import { bindShareBar } from '../../share/bar.ts';
-import { type PowerText, powerText } from '../../share/cardText.ts';
-import { siteAddress } from '../../share/index.ts';
+import { bindShareBar } from '../../postcard/bar.ts';
+import { siteAddress } from '../../postcard/site.ts';
+import { type PowerText, powerText } from '../../postcard/words.ts';
 import { POWER, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
@@ -39,7 +38,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
 
     const scene = linkScene(root);
     const site = siteAddress(siteUrl);
-    const files = new CardFiles(site);
     const months = sortedMonths(POWER_SERIES.USD.prices.months);
     const firstMonth = parseMonth(months[0] ?? '');
     const lastMonth = parseMonth(months.at(-1) ?? '');
@@ -52,8 +50,8 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     let text: PowerText | null = null;
     let settleTimer = 0;
     const share = bindShareBar(root, {
-        files,
-        card: () => text?.card ?? null,
+        postcard: () => text?.postcard ?? null,
+        site,
         onStatus: (message) => {
             window.clearTimeout(settleTimer);
             status.textContent = message;
@@ -89,7 +87,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         window.clearTimeout(settleTimer);
         settleTimer = window.setTimeout(() => {
             status.textContent = message;
-            if (text) files.get(text.card).catch(() => {});
         }, SETTLE_MS);
     }
 
@@ -167,7 +164,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
             return;
         }
         const { result } = outcome;
-        text = powerText(result, fiat, site);
+        text = powerText(result, fiat);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
         big.textContent = formatMoney(result.equivalentNow, fiat);

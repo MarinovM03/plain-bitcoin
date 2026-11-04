@@ -12,7 +12,7 @@ export const ADDRESS_SAMPLES: Record<keyof typeof ADDRESS.samples, string> = {
 export function renderAddressInputs(): SafeHtml {
     return html`<div class="field">
     <label class="field__label" for="address-input">${ADDRESS.field}</label>
-    <div class="field__control address-field">
+    <div class="field__control address-field" data-field-group>
         <input id="address-input" class="field__input address-field__input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="${ADDRESS.placeholder}" />
         <button id="address-paste" class="address-field__paste" type="button" hidden>${ADDRESS.paste}</button>
     </div>
@@ -30,13 +30,6 @@ export function renderAddressMore(): SafeHtml {
     <div class="presets__list">${samples}</div>
 </fieldset>
 ${noteLine(ADDRESS.offline)}`;
-}
-
-export function renderAddressCardToggle(): SafeHtml {
-    return html`<label class="card-toggle">
-    <input id="address-card-full" class="card-toggle__input" type="checkbox" />
-    <span>${ADDRESS.cardToggle}</span>
-</label>`;
 }
 
 export function renderAddressDetail(): SafeHtml {

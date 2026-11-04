@@ -13,7 +13,7 @@ try {
     await page.route(/^https:\/\//, (route) => route.abort());
     await page.goto(`http://localhost:${PORT}/?hero=plain`);
     const base64 = await page.evaluate(async (address) => {
-        const { renderOgImage } = await import('/src/share/og.ts');
+        const { renderOgImage } = await import('/src/postcard/og.ts');
         const bytes = new Uint8Array(await (await renderOgImage(address)).arrayBuffer());
         let binary = '';
         for (const byte of bytes) binary += String.fromCharCode(byte);

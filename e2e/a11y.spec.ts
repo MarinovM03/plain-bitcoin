@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, NAV, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, NAV, SHARE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
@@ -19,8 +19,8 @@ const SIZES = [
 async function open(page: Page, route: string) {
     await page.goto(`/?hero=plain#/${route}`);
     if (route === 'address') await page.locator('#address-input').fill(TAPROOT);
-    if (route !== '' && route !== 'left') await expect(page.locator('[data-share="copy"]')).toBeEnabled();
-    if (route === '') await expect(page.locator('.tile__preview > svg.still')).toHaveCount(TOOL_IDS.length);
+    if (route !== '' && route !== 'left') await expect(page.locator('[data-share="print"]')).toBeEnabled();
+    if (route === '') await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(TOOL_IDS.length);
     if (route === 'left') await expect(page.locator('#left-note')).not.toBeEmpty();
     const live = route === '' || route === 'left' || route === 'convert';
     if (live) await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
@@ -66,9 +66,12 @@ test('the keyboard reaches every tool from home in reading order and lands on it
     const order: string[] = [];
     const expected = [
         SITE_NAME,
-        ...TOOL_IDS.map((id) => NAV.short[id]),
+        ...TOOL_IDS.map((id, i) => `${String(i + 1).padStart(2, '0')}${NAV.short[id]}`),
         `${FOOTER.handle} ↗`,
         'mempool.space',
+        SHARE.print,
+        SHARE.download,
+        `${SHARE.post} ↗`,
         ...TOOL_IDS.map((id) => TOOLS[id].name),
     ];
     for (let step = 0; step < expected.length; step++) {

@@ -13,6 +13,7 @@ export function resultBlock(options: { id: string; label: string; empty: string 
 </section>`;
 }
 
+/** The gauge's window: an opaque screen on the plate. Nothing of the body shows through it. */
 export function sceneWindow(options: { head: SafeHtml; caption: string }): SafeHtml {
     return html`<div class="scene">
     ${options.head}
@@ -31,12 +32,18 @@ export function moreOptions(label: string, body: SafeHtml): SafeHtml {
 </details>`;
 }
 
+export function shareBar(): SafeHtml {
+    return html`<div class="share-bar" role="group" aria-label="${SHARE.label}">
+    <button class="button button--primary share-bar__print" type="button" data-share="print" disabled><span class="share-bar__slot" aria-hidden="true"></span>${SHARE.print}</button>
+    <button class="button" type="button" data-share="download" disabled>${SHARE.download}</button>
+    <a class="button share-bar__post" href="https://x.com/intent/post" data-share-post target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">${SHARE.post} <span aria-hidden="true">↗</span></a>
+</div>`;
+}
+
 export function shareSection(extra: SafeHtml | '' = ''): SafeHtml {
     return html`<div class="share">
-    <div class="share__actions">
-        ${shareBar()}
-        ${postLink()}
-    </div>
+    ${shareBar()}
+    <p class="share__note">${SHARE.madeHere}</p>
     ${extra}
 </div>`;
 }
@@ -50,16 +57,4 @@ export function sourceLine(privacy: string, text: string = TOOL_PAGE.sourcePendi
 
 export function noteLine(text: string): SafeHtml {
     return html`<p class="note-line">${text}</p>`;
-}
-
-export function postLink(): SafeHtml {
-    return html`<a class="post-link" href="https://x.com/intent/post" data-share-post target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">${SHARE.post} <span aria-hidden="true">↗</span></a>`;
-}
-
-export function shareBar(): SafeHtml {
-    return html`<div class="share-bar" role="group" aria-label="${SHARE.label}">
-    <button class="button button--primary" type="button" data-share="card" disabled>${SHARE.card}</button>
-    <button class="button" type="button" data-share="download" disabled>${SHARE.download}</button>
-    <button class="button" type="button" data-share="copy" disabled>${SHARE.copy}</button>
-</div>`;
 }

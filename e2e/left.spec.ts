@@ -74,7 +74,7 @@ test('the numbers panel shows every figure for the live height', async ({ page }
     await expect(page.locator('#tool-source')).toContainText('mempool.space, checked');
     await expect(page.getByText(LEFT_PAGE.honesty)).toBeVisible();
     await expect(page.locator('#scene-caption')).toHaveText(
-        /^Each dot is 10,000 BTC, filled from the bottom\. Each band is one halving era;/,
+        /^Left: all 21 million, a band per halving era\. Right: the last 2 million, ten times larger\./,
     );
     expect(realProblems(problems)).toEqual([]);
 });
@@ -89,8 +89,8 @@ test('offline, it estimates the height from the anchor and says so', async ({ pa
 
     await expect(page.locator('#left-note')).toHaveText(/^Estimated, offline: block [\d,]+, assuming a block/);
     await expect(page.locator('#tool-source')).toContainText(`estimated offline from block ${BLOCK}`);
-    await expect(page.locator('[data-share="card"]')).toBeDisabled();
-    await expect(page.locator('#left-status')).toHaveText(LEFT_PAGE.shareOffline);
+    // An estimate still prints, marked est., and never names an API that did not answer.
+    await expect(page.locator('[data-share="print"]')).toBeEnabled();
     expect(chain.calls).toEqual([]);
     expect(realProblems(problems)).toEqual([]);
 });

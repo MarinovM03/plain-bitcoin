@@ -1,10 +1,11 @@
 import type { PriceQuote } from '../data/price.ts';
+import type { DcaMarks } from '../gauges/types.ts';
 import type { Address } from '../model/address.ts';
 import { btcText, type Conversion, type Unit } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
-import type { Supply } from '../model/supply.ts';
-import { ADDRESS, CONVERT, DCA, LEFT_PAGE, POWER } from '../ui/copy.ts';
+import { MAX_SUPPLY, SATS_PER_BTC, type Supply } from '../model/supply.ts';
+import { ADDRESS, CONVERT, DCA, HOME, POSTCARD, POWER, SHARE } from '../ui/copy.ts';
 import {
     type Fiat,
     formatAmount,
@@ -21,14 +22,37 @@ import {
     isoDayMs,
 } from '../util/format.ts';
 import { monthKeyLabel } from '../util/month.ts';
-import type { ShareCard } from './index.ts';
+import type { Postcard, PostcardTool } from './types.ts';
 
-export function cardFileName(tool: string, date: string): string {
-    return `plain-bitcoin-${tool}-${date}.png`;
+export const COMPOSE_LIMIT = 200;
+
+/** plain-bitcoin-<tool>-<yyyy-mm-dd>.png, dated the day it was printed (UTC). */
+export function postcardFileName(tool: PostcardTool, printedAt: number): string {
+    return `plain-bitcoin-${tool}-${new Date(printedAt).toISOString().slice(0, 10)}.png`;
 }
 
-function utcDay(ms: number): string {
-    return new Date(ms).toISOString().slice(0, 10);
+/**
+ * The words that go with the image on X: the line of truth, the link back to this gauge and the handle. Never more
+ * than 200 characters; a line that would overflow is cut at a word, never mid-number.
+ */
+export function composeText(postcard: Pick<Postcard, 'line' | 'route'>, site: string): string {
+    const tail = ` ${site}/#/${postcard.route} ${SHARE.via}`;
+    const room = COMPOSE_LIMIT - tail.length;
+    let line = postcard.line;
+    if (line.length > room) {
+        const cut = line.slice(0, room - 1);
+        line = `${cut.slice(0, Math.max(0, cut.lastIndexOf(' ')))}…`;
+    }
+    return `${line}${tail}`;
+}
+
+/** A typed address is never printed in full: its first and last four characters only. */
+export function maskAddress(text: string): string {
+    return text.length <= 10 ? text : `${text.slice(0, 4)}…${text.slice(-4)}`;
+}
+
+function card(parts: Omit<Postcard, 'alt'>): Postcard {
+    return { ...parts, alt: `${parts.number}. ${parts.line} ${parts.source}` };
 }
 
 export interface PowerText {
@@ -40,7 +64,7 @@ export interface PowerText {
     bitcoinValue: string;
     bitcoinNote: string;
     path: string;
-    card: ShareCard;
+    postcard: Postcard;
 }
 
 function pathLine(result: PowerResult, currency: Fiat, amount: string): string {
@@ -64,12 +88,11 @@ function pathLine(result: PowerResult, currency: Fiat, amount: string): string {
     return `${fallLine} ${belowLine}`;
 }
 
-export function powerText(result: PowerResult, currency: Fiat, site: string): PowerText {
+export function powerText(result: PowerResult, currency: Fiat): PowerText {
     const amount = formatAmount(result.amount, currency);
-    const headline = POWER.headline(amount, monthKeyLabel(result.start), formatMoney(result.equivalentNow, currency));
+    const worth = formatMoney(result.equivalentNow, currency);
+    const headline = POWER.headline(amount, monthKeyLabel(result.start), worth);
     const bitcoinValue = formatMoney(result.btcValueNow, currency);
-    const fall = formatPercent(result.maxDrawdown);
-    const detail = fall === '0%' ? POWER.cardDetail(bitcoinValue) : POWER.cardDetailFall(bitcoinValue, fall);
     return {
         headline,
         bitcoin: POWER.bitcoin(bitcoinValue, formatBtcAmount(result.btc)),
@@ -79,18 +102,25 @@ export function powerText(result: PowerResult, currency: Fiat, site: string): Po
         bitcoinValue,
         bitcoinNote: POWER.buysThen(formatMoney(result.btcRealNow, currency)),
         path: pathLine(result, currency, amount),
-        card: {
-            headline,
-            detail,
-            source: POWER.cardSource(
+        postcard: card({
+            tool: 'power',
+            route: 'power',
+            kicker: POSTCARD.power.kicker(monthKeyLabel(result.priceMonth, 'short')),
+            number: worth,
+            line: POSTCARD.power.line(headline, bitcoinValue),
+            source: POSTCARD.power.source(
                 POWER.cpiShort[currency],
                 monthKeyLabel(result.cpiMonth, 'short'),
                 monthKeyLabel(result.priceMonth, 'short'),
             ),
-            alt: `${headline} ${detail}`,
-            copy: `${headline} ${detail}\n${site}`,
-            fileName: cardFileName('power', result.priceMonth),
-        },
+            signature: {
+                kind: 'columns',
+                cash: result.amount,
+                bitcoin: result.btcValueNow,
+                cashLabel: amount,
+                bitcoinLabel: bitcoinValue,
+            },
+        }),
     };
 }
 
@@ -104,10 +134,10 @@ export interface ConvertText {
     headline: string;
     figure: string;
     detail: string;
-    card: ShareCard;
+    postcard: Postcard;
 }
 
-export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuote, site: string): ConvertText {
+export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuote): ConvertText {
     const { sats, fiat } = conversion;
     const words: Record<Unit, string> = {
         sats: formatSats(sats),
@@ -120,19 +150,19 @@ export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuot
         .filter((other) => other !== unit && other !== target)
         .map((other) => words[other]);
     const headline = CONVERT.headline(words[unit], words[target]);
-    const detail = CONVERT.detail(first, second);
     return {
         headline,
         figure: words[target],
-        detail,
-        card: {
-            headline,
-            detail,
-            source: CONVERT.cardSource(priceLabel(quote)),
-            alt: `${headline}. ${detail}`,
-            copy: `${headline}. ${detail}\n${site}`,
-            fileName: cardFileName('converter', utcDay(quote.asOf)),
-        },
+        detail: CONVERT.detail(first, second),
+        postcard: card({
+            tool: 'convert',
+            route: 'convert',
+            kicker: POSTCARD.convert.kicker(words[unit]),
+            number: words[target],
+            line: `${headline}.`,
+            source: POSTCARD.convert.source(priceLabel(quote)),
+            signature: { kind: 'cells', sats },
+        }),
     };
 }
 
@@ -143,7 +173,7 @@ export interface DcaText {
     rows: Record<keyof typeof DCA.rows, string>;
     notes: string[];
     chartAlt: string;
-    card: ShareCard;
+    postcard: Postcard;
 }
 
 function fallPercent(result: DcaResult): string | null {
@@ -151,7 +181,7 @@ function fallPercent(result: DcaResult): string | null {
     return result.fall === null || percent === '0%' ? null : percent;
 }
 
-export function dcaText(result: DcaResult, currency: Fiat, site: string): DcaText {
+export function dcaText(result: DcaResult, currency: Fiat, marks: DcaMarks): DcaText {
     const money = (value: number) => formatMoney(value, currency);
     const day = (iso: string) => formatDay(isoDayMs(iso));
     const shortDay = (iso: string) => formatShortDay(isoDayMs(iso));
@@ -160,18 +190,12 @@ export function dcaText(result: DcaResult, currency: Fiat, site: string): DcaTex
     const worth = money(result.valueNow);
     const lump = money(result.lumpSum.valueNow);
     const buys = DCA.buys(result.buys);
-    const headline = DCA.headline(
-        amount,
-        DCA.every[result.frequency],
-        monthKeyLabel(result.start.slice(0, 7), 'short'),
-        worth,
-        lump,
-    );
+    const since = monthKeyLabel(result.start.slice(0, 7), 'short');
+    const headline = DCA.headline(amount, DCA.every[result.frequency], since, worth, lump);
     const fall = fallPercent(result);
     const percent = `${result.feePercent}%`;
     const fees = result.feePercent > 0 ? DCA.feesPaid(percent, money(result.fees)) : DCA.feesNone;
     const notes = [fees, ...(result.clamped ? [DCA.clamped(day(result.start))] : []), DCA.lumpNote];
-    const detail = fall === null ? DCA.cardDetailNoFall(invested, buys) : DCA.cardDetail(invested, buys, fall);
     return {
         headline,
         detail: DCA.detail(invested, buys, formatBtcExact(result.sats)),
@@ -196,58 +220,81 @@ export function dcaText(result: DcaResult, currency: Fiat, site: string): DcaTex
         },
         notes,
         chartAlt: DCA.chartAlt(worth, invested, lump),
-        card: {
-            headline,
-            detail,
-            source: DCA.cardSource(
+        postcard: card({
+            tool: 'dca',
+            route: 'dca',
+            kicker: POSTCARD.dca.kicker(shortDay(result.end)),
+            number: worth,
+            line: POSTCARD.dca.line(amount, DCA.every[result.frequency], since, worth, lump),
+            source: POSTCARD.dca.source(
                 shortDay(result.end),
-                result.feePercent > 0 ? DCA.cardFees(percent) : DCA.cardNoFees,
+                result.feePercent > 0 ? POSTCARD.dca.fees(percent) : POSTCARD.dca.noFees,
             ),
-            alt: `${headline} ${detail}`,
-            copy: `${headline} ${detail}\n${site}`,
-            fileName: cardFileName('dca', result.end),
-        },
+            signature: { kind: 'lines', ...marks },
+        }),
     };
 }
 
-export function leftCard(supply: Supply, api: string, checkedAt: number, site: string): ShareCard {
-    const headline = LEFT_PAGE.cardHeadline(formatBtcExact(supply.left), formatWhole(supply.height));
-    const detail = LEFT_PAGE.cardDetail(formatBtcExact(supply.issued), formatWhole(supply.nextHalving));
-    return {
-        headline,
-        detail,
-        source: LEFT_PAGE.cardSource(api, formatUtcStamp(checkedAt)),
-        alt: `${headline} ${detail}`,
-        copy: `${headline} ${detail}
-${site}`,
-        fileName: cardFileName('left', utcDay(checkedAt)),
-    };
+export interface LeftReading {
+    supply: Supply;
+    /** The API that answered, or null for an estimate from the schedule. */
+    api: string | null;
+    checkedAt: number;
+}
+
+export function leftPostcard({ supply, api, checkedAt }: LeftReading): Postcard {
+    const height = `${formatWhole(supply.height)}${api ? '' : POSTCARD.estimated}`;
+    return card({
+        tool: 'left',
+        route: 'left',
+        kicker: POSTCARD.left.kicker(height),
+        number: formatBtcExact(supply.left),
+        line: POSTCARD.left.line(formatWhole(Math.floor(supply.left / SATS_PER_BTC))),
+        source: api ? POSTCARD.left.source(height, api, formatUtcStamp(checkedAt)) : POSTCARD.left.estimate(height),
+        signature: { kind: 'supply', issued: supply.issued, max: MAX_SUPPLY },
+    });
+}
+
+export function homePostcard(reading: LeftReading): Postcard {
+    const { supply, api, checkedAt } = reading;
+    const height = `${formatWhole(supply.height)}${api ? '' : POSTCARD.estimated}`;
+    return card({
+        tool: 'home',
+        route: '',
+        kicker: POSTCARD.home.kicker,
+        number: height,
+        line: HOME.postcardLine(formatWhole(Math.floor(supply.issued / SATS_PER_BTC))),
+        source: api ? POSTCARD.left.source(height, api, formatUtcStamp(checkedAt)) : POSTCARD.left.estimate(height),
+        signature: { kind: 'supply', issued: supply.issued, max: MAX_SUPPLY },
+    });
 }
 
 export interface AddressText {
     headline: string;
     detail: string;
-    card: ShareCard;
+    postcard: Postcard;
 }
 
-function groupsOfFour(text: string): string {
-    return text.match(/.{1,4}/g)?.join(' ') ?? text;
-}
-
-export function addressText(address: Address, showAddress: boolean, checkedAt: number, site: string): AddressText {
+export function addressText(address: Address, sample: boolean): AddressText {
     const headline = ADDRESS.headline(ADDRESS.types[address.type]);
     const detail = ADDRESS.detail(ADDRESS.networks[address.network], ADDRESS.encodings[address.encoding]);
-    const cardDetail = showAddress ? groupsOfFour(address.text) : detail;
+    const figure = ADDRESS.figures[address.type];
     return {
         headline,
         detail,
-        card: {
-            headline,
-            detail: cardDetail,
+        postcard: card({
+            tool: 'address',
+            route: 'address',
+            kicker: POSTCARD.address.kicker(ADDRESS.encodings[address.encoding]),
+            number: figure,
+            line: POSTCARD.address.line(figure, ADDRESS.networks[address.network]),
             source: ADDRESS.cardSource(ADDRESS.specs[address.encoding]),
-            alt: `${headline} ${cardDetail}`,
-            copy: showAddress ? `${headline}\n${address.text}\n${site}` : `${headline} ${detail}\n${site}`,
-            fileName: cardFileName('address', utcDay(checkedAt)),
-        },
+            signature: {
+                kind: 'stamp',
+                type: figure,
+                encoding: ADDRESS.encodings[address.encoding],
+                shown: sample ? address.text : maskAddress(address.text),
+            },
+        }),
     };
 }

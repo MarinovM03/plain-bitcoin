@@ -15,9 +15,11 @@ describe('statusView', () => {
     it('shows a live block, price, time since the block and the source clock', () => {
         expect(statusView({ height: 921_034, source: 'live', time: TIME }, LIVE, false, NOW)).toEqual({
             block: 'Block 921,034',
+            elapsed: 0.31,
+            estimated: false,
             gbp: '£57,329',
             usd: '$76,777',
-            age: '6 min since block',
+            age: '6 min since last block',
             source: 'mempool.space 19:20 UTC',
             sourceUrl: 'https://mempool.space/',
             live: true,
@@ -28,7 +30,7 @@ describe('statusView', () => {
         for (const source of ['checking', 'offline'] as const) {
             const view = statusView({ height: 921_034, source, time: TIME }, LIVE, false, NOW);
             expect(view.block).toBe('Block 921,034 est.');
-            expect(view.age).toBe('est. 6 min since block');
+            expect(view.age).toBe('est. 6 min since last block');
             expect(view.live).toBe(false);
         }
     });
@@ -50,10 +52,20 @@ describe('statusView', () => {
     });
 });
 
+describe('dialShare', () => {
+    it('fills with real elapsed time across 20 minutes, and stays empty when no time is known', async () => {
+        const { dialShare } = await import('./status.ts');
+        expect(dialShare({ time: NOW / 1000 - 600 }, NOW)).toBe(0.5);
+        expect(dialShare({ time: NOW / 1000 - 3600 }, NOW)).toBe(1);
+        expect(dialShare({ time: NOW / 1000 + 60 }, NOW)).toBe(0);
+        expect(dialShare({ time: null }, NOW)).toBe(0);
+    });
+});
+
 describe('blockAge', () => {
     it('says when the block time is unknown instead of guessing', () => {
         expect(blockAge({ source: 'live', time: null }, NOW)).toBe('block time unknown');
-        expect(blockAge({ source: 'live', time: NOW / 1000 - 20 }, NOW)).toBe('<1 min since block');
+        expect(blockAge({ source: 'live', time: NOW / 1000 - 20 }, NOW)).toBe('<1 min since last block');
     });
 });
 
