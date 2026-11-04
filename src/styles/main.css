@@ -2,10 +2,10 @@
 @import "./fonts.css";
 @import "./base.css";
 @import "./stage.css";
-@import "./shell.css";
-@import "./status.css";
+@import "./bezel.css";
 @import "./home.css";
-@import "./tool-page.css";
+@import "./gauge.css";
+@import "./readout.css";
 @import "./fields.css";
 @import "./output.css";
 @import "./details.css";
@@ -14,3 +14,4 @@
 @import "./dca.css";
 @import "./address.css";
 @import "./footer.css";
+@import "./tray.css";

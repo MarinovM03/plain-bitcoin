@@ -1,7 +1,5 @@
 import { TOKENS } from '../styles/tokens.ts';
-import { type Points, STAGGER, STRIDE } from './morph.ts';
-import { MAX_POINTS } from './scenes/types.ts';
-import { FIELD_FRAGMENT, FULLSCREEN_VERTEX, HALFTONE_FRAGMENT, POINTS_FRAGMENT, POINTS_VERTEX } from './shaders.ts';
+import { CONTOUR_FRAGMENT, FIELD_FRAGMENT, FULLSCREEN_VERTEX, MAX_PLATES } from './shaders.ts';
 import { isSoftwareRenderer } from './tier.ts';
 
 export class SoftwareRendererError extends Error {
@@ -10,45 +8,40 @@ export class SoftwareRendererError extends Error {
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 type Vec3 = readonly [number, number, number];
-type Vec4 = readonly [number, number, number, number];
+export type Rect = [number, number, number, number];
 
 export interface WeatherFrame {
     time: number;
     seed: number;
     warp: number;
     drift: number;
-    density: number;
-    contrast: number;
-    warmth: number;
+    bands: number;
+    glow: number;
     scroll: number;
     intro: number;
+    /** Origin x, y in CSS px and progress 0..1; progress < 0 means no pulse. */
     pulse: Vec3;
+    /** Pointer x, y in CSS px and strength 0..1. */
     light: Vec3;
-    calm: Vec4;
-}
-
-export interface PointsFrame {
-    plot: Vec4;
-    morph: number;
-    scatter: number;
-    alpha: number;
+    /** Mounted plates, in document CSS px. */
+    plates: readonly Rect[];
 }
 
 export interface Surface {
     /** Canvas size in device pixels. */
     width: number;
     height: number;
-    /** Front halftone cell, in device pixels: a whole number so every dot sits on the pixel grid. */
-    cellDev: number;
-    /** Field texture size: one texel per cell. */
+    /** Device pixels per CSS pixel actually drawn. */
+    scale: number;
+    /** Field texture size, and the CSS pixels each texel covers. */
     cells: [number, number];
+    cell: number;
 }
 
 export interface Renderer {
     readonly ready: boolean;
     resize(cssWidth: number, cssHeight: number, scale: number): Surface;
-    upload(points: Points): void;
-    draw(weather: WeatherFrame, points: PointsFrame | null): void;
+    draw(weather: WeatherFrame): void;
     restore(): void;
     dispose(): void;
     /** Test hook: drop and bring back the context, as a GPU reset would. */
@@ -65,32 +58,34 @@ const CONTEXT: WebGLContextAttributes = {
     powerPreference: 'low-power',
 };
 
-const FIELD_UNIFORMS = ['uCells', 'uCell', 'uTime', 'uSeed', 'uWarp', 'uDrift', 'uScroll'] as const;
-const HALFTONE_UNIFORMS = [
+const FIELD_UNIFORMS = [
+    'uCells',
+    'uCell',
+    'uTime',
+    'uSeed',
+    'uWarp',
+    'uDrift',
+    'uScroll',
+    'uLight',
+    'uPlates',
+    'uPlateCount',
+] as const;
+const CONTOUR_UNIFORMS = [
     'uField',
     'uCells',
-    'uCellDev',
+    'uCell',
     'uRes',
     'uScale',
-    'uDensity',
-    'uContrast',
-    'uWarmth',
+    'uBands',
+    'uGlow',
     'uIntro',
     'uPulse',
     'uLight',
-    'uCalm',
-    'uInk',
-    'uDot',
-    'uFiat',
+    'uVoid',
+    'uSmoke',
+    'uLine',
+    'uIndex',
     'uBtc',
-] as const;
-const POINT_UNIFORMS = ['uView', 'uPlot', 'uScale', 'uMorph', 'uScatter', 'uAlpha', 'uStagger'] as const;
-const POINT_ATTRIBUTES = [
-    ['aPath', 4, 0],
-    ['aRadius', 2, 4],
-    ['aFrom', 4, 6],
-    ['aTo', 4, 10],
-    ['aSeed', 3, 14],
 ] as const;
 
 export function hexRgb(hex: string): Vec3 {
@@ -98,16 +93,34 @@ export function hexRgb(hex: string): Vec3 {
     return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
 }
 
-/** Front cell in CSS pixels: finer on a phone, where the field is seen up close. */
-export function cellCss(cssWidth: number): number {
-    return cssWidth < 640 ? 8 : 10;
+/** CSS pixels per field texel: the isobars are smooth curves, so a coarse field is enough and keeps phones cool. */
+export function fieldCell(cssWidth: number): number {
+    return cssWidth < 640 ? 5 : 4;
 }
 
 export function surfaceFor(cssWidth: number, cssHeight: number, scale: number): Surface {
-    const width = Math.max(1, Math.round(cssWidth * scale));
-    const height = Math.max(1, Math.round(cssHeight * scale));
-    const cellDev = Math.max(3, Math.round(cellCss(cssWidth) * scale));
-    return { width, height, cellDev, cells: [Math.ceil(width / cellDev) + 1, Math.ceil(height / cellDev) + 1] };
+    const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const width = Math.max(1, Math.round(cssWidth * s));
+    const height = Math.max(1, Math.round(cssHeight * s));
+    const cell = fieldCell(cssWidth);
+    return {
+        width,
+        height,
+        scale: width / Math.max(1, cssWidth),
+        cell,
+        cells: [Math.ceil(cssWidth / cell) + 2, Math.ceil(cssHeight / cell) + 2],
+    };
+}
+
+/** Plate rects as a flat uniform array, the largest first, capped to what the shader holds. */
+export function plateUniform(plates: readonly Rect[]): { data: Float32Array; count: number } {
+    const kept = plates
+        .filter((rect) => rect.every(Number.isFinite) && rect[2] > 0 && rect[3] > 0)
+        .sort((a, b) => b[2] * b[3] - a[2] * a[3])
+        .slice(0, MAX_PLATES);
+    const data = new Float32Array(MAX_PLATES * 4);
+    for (const [i, rect] of kept.entries()) data.set(rect, i * 4);
+    return { data, count: kept.length };
 }
 
 interface Program {
@@ -124,23 +137,23 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         gl.getExtension('WEBGL_lose_context')?.loseContext();
         throw new SoftwareRendererError();
     }
+    const webgl2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
 
     let parallel = gl.getExtension('KHR_parallel_shader_compile');
     let field: Program;
-    let halftone: Program;
-    let points: Program;
+    let contour: Program;
     let corners: WebGLBuffer | null = null;
-    let pointBuffer: WebGLBuffer | null = null;
     let target: WebGLFramebuffer | null = null;
     let texture: WebGLTexture | null = null;
     let linked = false;
-    let pointCount = 0;
     let size: Surface = surfaceFor(1, 1, 1);
-    let css = { width: 1, height: 1, scale: 1 };
-    const ink = hexRgb(TOKENS.ink);
-    const dot = hexRgb(TOKENS.paper);
-    const fiat = hexRgb(TOKENS.fiat);
-    const btc = hexRgb(TOKENS.btc);
+    const palette = {
+        void: hexRgb(TOKENS.void),
+        smoke: hexRgb(TOKENS.smoke),
+        line: hexRgb(TOKENS.isobar),
+        index: hexRgb(TOKENS.isobarIndex),
+        btc: hexRgb(TOKENS.btc),
+    };
 
     function shader(type: number, source: string): WebGLShader {
         const created = gl.createShader(type);
@@ -150,46 +163,58 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         return created;
     }
 
-    function program(vertex: string, fragment: string, first: string): Program {
+    function program(fragment: string): Program {
         const created = gl.createProgram();
         if (!created) throw new Error('Program could not be created');
-        gl.attachShader(created, shader(gl.VERTEX_SHADER, vertex));
+        gl.attachShader(created, shader(gl.VERTEX_SHADER, FULLSCREEN_VERTEX));
         gl.attachShader(created, shader(gl.FRAGMENT_SHADER, fragment));
-        gl.bindAttribLocation(created, 0, first);
+        gl.bindAttribLocation(created, 0, 'aCorner');
         gl.linkProgram(created);
         return { program: created, uniforms: new Map() };
     }
 
     function build(): void {
         parallel = gl.getExtension('KHR_parallel_shader_compile');
-        field = program(FULLSCREEN_VERTEX, FIELD_FRAGMENT, 'aCorner');
-        halftone = program(FULLSCREEN_VERTEX, HALFTONE_FRAGMENT, 'aCorner');
-        points = program(POINTS_VERTEX, POINTS_FRAGMENT, 'aPath');
+        field = program(FIELD_FRAGMENT);
+        contour = program(CONTOUR_FRAGMENT);
         corners = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, corners);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-        pointBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, MAX_POINTS * STRIDE * 4, gl.DYNAMIC_DRAW);
         target = null;
         texture = null;
         linked = false;
-        pointCount = 0;
     }
 
     function finishLink(): boolean {
-        const all = [field, halftone, points];
+        const all = [field, contour];
         if (parallel && !all.every(({ program: p }) => gl.getProgramParameter(p, parallel?.COMPLETION_STATUS_KHR ?? 0)))
             return false;
         for (const { program: p } of all) {
             if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('Stage shaders did not link');
         }
         for (const name of FIELD_UNIFORMS) field.uniforms.set(name, gl.getUniformLocation(field.program, name));
-        for (const name of HALFTONE_UNIFORMS)
-            halftone.uniforms.set(name, gl.getUniformLocation(halftone.program, name));
-        for (const name of POINT_UNIFORMS) points.uniforms.set(name, gl.getUniformLocation(points.program, name));
+        for (const name of CONTOUR_UNIFORMS) contour.uniforms.set(name, gl.getUniformLocation(contour.program, name));
         linked = true;
         return true;
+    }
+
+    /** Half floats keep the isobars smooth; plain bytes still work, with slightly stepped lines. */
+    function allocate(w: number, h: number): void {
+        if (webgl2 && gl.getExtension('EXT_color_buffer_float')) {
+            const gl2 = gl as WebGL2RenderingContext;
+            gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA16F, w, h, 0, gl2.RGBA, gl2.HALF_FLOAT, null);
+            return;
+        }
+        const half = !webgl2 ? gl.getExtension('OES_texture_half_float') : null;
+        if (half && gl.getExtension('OES_texture_half_float_linear')) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, half.HALF_FLOAT_OES, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+            const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            if (complete) return;
+        }
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     }
 
     function ensureTarget(): void {
@@ -197,7 +222,7 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         if (!texture) texture = gl.createTexture();
         if (!target) target = gl.createFramebuffer();
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        allocate(w, h);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -216,69 +241,46 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
 
     function drawField(frame: WeatherFrame): void {
         const u = (name: string) => field.uniforms.get(name) ?? null;
+        const plates = plateUniform(frame.plates);
         gl.bindFramebuffer(gl.FRAMEBUFFER, target);
         gl.viewport(0, 0, size.cells[0], size.cells[1]);
         gl.useProgram(field.program);
         gl.uniform2f(u('uCells'), size.cells[0], size.cells[1]);
-        gl.uniform1f(u('uCell'), size.cellDev / css.scale);
+        gl.uniform1f(u('uCell'), size.cell);
         gl.uniform1f(u('uTime'), frame.time);
         gl.uniform1f(u('uSeed'), frame.seed);
         gl.uniform1f(u('uWarp'), frame.warp);
         gl.uniform1f(u('uDrift'), frame.drift);
         gl.uniform1f(u('uScroll'), frame.scroll);
+        gl.uniform3fv(u('uLight'), frame.light);
+        gl.uniform4fv(u('uPlates'), plates.data);
+        gl.uniform1f(u('uPlateCount'), plates.count);
         fullscreen();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    function drawHalftone(frame: WeatherFrame): void {
-        const u = (name: string) => halftone.uniforms.get(name) ?? null;
+    function drawContours(frame: WeatherFrame): void {
+        const u = (name: string) => contour.uniforms.get(name) ?? null;
         gl.viewport(0, 0, size.width, size.height);
-        gl.useProgram(halftone.program);
+        gl.useProgram(contour.program);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform1i(u('uField'), 0);
         gl.uniform2f(u('uCells'), size.cells[0], size.cells[1]);
-        gl.uniform1f(u('uCellDev'), size.cellDev);
+        gl.uniform1f(u('uCell'), size.cell);
         gl.uniform2f(u('uRes'), size.width, size.height);
-        gl.uniform1f(u('uScale'), css.scale);
-        gl.uniform1f(u('uDensity'), frame.density);
-        gl.uniform1f(u('uContrast'), frame.contrast);
-        gl.uniform1f(u('uWarmth'), frame.warmth);
+        gl.uniform1f(u('uScale'), size.scale);
+        gl.uniform1f(u('uBands'), frame.bands);
+        gl.uniform1f(u('uGlow'), frame.glow);
         gl.uniform1f(u('uIntro'), frame.intro);
         gl.uniform3fv(u('uPulse'), frame.pulse);
         gl.uniform3fv(u('uLight'), frame.light);
-        gl.uniform4fv(u('uCalm'), frame.calm);
-        gl.uniform3fv(u('uInk'), ink);
-        gl.uniform3fv(u('uDot'), dot);
-        gl.uniform3fv(u('uFiat'), fiat);
-        gl.uniform3fv(u('uBtc'), btc);
+        gl.uniform3fv(u('uVoid'), palette.void);
+        gl.uniform3fv(u('uSmoke'), palette.smoke);
+        gl.uniform3fv(u('uLine'), palette.line);
+        gl.uniform3fv(u('uIndex'), palette.index);
+        gl.uniform3fv(u('uBtc'), palette.btc);
         fullscreen();
-    }
-
-    function drawPoints(frame: PointsFrame): void {
-        if (pointCount === 0 || frame.alpha <= 0) return;
-        const u = (name: string) => points.uniforms.get(name) ?? null;
-        gl.useProgram(points.program);
-        gl.uniform2f(u('uView'), css.width, css.height);
-        gl.uniform4fv(u('uPlot'), frame.plot);
-        gl.uniform1f(u('uScale'), css.scale);
-        gl.uniform1f(u('uMorph'), frame.morph);
-        gl.uniform1f(u('uScatter'), frame.scatter);
-        gl.uniform1f(u('uAlpha'), frame.alpha);
-        gl.uniform1f(u('uStagger'), STAGGER);
-        gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-        const locations = POINT_ATTRIBUTES.map(([name, components, offset]) => {
-            const location = gl.getAttribLocation(points.program, name);
-            if (location < 0) return location;
-            gl.enableVertexAttribArray(location);
-            gl.vertexAttribPointer(location, components, gl.FLOAT, false, STRIDE * 4, offset * 4);
-            return location;
-        });
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        gl.drawArrays(gl.POINTS, 0, pointCount);
-        gl.disable(gl.BLEND);
-        for (const location of locations) if (location > 0) gl.disableVertexAttribArray(location);
     }
 
     build();
@@ -288,23 +290,16 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
             return linked || finishLink();
         },
         resize(cssWidth, cssHeight, scale) {
-            css = { width: cssWidth, height: cssHeight, scale };
             size = surfaceFor(cssWidth, cssHeight, scale);
             canvas.width = size.width;
             canvas.height = size.height;
             ensureTarget();
             return size;
         },
-        upload(state) {
-            gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.data.subarray(0, state.count * STRIDE));
-            pointCount = state.count;
-        },
-        draw(frame, pointFrame) {
+        draw(frame) {
             if (!linked || gl.isContextLost()) return;
             drawField(frame);
-            drawHalftone(frame);
-            if (pointFrame) drawPoints(pointFrame);
+            drawContours(frame);
         },
         restore() {
             build();

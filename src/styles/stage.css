@@ -1,3 +1,7 @@
+/*
+ * The body: weather behind and around the plates. Until the canvas is drawing (and for good on the plain tier) the
+ * same family stands in as CSS: dim isobar rings around two pressure centres over deep smoke.
+ */
 .stage {
     position: fixed;
     inset: 0;
@@ -5,9 +9,17 @@
     overflow: hidden;
     pointer-events: none;
     background:
-        radial-gradient(ellipse 70% 55% at 78% 8%, color-mix(in srgb, var(--fiat) 11%, transparent), transparent 72%),
-        radial-gradient(ellipse 60% 45% at 8% 96%, color-mix(in srgb, var(--btc) 7%, transparent), transparent 70%),
-        var(--ink);
+        repeating-radial-gradient(
+            circle at 78% 18%,
+            transparent 0 46px,
+            color-mix(in srgb, var(--isobar) 70%, transparent) 46px 47px
+        ),
+        repeating-radial-gradient(
+            ellipse at 12% 88%,
+            transparent 0 58px,
+            color-mix(in srgb, var(--isobar) 55%, transparent) 58px 59px
+        ),
+        radial-gradient(ellipse 70% 55% at 70% 20%, var(--smoke), transparent 72%), var(--void);
 }
 
 @supports (height: 100lvh) {
@@ -17,47 +29,20 @@
     }
 }
 
-.stage::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle, color-mix(in srgb, var(--paper) 22%, transparent) 0 1.1px, transparent 1.8px) 0 0 / 9px
-        9px;
-    -webkit-mask-image:
-        radial-gradient(ellipse 55% 40% at 72% 22%, #000, transparent 75%),
-        radial-gradient(ellipse 45% 35% at 18% 70%, #000, transparent 72%);
-    mask-image:
-        radial-gradient(ellipse 55% 40% at 72% 22%, #000, transparent 75%),
-        radial-gradient(ellipse 45% 35% at 18% 70%, #000, transparent 72%);
-}
-
-/* Plain tier: a back layer of larger, dimmer dots half a cell over, for the same print depth as the live field. */
-.stage::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle, color-mix(in srgb, var(--fiat) 14%, transparent) 0 2.6px, transparent 3.4px) 9px 9px /
-        18px 18px;
-    -webkit-mask-image: radial-gradient(ellipse 60% 45% at 30% 30%, #000, transparent 72%);
-    mask-image: radial-gradient(ellipse 60% 45% at 30% 30%, #000, transparent 72%);
-}
-
 .stage__canvas {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     opacity: 0;
-    transition: opacity 400ms var(--ease);
+    transition: opacity 500ms var(--ease);
 }
 
 .stage__canvas.is-ready {
     opacity: 1;
 }
 
-.topbar,
+.bezel,
 main,
 .footer {
     position: relative;

@@ -8,7 +8,7 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     color-scheme: dark;
-    background: var(--ink);
+    background: var(--void);
 }
 
 body {
@@ -16,8 +16,8 @@ body {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--void);
+    color: var(--ink);
     font-family: var(--font-body);
     font-size: var(--step-body);
     line-height: 1.5;
@@ -48,9 +48,9 @@ a {
 }
 
 :focus-visible {
-    outline: 2px solid var(--paper);
+    outline: 2px solid var(--ink);
     outline-offset: 3px;
-    border-radius: 6px;
+    border-radius: 4px;
 }
 
 [tabindex="-1"]:focus {
@@ -59,7 +59,7 @@ a {
 
 ::selection {
     background: var(--btc);
-    color: var(--ink);
+    color: var(--void);
 }
 
 .visually-hidden {
@@ -74,28 +74,48 @@ a {
     border: 0;
 }
 
-.topbar,
-.tool__panel,
+/*
+ * Opaque instrument plates. Every readout, tile, panel and control group sits on one; the body shows only in the
+ * gutters around them, never through them.
+ */
+.bezel,
+.gauge,
 .tool__below,
-.tile::before,
-.footer {
-    background: var(--raised);
+.overview,
+.tile,
+.cautions,
+.footer,
+.tray__plate {
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    background: var(--plate);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ink) 5%, transparent),
+        0 1.25rem 2.5rem -1.5rem #000;
 }
 
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    .topbar,
-    .tool__panel,
-    .tool__below,
-    .tile::before,
-    .footer {
-        background: color-mix(in srgb, var(--raised) var(--glass), transparent);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
-        backdrop-filter: blur(18px) saturate(140%);
-    }
+/* Engraved labels: small mono capitals, the instrument's own voice. */
+.engraved,
+.tool__kicker,
+.overview__kicker,
+.tile__kicker,
+.result__label,
+.field__label,
+.more__toggle,
+.cautions__heading,
+.tray__title {
+    color: var(--ink-dim);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    line-height: 1.3;
+    text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: reduce) {
     :root {
         --duration: 0ms;
+        --flip: 0ms;
     }
 }

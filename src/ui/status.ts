@@ -15,8 +15,14 @@ const SOURCE_URLS: Record<PriceQuote['source'], string> = {
     'last close': LAST_CLOSE_SOURCE.url,
 };
 
+/** The dial spans 20 minutes, twice the target block time, with a tick at 10. */
+export const DIAL_MINUTES = 20;
+
 export interface StatusView {
     block: string;
+    /** 0..1 of the dial: real elapsed time since the block, or 0 when no time is known. */
+    elapsed: number;
+    estimated: boolean;
     gbp: string;
     usd: string;
     age: string;
@@ -31,6 +37,11 @@ export function chainState(tip: Pick<Tip, 'height' | 'source' | 'time'>): ChainS
         blockTime: tip.time === null ? null : tip.time * 1000,
         estimated: tip.source !== 'live',
     };
+}
+
+export function dialShare(tip: Pick<Tip, 'time'>, now: number): number {
+    if (tip.time === null || !Number.isFinite(tip.time)) return 0;
+    return Math.min(1, Math.max(0, (now / 1000 - tip.time) / 60 / DIAL_MINUTES));
 }
 
 export function blockAge(tip: Pick<Tip, 'source' | 'time'>, now: number): string {
@@ -48,6 +59,8 @@ export function statusView(
     const block = STATUS.block(formatWhole(tip.height)) + (tip.source === 'live' ? '' : STATUS.estimated);
     const common = {
         block,
+        elapsed: dialShare(tip, now),
+        estimated: tip.source !== 'live',
         gbp: formatMoney(quote.value.gbp, 'GBP'),
         usd: formatMoney(quote.value.usd, 'USD'),
         age: blockAge(tip, now),
@@ -67,15 +80,11 @@ export function statusView(
 
 export function renderStatus(now = Date.now()): SafeHtml {
     const view = statusView({ ...estimateTip(now), source: 'checking' }, LAST_CLOSE, true, now);
-    return html`<div id="status" class="status" role="group" aria-label="${STATUS.label}" aria-live="off" data-state="estimate">
-    <p class="status__line">
-        <span class="status__dot" aria-hidden="true"></span>
-        <span id="status-block" class="status__figure status__block" data-stage-origin>${view.block}</span>
-        <span class="status__price"><span class="visually-hidden">${STATUS.price}</span><span id="status-gbp" class="status__figure">${view.gbp}</span><span class="status__usd"><span class="status__sep" aria-hidden="true">·</span><span id="status-usd" class="status__figure">${view.usd}</span></span></span>
-        <span class="status__break" aria-hidden="true"></span>
-        <span id="status-age" class="status__age">${view.age}</span>
-        <a id="status-source" class="status__source" href="${view.sourceUrl}" rel="noopener noreferrer">${view.source}</a>
-    </p>
+    return html`<div id="status" class="meters" role="group" aria-label="${STATUS.label}" aria-live="off" data-state="estimate">
+    <p class="meter meter--block"><span class="meter__lamp" aria-hidden="true"></span><span id="status-block" class="meter__value" data-stage-origin>${view.block}</span></p>
+    <p class="meter meter--price"><span class="visually-hidden">${STATUS.price}</span><span id="status-gbp" class="meter__value">${view.gbp}</span><span class="meter__usd"><span class="meter__sep" aria-hidden="true">·</span><span id="status-usd" class="meter__value">${view.usd}</span></span></p>
+    <p class="meter meter--age"><span class="dial" role="img" aria-label="${STATUS.dial}" data-estimated><span id="status-dial" class="dial__fill"></span></span><span id="status-age" class="meter__age">${view.age}</span></p>
+    <a id="status-source" class="meter__source" href="${view.sourceUrl}" rel="noopener noreferrer">${view.source}</a>
 </div>`;
 }
 
@@ -92,6 +101,7 @@ export function mountStatus(root: HTMLElement): StatusLine {
     const usd = find(root, '#status-usd');
     const age = find(root, '#status-age');
     const source = find<HTMLAnchorElement>(root, '#status-source');
+    const dial = find(root, '#status-dial');
     let receivedAt = Number.NEGATIVE_INFINITY;
     let route = '';
     let started = false;
@@ -106,6 +116,8 @@ export function mountStatus(root: HTMLElement): StatusLine {
         gbp.textContent = view.gbp;
         usd.textContent = view.usd;
         age.textContent = view.age;
+        dial.style.setProperty('--elapsed', view.elapsed.toFixed(4));
+        dial.parentElement?.toggleAttribute('data-estimated', view.estimated);
         source.textContent = view.source;
         source.href = view.sourceUrl;
         root.dataset.state = view.live ? 'live' : 'estimate';
@@ -116,9 +128,11 @@ export function mountStatus(root: HTMLElement): StatusLine {
     function tick(): void {
         ticks += 1;
         block.dataset.ticks = String(ticks);
-        block.classList.remove('is-tick');
-        void block.offsetWidth;
-        block.classList.add('is-tick');
+        for (const element of [block, dial]) {
+            element.classList.remove('is-tick');
+            void element.offsetWidth;
+            element.classList.add('is-tick');
+        }
     }
 
     function sync(): void {

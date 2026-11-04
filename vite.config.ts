@@ -98,7 +98,7 @@ function shell(siteUrl: string): Plugin {
         `<title>${escapeHtml(SITE_NAME)}</title>`,
         meta('name', 'description', SITE_DESCRIPTION),
         `<link rel="canonical" href="${escapeHtml(siteUrl)}" />`,
-        meta('name', 'theme-color', TOKENS.ink),
+        meta('name', 'theme-color', TOKENS.void),
         meta('property', 'og:type', 'website'),
         meta('property', 'og:site_name', SITE_NAME),
         meta('property', 'og:title', SITE_NAME),
@@ -143,10 +143,14 @@ export default defineConfig(({ mode }) => {
             target: 'es2022',
             rolldownOptions: {
                 output: {
-                    chunkFileNames: (chunk) =>
-                        /[\\/]hero[\\/]scenes[\\/]/.test(chunk.facadeModuleId ?? '')
-                            ? 'assets/scene-[name]-[hash].js'
-                            : 'assets/[name]-[hash].js',
+                    chunkFileNames: (chunk) => {
+                        const id = chunk.facadeModuleId ?? '';
+                        const tool = /[\\/]tools[\\/](\w+)[\\/]index\.ts$/.exec(id)?.[1];
+                        if (tool) return `assets/tool-${tool}-[hash].js`;
+                        if (/[\\/]gauges[\\/]/.test(id)) return 'assets/gauge-[name]-[hash].js';
+                        if (/[\\/]postcard[\\/](tray|render)\.ts$/.test(id)) return 'assets/postcard-[name]-[hash].js';
+                        return 'assets/[name]-[hash].js';
+                    },
                 },
             },
         },

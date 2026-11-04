@@ -1,21 +1,14 @@
 import { createLadder, type Ladder, type Quality, settingsFor } from './degrade.ts';
-import { createRenderer, type Renderer, SoftwareRendererError, type WeatherFrame } from './gl.ts';
-import { inkRgba } from './inks.ts';
+import { createRenderer, type Rect, type Renderer, SoftwareRendererError, type WeatherFrame } from './gl.ts';
 import { easeToward, type FrameMode, frameInterval, frameMode, moodSettling, stepSeconds } from './loop.ts';
-import { createPoints, MORPH_SECONDS, morphFor, retarget } from './morph.ts';
-import type { Layout } from './scenes/types.ts';
 import { type ChainState, chainWeather, type Weather } from './weather.ts';
 
-const INTRO_SECONDS = 1.6;
-const PULSE_SECONDS = 3.4;
-const LIGHT_SECONDS = 1.2;
-const ALPHA_SECONDS = 0.35;
-const REBUILD_SCATTER = 0.3;
-const TWEAK_SCATTER = 0.06;
+const INTRO_SECONDS = 1.4;
+export const PULSE_SECONDS = 3.4;
+const LIGHT_SECONDS = 1.4;
 const REPORT_MS = 1000;
-const NOWHERE = [-1e5, -1e5, 0, 0] as const;
 
-export type Rect = [number, number, number, number];
+export type { Rect } from './gl.ts';
 export type StageTier = 'full' | 'phone';
 
 export interface View {
@@ -25,6 +18,11 @@ export interface View {
 }
 
 export type EngineCanvas = HTMLCanvasElement | OffscreenCanvas;
+
+/** A forced-tier test override: pins the minutes since the block, so a test can see the body at a set tension. */
+export interface WeatherMock {
+    minutes: number | null;
+}
 
 export type EngineMessage =
     | {
@@ -37,17 +35,17 @@ export type EngineMessage =
           view: View;
       }
     | { type: 'view'; view: View }
-    | { type: 'scene'; layout: Layout | null; rev: number; fresh: boolean; snap: boolean; rect: Rect; calm: Rect }
-    | { type: 'rect'; rect: Rect; calm: Rect }
-    | { type: 'scroll'; y: number; away: boolean }
+    | { type: 'plates'; plates: Rect[] }
+    | { type: 'scroll'; y: number }
     | { type: 'chain'; chain: ChainState | null; pulse: [number, number] | null }
     | { type: 'pointer'; x: number; y: number }
     | { type: 'visible'; visible: boolean }
     | { type: 'reduced'; reduced: boolean }
+    | { type: 'mock'; mock: WeatherMock; pulse: [number, number] | null }
     | { type: 'lose' };
 
 export type EngineReply =
-    | { type: 'drawn'; frames: number; live: boolean; settled: number | null; fps: number; mode: FrameMode }
+    | { type: 'drawn'; frames: number; fps: number; mode: FrameMode; pulsing: boolean; width: number; height: number }
     | { type: 'quality'; quality: Quality }
     | { type: 'failed'; software: boolean };
 
@@ -64,12 +62,20 @@ function smooth(t: number): number {
     return x * x * (3 - 2 * x);
 }
 
-type Mood = Pick<Weather, 'tension' | 'density' | 'warp' | 'contrast' | 'drift' | 'warmth'>;
-const MOOD_KEYS = ['tension', 'density', 'warp', 'contrast', 'drift', 'warmth'] as const;
+type Mood = Pick<Weather, 'tension' | 'bands' | 'warp' | 'drift' | 'glow'>;
+const MOOD_KEYS = ['tension', 'bands', 'warp', 'drift', 'glow'] as const;
+
+function pick(weather: Weather): Mood {
+    return {
+        tension: weather.tension,
+        bands: weather.bands,
+        warp: weather.warp,
+        drift: weather.drift,
+        glow: weather.glow,
+    };
+}
 
 export function createEngine(reply: (message: EngineReply) => void): (message: EngineMessage) => void {
-    const colors = inkRgba();
-    const points = createPoints();
     let renderer: Renderer | null = null;
     let canvas: EngineCanvas | null = null;
     let tier: StageTier = 'full';
@@ -80,9 +86,10 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
     let visible = true;
     let lost = false;
     let view: View = { width: 1, height: 1, pixelRatio: 1 };
+    let surface = { width: 0, height: 0 };
 
     let frames = 0;
-    let reported = { frames: -1, live: false, settled: null as number | null, at: 0 };
+    let reported = { frames: -1, pulsing: false, at: 0 };
     let raf = 0;
     let timer = 0;
     let requestedAt = 0;
@@ -95,6 +102,7 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
 
     let chain: ChainState | null = null;
     let chained = false;
+    let mock: WeatherMock = { minutes: null };
     let time = 0;
     let intro = 0;
     let seed = 0;
@@ -105,59 +113,35 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
     let origin: [number, number] = [0, 0];
     const light = { x: 0, y: 0, i: 0 };
     let scrollY = 0;
-    let away = false;
-    let alpha = 1;
-    let alphaTarget = 1;
-
-    let layout: Layout | null = null;
-    let rev: number | null = null;
-    let morph = 1;
-    let scatter = 0;
-    let hasPoints = false;
-    let docRect: Rect = [...NOWHERE];
-    let calmRect: Rect = [...NOWHERE];
+    let plates: Rect[] = [];
 
     const settings = () => settingsFor(quality, tier);
     const calm = () => reduced || quality === 'still';
 
     function target(): Weather {
-        return chainWeather(chain, Date.now());
+        const now = Date.now();
+        if (mock.minutes === null) return chainWeather(chain, now);
+        return chainWeather(
+            { height: chain?.height ?? 0, blockTime: now - mock.minutes * 60_000, estimated: false },
+            now,
+        );
     }
 
     function settleAll(): void {
         intro = INTRO_SECONDS;
-        morph = 1;
         pulse = -1;
         seed = seedTo;
         mood = pick(target());
         light.i = 0;
-        alpha = alphaTarget;
-    }
-
-    function pick(weather: Weather): Mood {
-        return {
-            tension: weather.tension,
-            density: weather.density,
-            warp: weather.warp,
-            contrast: weather.contrast,
-            drift: weather.drift,
-            warmth: weather.warmth,
-        };
-    }
-
-    function moodMoving(goal: Mood): boolean {
-        return mood !== null && moodSettling(mood.tension, goal.tension);
     }
 
     function animating(): boolean {
         if (calm()) return false;
         return (
             intro < INTRO_SECONDS ||
-            morph < 1 ||
             pulse >= 0 ||
             light.i > 0.01 ||
-            Math.abs(alpha - alphaTarget) > 0.001 ||
-            moodMoving(pick(target()))
+            (mood !== null && moodSettling(mood.tension, target().tension))
         );
     }
 
@@ -197,18 +181,11 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         schedule();
     }
 
-    function onScreen(rect: Rect): Rect {
-        return [rect[0], rect[1] - scrollY, rect[2], rect[3]];
-    }
-
-    function plotRect(): Rect {
-        return onScreen(docRect);
-    }
-
     function resize(): void {
         if (!renderer) return;
-        const scale = Math.min(view.pixelRatio || 1, settings().dprCap);
-        renderer.resize(view.width, view.height, scale);
+        const { dprCap, renderScale } = settings();
+        const scale = Math.min(view.pixelRatio || 1, dprCap) * renderScale;
+        surface = renderer.resize(view.width, view.height, scale);
         invalidate();
     }
 
@@ -220,7 +197,6 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         }
         time += dt;
         intro = Math.min(INTRO_SECONDS, intro + dt);
-        morph = Math.min(1, morph + dt / MORPH_SECONDS);
         if (pulse >= 0) {
             pulse += dt / PULSE_SECONDS;
             seed = seedFrom + (seedTo - seedFrom) * smooth(pulse);
@@ -234,49 +210,38 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         for (const key of MOOD_KEYS) eased[key] = easeToward(current[key], goal[key], dt);
         mood = eased;
         light.i = Math.max(0, light.i - dt / LIGHT_SECONDS);
-        const step = dt / ALPHA_SECONDS;
-        alpha = alpha < alphaTarget ? Math.min(alphaTarget, alpha + step) : Math.max(alphaTarget, alpha - step);
     }
 
     function weatherFrame(): WeatherFrame {
         const now = mood ?? pick(target());
-        const shown = hasPoints && !(away && alpha <= 0);
         return {
-            time: calm() ? 0 : time,
+            time,
             seed,
             warp: now.warp,
             drift: now.drift,
-            density: now.density,
-            contrast: now.contrast,
-            warmth: now.warmth,
+            bands: now.bands,
+            glow: now.glow,
             scroll: scrollY,
-            intro: smooth(intro / INTRO_SECONDS),
+            intro: calm() ? 1 : smooth(intro / INTRO_SECONDS),
             pulse: [origin[0], origin[1], pulse],
             light: [light.x, light.y, light.i],
-            calm: shown ? onScreen(calmRect) : NOWHERE,
+            plates,
         };
     }
 
     function draw(): void {
         if (!renderer) return;
-        renderer.draw(weatherFrame(), hasPoints ? { plot: plotRect(), morph, scatter, alpha } : null);
+        renderer.draw(weatherFrame());
         frames += 1;
     }
 
-    function settledRev(): number | null {
-        if (!hasPoints || rev === null || away) return null;
-        return morph >= 1 ? rev : null;
-    }
-
     function report(force = false): void {
-        const live = hasPoints && !away;
-        const settled = settledRev();
         const now = performance.now();
-        const changed = live !== reported.live || settled !== reported.settled;
+        const pulsing = pulse >= 0;
         const due = frames !== reported.frames && (force || now - reported.at >= REPORT_MS);
-        if (!changed && !due) return;
-        reported = { frames, live, settled, at: now };
-        reply({ type: 'drawn', frames, live, settled, fps, mode: lastMode });
+        if (pulsing === reported.pulsing && !due) return;
+        reported = { frames, pulsing, at: now };
+        reply({ type: 'drawn', frames, fps, mode: lastMode, pulsing, ...surface });
     }
 
     function teardown(): void {
@@ -348,7 +313,6 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         lost = false;
         renderer?.restore();
         resize();
-        renderer?.upload(points);
         lastDraw = 0;
         invalidate();
     }
@@ -374,30 +338,18 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
         resize();
     }
 
-    function setScene(message: Extract<EngineMessage, { type: 'scene' }>): void {
-        const next = message.layout;
-        const kind = morphFor(layout, next, message.fresh);
-        retarget(points, next, morph, scatter, colors, kind);
-        renderer?.upload(points);
-        scatter = kind.kind === 'tweak' ? TWEAK_SCATTER : kind.kind === 'rebuild' ? REBUILD_SCATTER : 0;
-        morph = calm() || message.snap ? 1 : 0;
-        layout = next;
-        rev = next ? message.rev : null;
-        hasPoints = (next?.count ?? 0) > 0;
-        docRect = message.rect;
-        calmRect = message.calm;
-        invalidate();
-        report();
+    function startPulse(at: [number, number]): void {
+        seedFrom = seed;
+        seedTo = target().seed;
+        pulse = 0;
+        origin = at;
     }
 
     function setChain(message: Extract<EngineMessage, { type: 'chain' }>): void {
         chain = message.chain;
         const next = target();
         if (message.pulse && chained && !calm()) {
-            seedFrom = seed;
-            seedTo = next.seed;
-            pulse = 0;
-            origin = message.pulse;
+            startPulse(message.pulse);
         } else if (pulse < 0) {
             seed = next.seed;
             seedFrom = next.seed;
@@ -419,22 +371,12 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
                 view = message.view;
                 resize();
                 return;
-            case 'scene':
-                setScene(message);
-                return;
-            case 'rect':
-                docRect = message.rect;
-                calmRect = message.calm;
+            case 'plates':
+                plates = message.plates;
                 invalidate();
                 return;
             case 'scroll':
                 scrollY = message.y;
-                if (message.away !== away) {
-                    away = message.away;
-                    alphaTarget = away ? 0 : 1;
-                    if (!chained || calm()) alpha = alphaTarget;
-                    report();
-                }
                 invalidate();
                 return;
             case 'chain':
@@ -461,6 +403,12 @@ export function createEngine(reply: (message: EngineReply) => void): (message: E
             case 'reduced':
                 reduced = message.reduced;
                 if (reduced) settleAll();
+                invalidate();
+                return;
+            case 'mock':
+                mock = message.mock;
+                if (calm()) mood = pick(target());
+                if (message.pulse && !calm()) startPulse(message.pulse);
                 invalidate();
                 return;
             case 'lose':

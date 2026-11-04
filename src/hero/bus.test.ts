@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { ScenePayload } from '../gauges/types.ts';
 import { createStageBus, type StageChange } from './bus.ts';
-import type { ScenePayload } from './scenes/types.ts';
 
 const plot = { closest: () => null } as unknown as HTMLElement;
 const chain = { height: 900_000, blockTime: 1_000, estimated: false };

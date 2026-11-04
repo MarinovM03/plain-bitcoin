@@ -38,7 +38,7 @@ test('the stage loads only after first paint, and the tool answers and takes inp
     });
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
-    await expect(page.locator('#scene-plot > svg.still')).toHaveCount(1);
+    await expect(page.locator('#scene-plot > svg.gauge-svg')).toHaveCount(1);
     await page.locator('#convert-sats').fill('2,000');
     await expect(page.locator('#tool-result')).toHaveText('2,000 sats = £1.15');
     await expect(page.locator('#stage')).not.toHaveAttribute('data-tier', /./);
@@ -52,7 +52,7 @@ test('the stage loads only after first paint, and the tool answers and takes inp
     await expect(page.locator('#stage')).toHaveAttribute('data-tier', /^(full|phone|plain)$/);
 });
 
-test('one WebGL context serves every route and the home previews, and calculators still answer on top of it', async ({
+test('one WebGL context serves every route, and the gauges answer on their plates above it', async ({
     page,
     isMobile,
 }) => {
@@ -71,12 +71,12 @@ test('one WebGL context serves every route and the home previews, and calculator
     const found = problems(page);
     await page.goto('/?hero=phone');
     await waitForStage(page);
-    await expect(page.locator('.tile__preview[data-live]')).toHaveCount(1, { timeout: 15_000 });
+    await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(TOOL_IDS.length);
     const nav = page.getByRole('navigation', { name: NAV.label, exact: true });
     for (const id of TOOL_IDS) {
         await nav.getByRole('link', { name: NAV.short[id], exact: true }).click();
         await expect(page.locator('.result__figure')).not.toHaveText('');
-        await expect(page.locator(`.scene[data-live][data-scene="${id}"]`)).toHaveCount(1, { timeout: 15_000 });
+        await expect(page.locator(`.scene[data-scene="${id}"][data-settled]`)).toHaveCount(1, { timeout: 15_000 });
         await expect(page.locator('#stage canvas')).toHaveCount(1);
     }
     // The stage draws in a worker through OffscreenCanvas when it can, so the page itself may hold no context at all.
@@ -122,8 +122,8 @@ test('reduced motion draws one still frame per change, and nothing in between', 
     const still = await frames(page);
     await page.waitForTimeout(2_500);
     expect(await frames(page)).toBe(still);
-    expect(still).toBeLessThanOrEqual(6);
-    await page.locator('#power-amount').fill('5,000');
+    expect(still).toBeLessThanOrEqual(8);
+    await page.setViewportSize({ width: 1200, height: 800 });
     await expect.poll(() => frames(page)).toBeGreaterThan(still);
     await page.waitForTimeout(500);
     const after = await frames(page);
@@ -134,7 +134,7 @@ test('reduced motion draws one still frame per change, and nothing in between', 
 test('the plain tier draws no canvas and no frames, and still shows every scene as SVG', async ({ page }) => {
     await page.goto('/?hero=plain#/convert');
     await expect(page.locator('#stage')).toHaveAttribute('data-tier', 'plain');
-    await expect(page.locator('#scene-plot > svg.still')).toHaveCount(1);
+    await expect(page.locator('#scene-plot > svg.gauge-svg')).toHaveCount(1);
     await page.waitForTimeout(1_000);
     await expect(page.locator('#stage canvas')).toHaveCount(0);
     await expect(page.locator('#stage')).not.toHaveAttribute('data-frames', /./);
