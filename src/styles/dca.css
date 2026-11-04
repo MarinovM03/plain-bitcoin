@@ -2,26 +2,45 @@
     opacity: 0;
 }
 
-.dca-chart__line {
+/* Three series, three inks: orange for the answer, thin white for the money put in, dashed steel for the lump sum. */
+.dca-chart__line,
+.dca-chart__key {
     fill: none;
     stroke-linejoin: round;
+    stroke-linecap: round;
     vector-effect: non-scaling-stroke;
 }
 
-.dca-chart__line--value {
+.dca-chart__line--value,
+.dca-chart__key--value {
     stroke: var(--btc);
     stroke-width: 2.5;
 }
 
-.dca-chart__line--invested {
-    stroke: var(--paper);
-    stroke-width: 1.5;
+.dca-chart__line--invested,
+.dca-chart__key--invested {
+    stroke: var(--ink);
+    stroke-width: 1.25;
 }
 
-.dca-chart__line--lump {
-    stroke: var(--muted);
-    stroke-width: 1.5;
-    stroke-dasharray: 5 4;
+.dca-chart__line--lump,
+.dca-chart__key--lump {
+    stroke: var(--ink-cool);
+    stroke-width: 1.75;
+    stroke-dasharray: 6 4;
+    stroke-linecap: butt;
+}
+
+.dca-chart__legend--value {
+    fill: var(--btc);
+}
+
+.dca-chart__legend--invested {
+    fill: var(--ink);
+}
+
+.dca-chart__legend--lump {
+    fill: var(--ink-cool);
 }
 
 .dca-detail__notes {

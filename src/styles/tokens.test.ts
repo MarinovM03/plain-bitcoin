@@ -1,7 +1,8 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { TOKENS } from './tokens.ts';
+import { contrast, luminance } from './contrast.ts';
+import { TOKENS, WEATHER_CEILING } from './tokens.ts';
 
 const css = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
 
@@ -13,68 +14,38 @@ function cssTokens(source: string): Record<string, string> {
     return Object.fromEntries(entries);
 }
 
-function channels(hex: string): number[] {
-    return [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
-}
-
-function luminance(hex: string): number {
-    const [r = 0, g = 0, b = 0] = channels(hex).map((value) => {
-        const channel = value / 255;
-        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(a: string, b: string): number {
-    const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-    return (light + 0.05) / (dark + 0.05);
-}
-
-function mix(base: string, over: string, amount: number): string {
-    const a = channels(base);
-    const b = channels(over);
-    return `#${a
-        .map((value, i) =>
-            Math.round(value * (1 - amount) + (b[i] ?? 0) * amount)
-                .toString(16)
-                .padStart(2, '0'),
-        )
-        .join('')}`;
-}
-
-const TEXT = [TOKENS.paper, TOKENS.muted, TOKENS.btc, TOKENS.fiat];
-const glass = Number.parseFloat(TOKENS.glass) / 100;
+const READOUT_TEXT = [TOKENS.ink, TOKENS.inkDim, TOKENS.inkCool, TOKENS.btc];
+const SURFACES = [TOKENS.plate, TOKENS.well];
+const WEATHER = [TOKENS.void, TOKENS.smoke, TOKENS.isobar, TOKENS.isobarIndex];
 
 describe('design tokens', () => {
     it('tokens.ts mirrors tokens.css exactly', () => {
         expect(cssTokens(css)).toEqual(TOKENS);
     });
 
-    it('keeps every text colour at AA body contrast on both surfaces', () => {
-        for (const text of TEXT) {
-            for (const surface of [TOKENS.ink, TOKENS.raised]) {
-                expect(contrast(text, surface)).toBeGreaterThanOrEqual(4.5);
-            }
+    it('keeps every readout ink at AA body contrast on a plate and in a well', () => {
+        for (const text of READOUT_TEXT) {
+            for (const surface of SURFACES)
+                expect(contrast(text, surface), `${text} on ${surface}`).toBeGreaterThanOrEqual(4.5);
         }
     });
 
-    it('keeps text AA on a glass panel even over the brightest frame of the live field', () => {
-        for (const brightest of [TOKENS.paper, TOKENS.btc, TOKENS.fiat]) {
-            const panel = mix(TOKENS.raised, brightest, 1 - glass);
-            for (const text of TEXT) expect(contrast(text, panel)).toBeGreaterThanOrEqual(4.5);
-        }
+    it('keeps every graph line and filled cell at 3:1 against the plate, the well and each other series', () => {
+        for (const ink of READOUT_TEXT)
+            for (const surface of SURFACES) expect(contrast(ink, surface)).toBeGreaterThanOrEqual(3);
+        expect(contrast(TOKENS.edge, TOKENS.plate)).toBeGreaterThan(1.3);
     });
 
-    it('keeps scene labels AA on their scrim even over a max-tension dot or the orange pulse', () => {
-        const scrim = Number.parseFloat(TOKENS.scrim) / 100;
-        for (const brightest of [TOKENS.paper, TOKENS.btc, TOKENS.fiat]) {
-            const chip = mix(brightest, TOKENS.ink, scrim);
-            for (const text of TEXT) expect(contrast(text, chip)).toBeGreaterThanOrEqual(4.5);
-        }
+    it('holds the whole weather family under the luminance ceiling, darker than any readout ink', () => {
+        for (const colour of WEATHER) expect(luminance(colour), colour).toBeLessThanOrEqual(WEATHER_CEILING);
+        const brightestWeather = Math.max(...WEATHER.map(luminance));
+        for (const ink of READOUT_TEXT) expect(luminance(ink)).toBeGreaterThan(brightestWeather * 2.5);
+        // The plate edge stays visible against the brightest weather line, so a plate never melts into the body.
+        expect(contrast(TOKENS.ink, TOKENS.isobarIndex)).toBeGreaterThanOrEqual(4.5);
     });
 
-    it('keeps ink readable on the orange and paper buttons', () => {
-        expect(contrast(TOKENS.ink, TOKENS.btc)).toBeGreaterThanOrEqual(4.5);
-        expect(contrast(TOKENS.ink, TOKENS.paper)).toBeGreaterThanOrEqual(4.5);
+    it('keeps ink readable on the orange and ink buttons', () => {
+        expect(contrast(TOKENS.void, TOKENS.btc)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(TOKENS.void, TOKENS.ink)).toBeGreaterThanOrEqual(4.5);
     });
 });

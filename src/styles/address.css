@@ -1,19 +1,41 @@
+/*
+ * One field group: the input and the Paste button share a single bordered control. The button sits fully inside, at
+ * the trailing end, with the same 4px inset on top, right and bottom, and a full 44px tap target.
+ */
+.address-field {
+    min-height: 3.375rem;
+}
+
 .address-field__input {
+    height: calc(3.375rem - 2px);
+    padding-right: calc(4px + 4.75rem + 0.625rem);
     font-size: var(--step-body);
 }
 
+.address-field:has(.address-field__paste[hidden]) .address-field__input {
+    padding-right: 1rem;
+}
+
 .address-field__paste {
-    flex: none;
-    min-width: var(--tap);
-    min-height: var(--tap);
-    margin-inline-end: 0.25rem;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    bottom: 4px;
+    min-width: 4.75rem;
+    min-height: 2.75rem;
     padding: 0 0.875rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--ink) 72%, transparent);
-    color: var(--paper);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    background: var(--plate);
+    color: var(--ink);
     font: 600 var(--step-small) / 1.2 var(--font-body);
     cursor: pointer;
+}
+
+@media (hover: hover) {
+    .address-field__paste:hover {
+        border-color: var(--ink);
+    }
 }
 
 .tool--address [hidden] {
@@ -23,35 +45,17 @@
 .guard-line {
     padding: 0.75rem 0.875rem;
     border: 1px solid var(--btc);
-    border-radius: var(--radius);
+    border-radius: var(--radius-control);
     background: color-mix(in srgb, var(--btc) 8%, transparent);
     font-size: var(--step-body);
     line-height: 1.45;
 }
 
-.card-toggle {
-    display: flex;
-    gap: 0.625rem;
-    align-items: center;
-    min-height: var(--tap);
-    color: var(--muted);
-    font-size: var(--step-small);
-    cursor: pointer;
-}
-
-.card-toggle__input {
-    flex: none;
-    width: 1.25rem;
-    height: 1.25rem;
-    margin: 0;
-    accent-color: var(--btc);
-}
-
 .address-parts__text {
     padding: 0.875rem 1rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: color-mix(in srgb, var(--ink) 72%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-control);
+    background: var(--well);
     font-family: var(--font-mono);
     font-weight: 500;
     font-size: var(--step-lead);
@@ -61,15 +65,15 @@
 }
 
 .address-parts__text--bytes {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-size: var(--step-small);
 }
 
 .address-parts__legend {
     display: grid;
     margin: 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-control);
     overflow: hidden;
 }
 
@@ -84,7 +88,7 @@
 }
 
 .address-parts__row + .address-parts__row {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--edge);
 }
 
 .address-parts__row dt {
@@ -95,22 +99,22 @@
 
 .address-parts__row dd {
     margin: 0;
-    color: var(--muted);
+    color: var(--ink-dim);
 }
 
 .part--hrp,
 .part--prefix {
-    color: var(--fiat);
+    color: var(--ink-cool);
 }
 
 .part--separator,
 .part--version {
-    color: var(--muted);
+    color: var(--ink-dim);
 }
 
 .part--program,
 .part--body {
-    color: var(--paper);
+    color: var(--ink);
 }
 
 .part--checksum {
@@ -119,12 +123,12 @@
 
 .part--bad {
     background: var(--btc);
-    color: var(--ink);
+    color: var(--void);
 }
 
 .part--suspect {
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--ink);
+    color: var(--void);
     text-decoration: underline wavy var(--btc);
 }
 
@@ -139,6 +143,6 @@
     justify-self: start;
     min-height: var(--tap);
     text-decoration: underline;
-    text-decoration-color: var(--line);
+    text-decoration-color: var(--edge);
     text-underline-offset: 0.2em;
 }
