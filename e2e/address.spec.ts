@@ -187,7 +187,7 @@ test('an extended public key is not looked up', async ({ page }) => {
     await expect(page.getByRole('button', { name: ADDRESS.lookUp })).toBeDisabled();
 });
 
-test('paste fills the field, and the card shows the type unless the address is switched on', async ({
+test('paste fills the field from the clipboard, and the postcard prints the type with the address masked', async ({
     page,
     context,
     browserName,
@@ -199,18 +199,10 @@ test('paste fills the field, and the card shows the type unless the address is s
     await expect(page.getByLabel(ADDRESS.field)).toHaveValue(TAPROOT);
     await expect(page.locator('#tool-result')).toHaveText(ADDRESS.headline(ADDRESS.types.p2tr));
 
-    const copy = page.locator('[data-share="copy"]');
-    await copy.click();
-    await expect(copy).toHaveText('Copied');
-    const typeOnly = await page.evaluate(() => navigator.clipboard.readText());
-    expect(typeOnly).toContain(ADDRESS.headline(ADDRESS.types.p2tr));
-    expect(typeOnly).not.toContain(TAPROOT);
-
-    await page.getByLabel(ADDRESS.cardToggle).check();
-    await expect(copy).toHaveText('Copy text');
-    await copy.click();
-    await expect(copy).toHaveText('Copied');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(TAPROOT);
+    const post = new URL((await page.locator('[data-share-post]').getAttribute('href')) ?? '');
+    const text = post.searchParams.get('text') ?? '';
+    expect(text).toContain('This is a Taproot address, typed right.');
+    expect(text).not.toContain(TAPROOT);
 
     const download = page.waitForEvent('download');
     await page.locator('[data-share="download"]').click();

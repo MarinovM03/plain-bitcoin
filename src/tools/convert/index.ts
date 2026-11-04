@@ -1,9 +1,8 @@
 import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.ts';
 import { convert, type ParseFailure, parseToSats, pasteFits, SATS_PER_BTC, type Unit } from '../../model/convert.ts';
-import { CardFiles } from '../../share/actions.ts';
-import { bindShareBar } from '../../share/bar.ts';
-import { type ConvertText, convertText, priceLabel } from '../../share/cardText.ts';
-import { siteAddress } from '../../share/index.ts';
+import { bindShareBar } from '../../postcard/bar.ts';
+import { siteAddress } from '../../postcard/site.ts';
+import { type ConvertText, convertText, priceLabel } from '../../postcard/words.ts';
 import {
     CONVERT_PRESETS,
     CONVERT_UNITS,
@@ -49,7 +48,6 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
 
     const scene = linkScene(root);
     const site = siteAddress(siteUrl);
-    const files = new CardFiles(site);
     const prices = priceFeed();
     const owner = {};
     let quote: PriceQuote = prices.quote;
@@ -57,8 +55,8 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     let text: ConvertText | null = null;
     let settleTimer = 0;
     const share = bindShareBar(root, {
-        files,
-        card: () => text?.card ?? null,
+        postcard: () => text?.postcard ?? null,
+        site,
         onStatus: (message) => {
             window.clearTimeout(settleTimer);
             status.textContent = message;
@@ -69,7 +67,6 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         window.clearTimeout(settleTimer);
         settleTimer = window.setTimeout(() => {
             status.textContent = message;
-            if (text) files.get(text.card).catch(() => {});
         }, SETTLE_MS);
     }
 
@@ -137,7 +134,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         showNote(null);
         const conversion = convert(parsed.value, quote.value);
         for (const other of CONVERT_UNITS) if (other !== unit) inputs[other].value = conversion.fields[other];
-        text = convertText(unit, conversion, quote, site);
+        text = convertText(unit, conversion, quote);
         figure.textContent = text.headline;
         big.textContent = text.figure;
         detail.textContent = text.detail;

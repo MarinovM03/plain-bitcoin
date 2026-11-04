@@ -1,17 +1,15 @@
 import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
-import { sceneArt, stage } from '../../hero/bus.ts';
+import { stage } from '../../hero/bus.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
-import { CardFiles } from '../../share/actions.ts';
-import { bindShareBar } from '../../share/bar.ts';
-import { leftCard } from '../../share/cardText.ts';
-import { type CardArt, type ShareCard, siteAddress } from '../../share/index.ts';
+import { bindShareBar } from '../../postcard/bar.ts';
+import { siteAddress } from '../../postcard/site.ts';
+import { leftPostcard } from '../../postcard/words.ts';
 import { LEFT_PAGE } from '../../ui/copy.ts';
-import { afterFirstPaint, find, link, whenIdle } from '../../util/dom.ts';
+import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, formatWhole } from '../../util/format.ts';
 import { tipAge, watchActive } from './counter.ts';
 
 const MEMPOOL = 'https://mempool.space/';
-const ART_ASPECT = 1.4;
 
 export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const panel = find(root, '#numbers-panel');
@@ -20,18 +18,19 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const cell = (id: string) => find(panel, `#left-${id}`);
     const plot = find(root, '#scene-plot');
     const site = siteAddress(siteUrl);
-    const files = new CardFiles(site);
     const heights = heightFeed();
     const owner = {};
     let tip = heights.tip;
-    let card: ShareCard | null = null;
-    let art: CardArt | undefined;
     let ticker = 0;
     let shownHeight = -1;
     const share = bindShareBar(root, {
-        files,
-        card: () => card,
-        art: () => art,
+        postcard: () =>
+            leftPostcard({
+                supply: supplyAt(tip.height),
+                api: tip.source === 'live' ? tip.api : null,
+                checkedAt: tip.checkedAt,
+            }),
+        site,
         onStatus: (message) => {
             status.textContent = message;
         },
@@ -78,21 +77,13 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
         panel.dataset.source = tip.source;
         renderSource();
 
-        const live = tip.source === 'live' && tip.api !== null;
-        card = live && tip.api ? leftCard(supply, tip.api, tip.checkedAt, site) : null;
         if (supply.height !== shownHeight) {
             const data = { id: 'left', height: supply.height } as const;
             if (shownHeight < 0) stage.show(plot, data);
             else stage.update(data);
             shownHeight = supply.height;
-            sceneArt(data, ART_ASPECT)
-                .then((next) => {
-                    art = next;
-                })
-                .catch(() => {});
         }
-        share.setEnabled(card !== null);
-        if (!live && tip.source === 'offline') status.textContent = LEFT_PAGE.shareOffline;
+        share.setEnabled(true);
     }
 
     function setTicking(on: boolean): void {
@@ -104,24 +95,10 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
             : 0;
     }
 
-    let barVisible = false;
-    const prepareCard = () => {
-        if (!barVisible) return;
-        whenIdle(() => {
-            if (card) files.get(card, art).catch(() => {});
-        });
-    };
-    const barWatch = new IntersectionObserver((entries) => {
-        barVisible = entries.some((entry) => entry.isIntersecting);
-        prepareCard();
-    });
-    barWatch.observe(find(root, '.share-bar'));
-
     render();
     const unsubscribe = heights.subscribe((next: Tip) => {
         tip = next;
         render();
-        prepareCard();
     });
     let disposed = false;
     let unwatch = () => {};
@@ -135,7 +112,6 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
 
     return () => {
         disposed = true;
-        barWatch.disconnect();
         unwatch();
         unsubscribe();
         setTicking(false);

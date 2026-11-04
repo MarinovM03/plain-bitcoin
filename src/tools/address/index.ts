@@ -8,10 +8,10 @@ import {
     type InvalidAddress,
     type PartRole,
 } from '../../model/address.ts';
-import { CardFiles } from '../../share/actions.ts';
-import { bindShareBar } from '../../share/bar.ts';
-import { type AddressText, addressText } from '../../share/cardText.ts';
-import { siteAddress } from '../../share/index.ts';
+import { bindShareBar } from '../../postcard/bar.ts';
+import { siteAddress } from '../../postcard/site.ts';
+import { type AddressText, addressText } from '../../postcard/words.ts';
+import { ADDRESS_SAMPLES } from '../../ui/address-view.ts';
 import { ADDRESS, SCENE } from '../../ui/copy.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { find } from '../../util/dom.ts';
@@ -109,19 +109,18 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     const lookupStatus = find(root, '#address-lookup-status');
     const chain = find(root, '#address-chain');
     const explorer = find<HTMLAnchorElement>(root, '#address-explorer');
-    const fullToggle = find<HTMLInputElement>(root, '#address-card-full');
 
     const scene = linkScene(root);
     const site = siteAddress(siteUrl);
-    const files = new CardFiles(site);
+    const samples = new Set<string>(Object.values(ADDRESS_SAMPLES));
     let address: Address | null = null;
     let text: AddressText | null = null;
     let sequence = 0;
     let lookup: AbortController | null = null;
     let settleTimer = 0;
     const share = bindShareBar(root, {
-        files,
-        card: () => text?.card ?? null,
+        postcard: () => text?.postcard ?? null,
+        site,
         onStatus: (message) => {
             window.clearTimeout(settleTimer);
             status.textContent = message;
@@ -132,7 +131,6 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         window.clearTimeout(settleTimer);
         settleTimer = window.setTimeout(() => {
             status.textContent = message;
-            if (text) files.get(text.card).catch(() => {});
         }, SETTLE_MS);
     }
 
@@ -262,7 +260,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function updateCard(): void {
-        text = address ? addressText(address, fullToggle.checked, Date.now(), site) : null;
+        text = address ? addressText(address, samples.has(address.text)) : null;
         share.setEnabled(text !== null);
     }
 
@@ -424,10 +422,6 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
             analyse().catch(() => {});
         });
     }
-    fullToggle.addEventListener('change', () => {
-        updateCard();
-        if (text) files.get(text.card).catch(() => {});
-    });
     if (typeof navigator.clipboard?.readText === 'function') {
         pasteButton.hidden = false;
         pasteButton.addEventListener('click', () => {
