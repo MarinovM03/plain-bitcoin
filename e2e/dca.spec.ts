@@ -35,7 +35,7 @@ test('answers £50 a week since January 2020 from bundled closes only, with the 
     await expect(page.locator('#dca-notes')).toContainText(DCA.feesNone);
     await expect(page.locator('#scene-plot .dca-chart__line--lump')).toHaveAttribute('points', /^[\d.]+,[\d.]+ /);
     await expect(page.locator('#scene-plot .dca-chart')).toHaveAttribute('aria-label', /^Line chart\./);
-    await expect(page.locator('#scene-plot .guide-label--btc')).toHaveText(
+    await expect(page.locator('#scene-plot .g-end')).toHaveText(
         (await page.locator('#tool-result-figure').textContent()) ?? '',
     );
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics reference price, daily closes to');
@@ -68,7 +68,7 @@ test('a fee comes off every buy, and an impossible fee says so', async ({ page }
     await page.getByLabel(DCA.fee).fill('100');
     await expect(page.locator('#tool-result')).toHaveText(DCA.badFee);
     await expect(page.locator('#dca-detail')).toBeHidden();
-    await expect(page.locator('[data-share="card"]')).toBeDisabled();
+    await expect(page.locator('[data-share="print"]')).toBeDisabled();
 });
 
 test('an amount that would buy more bitcoin than exists says so, and clears the old answer and chart', async ({

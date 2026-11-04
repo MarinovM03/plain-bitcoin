@@ -1,13 +1,8 @@
-import type { ToolId } from '../tools/index.ts';
+import { TOOL_IDS, type ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
-import {
-    renderAddressCardToggle,
-    renderAddressDetail,
-    renderAddressInputs,
-    renderAddressMore,
-} from './address-view.ts';
+import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
 import { renderConvertDetail, renderConvertInputs, renderConvertMore } from './convert-view.ts';
-import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, POWER, SCENE, TOOL_PAGE, TOOLS } from './copy.ts';
+import { ADDRESS, CONVERT, FIELDS, GAUGE_LABEL, LEFT_PAGE, POWER, SCENE, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { moreOptions, noteLine, resultBlock, sceneWindow, shareSection, sourceLine } from './output.ts';
@@ -64,33 +59,44 @@ function calculator(id: CalculatorId): Calculator {
 
 function head(id: ToolId): SafeHtml {
     return html`<div class="tool__head">
+    <p class="tool__kicker">${GAUGE_LABEL(TOOL_IDS.indexOf(id) + 1, TOOLS[id].name)}</p>
     <h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>
     <p class="tool__question">${TOOLS[id].question}</p>
 </div>`;
 }
 
+/** One gauge face on the chassis: the mount stays put, the face inside it flips in on a change of mode. */
+function face(id: ToolId, window: SafeHtml, panel: SafeHtml, below: SafeHtml): SafeHtml {
+    return html`<article class="tool tool--${id}">
+    <div class="mount" data-plate>
+        <div class="gauge">
+            ${window}
+            ${panel}
+        </div>
+    </div>
+    <div class="tool__below" data-plate>${below}</div>
+</article>`;
+}
+
 function renderCalculator(id: CalculatorId): SafeHtml {
     const address = id === 'address';
     const parts = calculator(id);
-    return html`<article class="tool tool--${id}">
-    <div class="tool__screen">
-        ${sceneWindow({ head: head(id), caption: parts.caption })}
-        <form class="tool__panel tool__inputs" aria-label="${address ? TOOL_PAGE.addressLabel : TOOL_PAGE.inputsLabel}" novalidate>
+    return face(
+        id,
+        sceneWindow({ head: head(id), caption: parts.caption }),
+        html`<form class="tool__panel tool__inputs" aria-label="${address ? TOOL_PAGE.addressLabel : TOOL_PAGE.inputsLabel}" novalidate>
             <div class="tool__fields">${parts.inputs}</div>
             ${resultBlock({
                 id: 'tool-result',
                 label: address ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
                 empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
             })}
+            ${shareSection()}
             ${moreOptions(...parts.more)}
-        </form>
-    </div>
-    <div class="tool__below">
-        ${shareSection(address ? renderAddressCardToggle() : '')}
-        ${parts.detail}
-        ${sourceLine(TOOLS[id].privacy, address ? ADDRESS.sourceIdle : TOOL_PAGE.sourcePending)}
-    </div>
-</article>`;
+        </form>`,
+        html`${parts.detail}
+        ${sourceLine(TOOLS[id].privacy, address ? ADDRESS.sourceIdle : TOOL_PAGE.sourcePending)}`,
+    );
 }
 
 const LEFT_CELLS = [
@@ -113,21 +119,19 @@ function renderLeft(): SafeHtml {
             <dd id="left-${id}">${LEFT_PAGE.pending}</dd>
         </div>`,
     );
-    return html`<article class="tool tool--left">
-    <div class="tool__screen">
-        ${sceneWindow({ head: head('left'), caption: SCENE.left })}
-        <div class="tool__panel">
+    return face(
+        'left',
+        sceneWindow({ head: head('left'), caption: SCENE.left }),
+        html`<div class="tool__panel">
             <section class="result" aria-labelledby="left-label">
                 <p id="left-label" class="result__label">${LEFT_PAGE.resultLabel}</p>
                 <p id="left-figure" class="result__figure"><span class="result__empty">${LEFT_PAGE.figureEmpty}</span></p>
                 <p id="left-supply" class="result__sentence"></p>
                 <p id="left-note" class="result__detail"></p>
             </section>
-        </div>
-    </div>
-    <div class="tool__below">
-        ${shareSection(html`<p id="left-status" class="visually-hidden" aria-live="polite"></p>`)}
-        <section class="details" aria-labelledby="numbers-heading">
+            ${shareSection(html`<p id="left-status" class="visually-hidden" aria-live="polite"></p>`)}
+        </div>`,
+        html`<section class="details" aria-labelledby="numbers-heading">
             <h2 id="numbers-heading" class="details__title">${LEFT_PAGE.numbersHeading}</h2>
             <dl id="numbers-panel" class="stats">${cells}</dl>
         </section>
@@ -135,9 +139,8 @@ function renderLeft(): SafeHtml {
             ${noteLine(LEFT_PAGE.steps)}
             ${noteLine(LEFT_PAGE.honesty)}
         </div>
-        ${sourceLine(TOOLS.left.privacy)}
-    </div>
-</article>`;
+        ${sourceLine(TOOLS.left.privacy)}`,
+    );
 }
 
 export function renderToolPage(id: ToolId): SafeHtml {

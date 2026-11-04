@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
+import { supplyAt } from '../src/model/supply.ts';
 import { ADDRESS, NAV } from '../src/ui/copy.ts';
 import { realProblems } from './console.ts';
 import { FAKE_HEIGHT, fakeHeightApi } from './height-api.ts';
@@ -24,16 +24,16 @@ function watch(page: Page): string[] {
 
 const real = (found: string[]) => realProblems(found).filter((text) => !text.includes('GL Driver Message'));
 
-async function labels(page: Page, tone: 'btc' | 'paper' | 'muted'): Promise<string[]> {
-    return page.locator(`#scene-plot .guide-label--${tone}`).allTextContents();
+async function labels(page: Page, tone: 'btc' | 'cool' | 'ink'): Promise<string[]> {
+    return page.locator(`#scene-plot .g-label--${tone}`).allTextContents();
 }
 
 async function burst(page: Page, selector: string, values: string[]): Promise<void> {
     for (const value of values) await page.locator(selector).fill(value);
 }
 
-// Every tool, driven the way a person does, on the WebGL stage: the answer, the newest payload and the picture
-// on screen must end up agreeing.
+// Every gauge, driven the way a person does, over the live body and on the plain tier: the answer, the newest
+// payload and the drawing on the plate must end up agreeing.
 for (const tier of ['phone', 'plain'] as const) {
     test.describe(`rapid input on the ${tier} tier`, () => {
         test.beforeEach(({ isMobile }) => {
@@ -50,23 +50,24 @@ for (const tier of ['phone', 'plain'] as const) {
             await burst(page, '#convert-sats', ['', '0', '9,999,999,999,999,999', '1', '']);
             await sats.pressSequentially('2000', { delay: 5 });
             await expect(page.locator('#tool-result')).toHaveText('2,000 sats = £1.15');
-            const state = await settled(page, tier !== 'plain');
+            const state = await settled(page);
             expect(state.scene).toBe('convert');
             expect(state.summary).toBe('sats=2000;perDot=10;lit=200');
-            expect(await labels(page, 'btc')).toEqual(['1 dot = 10 sats']);
+            expect(await labels(page, 'btc')).toEqual(['1 cell = 10 sats']);
+            await expect(page.locator('#scene-plot .g-cell--btc')).toHaveCount(200);
             for (const [value, label] of [
-                ['1', '1 dot = 1 sat'],
-                ['100,000,000', '1 dot = 0.001 BTC'],
-                ['500', '1 dot = 1 sat'],
+                ['1', '1 cell = 1 sat'],
+                ['100,000,000', '1 cell = 0.001 BTC'],
+                ['500', '1 cell = 1 sat'],
             ] as const) {
                 await sats.fill(value);
-                await settled(page, tier !== 'plain');
+                await settled(page);
                 expect(await labels(page, 'btc')).toEqual([label]);
             }
             expect(real(found)).toEqual([]);
         });
 
-        test('purchasing power: amounts and dates changed mid-morph land on the bars below', async ({ page }) => {
+        test('purchasing power: amounts and dates changed mid-tween land on the bars below', async ({ page }) => {
             const found = watch(page);
             await page.goto(`/?hero=${tier}#/power`);
             if (tier !== 'plain') await waitForStage(page);
@@ -75,11 +76,9 @@ for (const tier of ['phone', 'plain'] as const) {
             await page.locator('#power-when-year').selectOption('2021');
             await page.locator('#power-amount').fill('2,500');
             await expect(page.locator('#tool-result')).toHaveText(/^£2,500 in January 2021 is worth /);
-            await settled(page, tier !== 'plain');
+            await settled(page);
             expect(await labels(page, 'btc')).toEqual([(await page.locator('#power-btc-value').textContent()) ?? '']);
-            expect(await labels(page, 'paper')).toEqual([
-                (await page.locator('#power-cash-value').textContent()) ?? '',
-            ]);
+            expect(await labels(page, 'cool')).toEqual([(await page.locator('#power-cash-value').textContent()) ?? '']);
             await page.locator('#power-amount').fill('');
             const empty = await settled(page);
             expect(empty.summary).toBe('cash=0;bitcoin=0;log=false');
@@ -97,10 +96,10 @@ for (const tier of ['phone', 'plain'] as const) {
             await page.locator('#dca-amount').fill('40');
             await expect(page.locator('#tool-result')).toHaveText(/^\$40 a month since /);
             await page.evaluate(() => window.scrollTo(0, 0));
-            const state = await settled(page, tier !== 'plain');
+            const state = await settled(page);
             const figure = (await page.locator('#tool-result-figure').textContent()) ?? '';
             expect(state.summary).toMatch(new RegExp(`;worth=${figure.replace(/[$]/g, '\\$')}$`));
-            expect(await labels(page, 'btc')).toEqual([figure]);
+            await expect(page.locator('#scene-plot .g-end')).toHaveText(figure);
             const buys = Number(((await page.locator('#dca-buys').textContent()) ?? '').split(' ')[0]);
             expect(state.summary).toMatch(new RegExp(`^marks=(${buys}|${buys + 1});`));
             await expect(page.locator('#scene-plot .dca-chart__line--lump')).toHaveAttribute('points', /\d/);
@@ -118,9 +117,10 @@ for (const tier of ['phone', 'plain'] as const) {
             await input.fill('1A0zzz');
             await input.fill(SEGWIT);
             await expect(page.locator('#tool-result-figure')).toHaveText(ADDRESS.figures.p2wpkh);
-            const valid = await settled(page, tier !== 'plain');
+            const valid = await settled(page);
             expect(valid.summary).toBe('state=valid;chars=42');
-            expect(await labels(page, 'btc')).toEqual([ADDRESS.figures.p2wpkh]);
+            expect(await labels(page, 'btc')).toEqual([`${ADDRESS.figures.p2wpkh} · checksum valid`]);
+            await expect(page.locator('#scene-plot .g-glyph')).toHaveCount(42);
             await input.fill('');
             expect((await settled(page)).summary).toBe('state=empty;chars=0');
             expect(real(found)).toEqual([]);
@@ -128,24 +128,24 @@ for (const tier of ['phone', 'plain'] as const) {
     });
 }
 
-test('left: the volume lights one dot per 10,000 BTC issued, and a band reads out its era', async ({ page }) => {
+test('left: the column splits at the real issued amount, and a band reads out its era', async ({ page }) => {
     await page.goto('/?hero=phone#/left');
-    await waitForStage(page);
-    const state = await settled(page, true);
-    expect(state.summary).toBe(
-        `issued=${supplyAt(FAKE_HEIGHT).issued};max=2099999997690000;lit=${Math.floor(supplyAt(FAKE_HEIGHT).issued / SATS_PER_BTC / 10_000)}`,
-    );
-    await page.locator('.guide-band').first().click();
+    const state = await settled(page);
+    const supply = supplyAt(FAKE_HEIGHT);
+    expect(state.summary).toBe(`issued=${supply.issued};max=2099999997690000;left=${supply.left}`);
+    await page.locator('#scene-plot .g-band').first().click();
     await expect(page.locator('.scene__callout')).toHaveText(/^Era 1 · 3 Jan 2009 to 28 Nov 2012 · 50 BTC a block/);
-    await page.locator('.guide-band').first().click();
+    await page.locator('#scene-plot .g-band').first().click();
     await expect(page.locator('.scene__callout')).toBeHidden();
 });
 
-test('switching routes mid-morph shows the new scene, never the old one', async ({ page, isMobile }) => {
+test('switching gauges mid-flip shows the new face at once, never the old one, and back and forward land right', async ({
+    page,
+    isMobile,
+}) => {
     test.skip(isMobile, 'Checked once, on desktop');
     await page.goto('/?hero=phone#/left');
-    await waitForStage(page);
-    await settled(page, true);
+    await settled(page);
     const nav = page.getByRole('navigation', { name: NAV.label, exact: true });
     for (const id of ['dca', 'convert', 'power', 'left', 'address', 'dca'] as const) {
         await nav.getByRole('link', { name: NAV.short[id], exact: true }).click();
@@ -161,17 +161,32 @@ test('switching routes mid-morph shows the new scene, never the old one', async 
                 return scene;
             })
             .toBe(id);
-        await page.waitForTimeout(120);
+        await page.waitForTimeout(90);
     }
-    const last = await settled(page, true);
-    expect(last.scene).toBe('dca');
-    await expect(page.locator('.scene[data-live]')).toHaveCount(1);
+    expect((await settled(page)).scene).toBe('dca');
+    await page.goBack();
+    await expect(page.locator('.tool--address')).toHaveCount(1);
+    expect((await settled(page)).scene).toBe('address');
+    await page.goForward();
+    expect((await settled(page)).scene).toBe('dca');
 });
 
-test('resizing and rotating keep the points inside their window', async ({ page, isMobile }) => {
+test('the gauge takes input during the flip', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Checked once, on desktop');
+    await page.goto('/?hero=phone#/left');
+    await page
+        .getByRole('navigation', { name: NAV.label, exact: true })
+        .getByRole('link', { name: NAV.short.convert })
+        .click();
+    const sats = page.locator('#convert-sats');
+    await sats.fill('777');
+    await expect(page.locator('#tool-result')).toHaveText(/^777 sats = /);
+    expect((await settled(page)).summary).toBe('sats=777;perDot=1;lit=777');
+});
+
+test('resizing and rotating redraw the gauge at its window size', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Viewport sweep runs once, on desktop');
     await page.goto('/?hero=phone#/dca');
-    await waitForStage(page);
     for (const [width, height] of [
         [390, 844],
         [844, 390],
@@ -179,24 +194,20 @@ test('resizing and rotating keep the points inside their window', async ({ page,
         [360, 780],
     ] as const) {
         await page.setViewportSize({ width, height });
-        await settled(page, true);
+        await settled(page);
         await expect
             .poll(() =>
                 page.evaluate(() => {
-                    const plot = document.querySelector('#scene-plot')?.getBoundingClientRect();
-                    const sent = (document.querySelector<HTMLElement>('#stage')?.dataset.plotRect ?? '').split(',');
-                    if (!plot) return 'no plot';
-                    const want = [plot.left, plot.top + window.scrollY, plot.width, plot.height].map(Math.round);
-                    return want.every((value, i) => Math.abs(value - Number(sent[i])) <= 1)
-                        ? 'aligned'
-                        : `${want} vs ${sent}`;
+                    const plot = document.querySelector<HTMLElement>('#scene-plot');
+                    const box = plot?.querySelector('svg')?.getAttribute('viewBox');
+                    return plot ? `${box}` === `0 0 ${plot.clientWidth} ${plot.clientHeight}` : false;
                 }),
             )
-            .toBe('aligned');
+            .toBe(true);
     }
 });
 
-test('after the GPU context is lost and restored, the stage draws the right scene again', async ({
+test('after the GPU context is lost and restored, the body draws again and the gauge never noticed', async ({
     page,
     isMobile,
 }) => {
@@ -204,27 +215,21 @@ test('after the GPU context is lost and restored, the stage draws the right scen
     const found = watch(page);
     await page.goto('/?hero=phone#/convert');
     await waitForStage(page);
-    await settled(page, true);
+    await settled(page);
     await page.evaluate(() => (window as unknown as { __stage: { loseContext(): void } }).__stage.loseContext());
     await page.waitForTimeout(1_000);
     const before = await frames(page);
     await page.locator('#convert-sats').fill('777');
     await expect.poll(() => frames(page), { timeout: 10_000 }).toBeGreaterThan(before + 5);
-    const state = await settled(page, true);
-    expect(state.summary).toBe('sats=777;perDot=1;lit=777');
+    expect((await settled(page)).summary).toBe('sats=777;perDot=1;lit=777');
     expect(real(found)).toEqual([]);
 });
 
-test('home previews take turns re-forming through the one stage', async ({ page, isMobile }) => {
-    test.skip(isMobile, 'Checked once, on desktop');
-    await page.goto('/?hero=phone');
-    await waitForStage(page);
-    const live = () =>
-        page.evaluate(() => document.querySelector<HTMLElement>('.tile__preview[data-live]')?.dataset.preview ?? '');
-    await expect.poll(live, { timeout: 10_000 }).not.toBe('');
-    const first = await live();
-    await expect.poll(live, { timeout: 12_000 }).not.toBe(first);
-    await expect(page.locator('.tile__preview[data-live]')).toHaveCount(1);
+test('home tiles each carry a solid-ink drawing of their gauge, on the plain tier too', async ({ page }) => {
+    await page.goto('/?hero=plain');
+    await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(5);
+    await expect(page.locator('[data-preview="dca"] .dca-chart__line--value')).toHaveAttribute('points', /\d/);
+    await expect(page.locator('[data-preview="power"] .g-col')).toHaveCount(2);
 });
 
 test('the plain-tier DCA chart is a real SVG whose end point and label match the answer', async ({ page }) => {
@@ -234,24 +239,22 @@ test('the plain-tier DCA chart is a real SVG whose end point and label match the
     const chart = page.locator('#scene-plot .dca-chart');
     await expect(chart).toHaveAttribute('aria-label', /^Line chart\./);
     for (const line of ['lump', 'invested', 'value'])
-        await expect(chart.locator(`.dca-chart__line--${line}`)).toHaveAttribute(
+        await expect(chart.locator(`polyline.dca-chart__line--${line}`)).toHaveAttribute(
             'points',
             /^[\d.]+,[\d.]+( [\d.]+,[\d.]+){50,}$/,
         );
-    await expect(page.locator('#scene-plot .guide-label--btc')).toHaveText(figure);
-    const years = await page.locator('#scene-plot .guide-label--middle').allTextContents();
+    await expect(page.locator('#scene-plot .g-end')).toHaveText(figure);
+    const years = await page.locator('#scene-plot .dca-chart__year').allTextContents();
     expect(years).toEqual(['2021', '2022', '2023', '2024', '2025', '2026']);
     const end = await page.evaluate(() => {
-        const line = document.querySelector<SVGPolylineElement>('.dca-chart__line--value');
-        const svg = line?.ownerSVGElement;
-        const last = line?.points.getItem(line.points.numberOfItems - 1);
-        if (!line || !svg || !last) return null;
-        const matrix = svg.getScreenCTM();
-        const point = new DOMPoint(last.x, last.y).matrixTransform(matrix ?? undefined);
-        const label = document.querySelector('.guide-label--btc')?.getBoundingClientRect();
-        return { x: point.x, y: point.y, label: label ? { right: label.right, bottom: label.bottom } : null };
+        const dot = document.querySelector<SVGCircleElement>('#scene-plot .g-dot--btc')?.getBoundingClientRect();
+        const label = document.querySelector('#scene-plot .g-end')?.getBoundingClientRect();
+        const plot = document.querySelector('#scene-plot')?.getBoundingClientRect();
+        return dot && label && plot ? { dot, label, plot } : null;
     });
-    expect(end?.label).not.toBeNull();
-    expect(Math.abs((end?.label?.right ?? 0) - (end?.x ?? 0))).toBeLessThan(2);
-    expect((end?.label?.bottom ?? 0) <= (end?.y ?? 0)).toBe(true);
+    expect(end).not.toBeNull();
+    const centre = (end?.dot.left ?? 0) + (end?.dot.width ?? 0) / 2;
+    expect(Math.abs((end?.label.right ?? 0) - centre)).toBeLessThan(3);
+    expect(end?.label.bottom ?? 0).toBeLessThanOrEqual((end?.dot.top ?? 0) + 1);
+    expect(end?.dot.right ?? 0).toBeLessThanOrEqual((end?.plot.right ?? 0) + 1);
 });

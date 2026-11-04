@@ -4,7 +4,7 @@
     align-content: start;
     min-width: 0;
     padding-top: var(--space-m);
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--edge);
 }
 
 .details__title {
@@ -35,11 +35,11 @@
 }
 
 .stat + .stat {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--edge);
 }
 
 .stat dt {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-size: var(--step-small);
 }
 
@@ -69,14 +69,14 @@
 .note-line,
 .source-line,
 .privacy-line {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-size: var(--step-small);
     line-height: 1.5;
 }
 
 .note-line {
     padding-left: 0.75rem;
-    border-left: 2px solid var(--line);
+    border-left: 2px solid var(--edge);
 }
 
 .note-line[hidden] {
@@ -85,12 +85,12 @@
 
 .source-line a {
     text-decoration: underline;
-    text-decoration-color: var(--muted);
+    text-decoration-color: var(--ink-dim);
     text-underline-offset: 0.2em;
 }
 
 .formula {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-family: var(--font-mono);
     font-size: 0.8125rem;
     line-height: 1.55;

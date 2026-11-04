@@ -26,8 +26,11 @@ describe('renderHome', () => {
         }
     });
 
-    it('opens with one headline and no hero stage', () => {
+    it('opens with one headline on the overview plate, every tile a plate, and a print control', () => {
         const markup = renderHome().value;
+        expect(markup).toContain('class="overview" aria-labelledby="home-heading" data-plate');
+        expect(markup.match(/class="tile" href="[^"]+" data-plate/g)).toHaveLength(TOOL_IDS.length);
+        expect(markup).toContain('data-share="print"');
         expect(markup.match(/<h1/g)).toHaveLength(1);
         expect(markup).toContain(HOME.headline);
         expect(markup).not.toContain('hero');
@@ -53,10 +56,22 @@ describe('renderToolPage', () => {
         }
     });
 
-    it('renders share actions disabled until there is an answer to share', () => {
-        const buttons = [...renderToolPage('power').value.matchAll(/<button[^>]*data-share[^>]*>/g)];
-        expect(buttons).toHaveLength(3);
+    it('renders print, download and post disabled until there is an answer to print', () => {
+        const markup = renderToolPage('power').value;
+        const buttons = [...markup.matchAll(/<button[^>]*data-share="(print|download)"[^>]*>/g)];
+        expect(buttons.map(([, kind]) => kind)).toEqual(['print', 'download']);
         for (const [button] of buttons) expect(button).toContain('disabled');
+        expect(markup).toMatch(/<a [^>]*data-share-post[^>]*aria-disabled="true"/);
+    });
+
+    it('mounts every gauge as one opaque plate on a still mount, with its details on a plate below', () => {
+        for (const id of TOOL_IDS) {
+            const markup = renderToolPage(id).value;
+            expect(markup).toContain('<div class="mount" data-plate>');
+            expect(markup.indexOf('class="gauge"')).toBeGreaterThan(markup.indexOf('class="mount"'));
+            expect(markup).toContain('class="tool__below" data-plate');
+            expect(markup).toContain(`Gauge 0${TOOL_IDS.indexOf(id) + 1}`);
+        }
     });
 
     it('gives every calculator one scene window: a plot the stage paints, a caption and a callout slot', () => {

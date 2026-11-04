@@ -5,7 +5,7 @@
 }
 
 .convert-ref {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-family: var(--font-mono);
     font-size: var(--step-small);
     font-variant-numeric: tabular-nums;

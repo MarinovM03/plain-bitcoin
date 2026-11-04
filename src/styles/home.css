@@ -1,111 +1,95 @@
 .home {
     display: grid;
-    gap: var(--space-m);
-    padding-top: var(--space-m);
+    gap: 0.625rem;
+    padding-top: 0.625rem;
 }
 
-.intro {
+/* The overview face: the product sentence, in the instrument's own voice, and a print of today's reading. */
+.overview {
     display: grid;
-    gap: 0.75rem;
-    max-width: 44rem;
-    position: relative;
-    isolation: isolate;
-    padding: 0.5rem 0 0.25rem;
+    gap: 0.5rem;
+    padding: 1rem 1rem 0.875rem;
+    transform-origin: 50% 0;
 }
 
-.intro::before {
-    content: "";
-    position: absolute;
-    inset: -3rem 0 -3rem -40vw;
-    z-index: -1;
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--ink) 92%, transparent) 62%, transparent);
-    pointer-events: none;
-}
-
-.intro__heading {
+.overview__heading {
     font-family: var(--font-display);
     font-weight: 600;
     font-size: var(--step-display);
-    line-height: 0.98;
-    letter-spacing: -0.04em;
+    line-height: 1;
+    letter-spacing: -0.035em;
 }
 
-.intro__lead {
-    max-width: 38ch;
-    color: var(--muted);
-    font-size: var(--step-lead);
+.overview__lead {
+    max-width: 44ch;
+    color: var(--ink-dim);
+    font-size: var(--step-body);
     line-height: 1.45;
+}
+
+.overview__print {
+    padding-top: 0.25rem;
+}
+
+.overview__print .share-bar {
+    max-width: 26rem;
 }
 
 .tiles__grid {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.625rem;
 }
 
+/* Each gauge, mounted small: one live reading and the same solid-ink drawing as its face. */
 .tile {
     position: relative;
     display: grid;
-    grid-template-columns: 6.5rem minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 6.75rem;
     grid-template-areas:
-        "preview figure"
-        "preview text";
+        "kicker preview"
+        "figure preview"
+        "text preview";
     align-content: center;
-    column-gap: 1rem;
-    row-gap: 0.25rem;
-    min-height: 7.5rem;
-    padding: 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    overflow: hidden;
-    isolation: isolate;
+    column-gap: 0.875rem;
+    row-gap: 0.125rem;
+    min-height: 6.25rem;
+    padding: 0.625rem 0.75rem;
+    transform-origin: 50% 0;
     transition: border-color var(--duration) var(--ease);
 }
 
-/* Glass sits behind the words only, so the preview is a clear window onto the field and the stage drawn in it. */
-.tile::before {
-    content: "";
-    z-index: -1;
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    margin: -0.75rem -0.75rem -0.75rem -0.5rem;
-    border-left: 1px solid var(--line);
+.tile__kicker {
+    grid-area: kicker;
+    font-size: 0.625rem;
 }
 
 .tile__preview {
     grid-area: preview;
+    position: relative;
     align-self: stretch;
-    min-height: 6rem;
-    border-radius: calc(var(--radius) - 6px);
+    min-height: 4.5rem;
 }
 
-.tile__preview > svg {
+.tile__preview > .gauge-svg {
     display: block;
     width: 100%;
     height: 100%;
-    transition: opacity 300ms var(--ease);
-}
-
-.tile__preview[data-live] > svg {
-    opacity: 0;
 }
 
 .tile__figure {
     grid-area: figure;
-    align-self: end;
-    justify-self: start;
     color: var(--btc);
     font-family: var(--font-mono);
-    font-size: var(--step-tiny);
+    font-size: var(--step-small);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.02em;
+    line-height: 1.3;
 }
 
 .tile__text {
     grid-area: text;
     display: grid;
     gap: 0.125rem;
-    align-content: start;
 }
 
 .tile__name {
@@ -117,34 +101,15 @@
 }
 
 .tile__question {
-    color: var(--muted);
+    display: none;
+    color: var(--ink-dim);
     font-size: var(--step-small);
     line-height: 1.35;
 }
 
-.tiles__item--left .tile {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-        "preview"
-        "figure"
-        "text";
-}
-
-.tiles__item--left .tile__preview {
-    height: 8.5rem;
-}
-
-.tiles__item--left .tile::before {
-    grid-column: 1;
-    grid-row: 2 / span 2;
-    margin: 0 -0.75rem -0.75rem;
-    border-top: 1px solid var(--line);
-    border-left: 0;
-}
-
 @media (hover: hover) {
     .tile:hover {
-        border-color: color-mix(in srgb, var(--btc) 70%, var(--line));
+        border-color: color-mix(in srgb, var(--btc) 70%, var(--edge));
     }
 }
 
@@ -156,52 +121,62 @@
     .tiles__item--left {
         grid-column: 1 / -1;
     }
+
+    .tile__question {
+        display: block;
+    }
 }
 
 @media (min-width: 64rem) {
     .home {
-        gap: var(--space-l);
-        padding-top: var(--space-l);
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+    }
+
+    .overview {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        column-gap: 2rem;
+        padding: 1.5rem 1.75rem;
+    }
+
+    .overview__kicker,
+    .overview__heading,
+    .overview__lead {
+        grid-column: 1;
+    }
+
+    .overview__print {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+        align-self: end;
     }
 
     .tiles__grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        grid-auto-rows: minmax(15rem, auto);
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .tiles__item--left {
-        grid-column: span 2;
-        grid-row: span 2;
+        grid-column: auto;
     }
 
     .tile {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) auto auto;
+        grid-template-rows: auto minmax(0, 1fr) auto auto;
         grid-template-areas:
+            "kicker"
             "preview"
             "figure"
             "text";
         height: 100%;
-        padding: 1rem;
+        min-height: 18rem;
+        padding: 0.875rem 1rem 1rem;
+        row-gap: 0.375rem;
     }
 
-    .tile::before,
-    .tiles__item--left .tile::before {
-        grid-column: 1;
-        grid-row: 2 / span 2;
-        margin: 0 -1rem -1rem;
-        border-top: 1px solid var(--line);
-        border-left: 0;
-    }
-
-    .tile__preview,
-    .tiles__item--left .tile__preview {
-        height: auto;
-        min-height: 7rem;
-    }
-
-    .tiles__item--left .tile__name {
-        font-size: var(--step-title);
+    .tile__preview {
+        min-height: 7.5rem;
+        margin-block: 0.25rem;
     }
 }
 
@@ -210,17 +185,6 @@
     gap: 0.5rem;
     max-width: var(--measure);
     padding: var(--space-m);
-    border-radius: var(--radius);
-    background: color-mix(in srgb, var(--ink) 88%, transparent);
-}
-
-.cautions__heading {
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: var(--step-tiny);
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
 }
 
 .cautions__list {
@@ -231,6 +195,6 @@
 .cautions__item {
     padding-left: 0.75rem;
     border-left: 2px solid var(--btc);
-    color: var(--paper);
+    color: var(--ink);
     font-size: var(--step-small);
 }

@@ -3,16 +3,7 @@
     gap: 0.25rem;
     min-width: 0;
     padding-top: 0.625rem;
-    border-top: 1px solid var(--line);
-}
-
-.result__label {
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    border-top: 1px solid var(--edge);
 }
 
 .result__figure {
@@ -32,7 +23,7 @@
 }
 
 .result__unit {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-size: 0.45em;
     letter-spacing: 0.04em;
 }
@@ -48,7 +39,7 @@
 }
 
 .result__empty {
-    color: var(--muted);
+    color: var(--ink-dim);
 }
 
 .result__line {
@@ -56,7 +47,7 @@
 }
 
 .result__detail {
-    color: var(--muted);
+    color: var(--ink-dim);
     font-size: var(--step-small);
     line-height: 1.4;
 }
@@ -67,39 +58,42 @@
 
 .share {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.375rem;
 }
 
-.share__actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 1.25rem;
+.share__note {
+    color: var(--ink-dim);
+    font-size: var(--step-tiny);
 }
 
+/* Print, download, post: the printer is the first control, and it carries a little paper slot. */
 .share-bar {
     display: grid;
-    flex: 1 1 20rem;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 0.5rem;
-    max-width: 28rem;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.375rem;
+    max-width: 30rem;
 }
 
 .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4375rem;
     min-height: var(--tap);
     padding: 0 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--paper);
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-control);
+    background: var(--well);
+    color: var(--ink);
     font: 600 var(--step-small) / 1.2 var(--font-body);
+    white-space: nowrap;
     cursor: pointer;
 }
 
 .button--primary {
     border-color: var(--btc);
     background: var(--btc);
-    color: var(--ink);
+    color: var(--void);
 }
 
 .button--block {
@@ -108,37 +102,35 @@
     font-size: var(--step-body);
 }
 
-.button:disabled {
-    border-color: var(--line);
+.button:disabled,
+.button[aria-disabled="true"] {
+    border-color: var(--edge);
     background: transparent;
-    color: var(--muted);
+    color: var(--ink-dim);
     cursor: not-allowed;
 }
 
-@media (hover: hover) {
-    .button:not(:disabled):hover {
-        border-color: var(--paper);
-    }
-}
-
-.post-link {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: 0.375rem;
-    min-height: var(--tap);
-    color: var(--paper);
-    font-size: var(--step-small);
-    font-weight: 600;
-    text-decoration: underline;
-    text-decoration-color: var(--muted);
-    text-underline-offset: 0.2em;
-}
-
-.post-link[aria-disabled="true"] {
-    color: var(--muted);
-    text-decoration: none;
+.button[aria-disabled="true"] {
     pointer-events: none;
+}
+
+.share-bar__slot {
+    flex: none;
+    width: 0.875rem;
+    height: 0.3125rem;
+    border-radius: 1px;
+    background: var(--void);
+    box-shadow: inset 0 1px 0 #000;
+}
+
+.button:disabled .share-bar__slot {
+    background: var(--edge);
+}
+
+@media (hover: hover) {
+    .button:not(:disabled):not([aria-disabled="true"]):hover {
+        border-color: var(--ink);
+    }
 }
 
 @media (orientation: landscape) and (max-height: 32rem) {
