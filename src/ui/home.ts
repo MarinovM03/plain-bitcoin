@@ -62,7 +62,7 @@ async function defaults(): Promise<{ power: SceneData & { id: 'power' }; dca: Sc
         import('../model/power.ts'),
         import('../model/dca.ts'),
         import('../tools/dca/marks.ts'),
-        import('../data/prices/daily-gbp.json'),
+        import('../data/prices/daily-gbp.json', { with: { type: 'json' } }),
     ]);
     const power = purchasingPower(1000, '2015-01', powerData('GBP'));
     const plan = dca({ amount: 50, frequency: 'weekly', start: '2020-01-01', feePercent: 0 }, daily.default);
