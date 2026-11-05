@@ -1,6 +1,6 @@
 /*
- * The body: weather behind and around the plates. Until the canvas is drawing (and for good on the plain tier) the
- * same family stands in as CSS: dim isobar rings around two pressure centres over deep smoke.
+ * The moving background around the plates. Until the canvas is drawing (and for good on the plain tier) the same
+ * continuous-tone family stands in as still CSS: soft cool masses over the deep ground. No lines, no dots.
  */
 .stage {
     position: fixed;
@@ -9,17 +9,9 @@
     overflow: hidden;
     pointer-events: none;
     background:
-        repeating-radial-gradient(
-            circle at 78% 18%,
-            transparent 0 46px,
-            color-mix(in srgb, var(--isobar) 70%, transparent) 46px 47px
-        ),
-        repeating-radial-gradient(
-            ellipse at 12% 88%,
-            transparent 0 58px,
-            color-mix(in srgb, var(--isobar) 55%, transparent) 58px 59px
-        ),
-        radial-gradient(ellipse 70% 55% at 70% 20%, var(--smoke), transparent 72%), var(--void);
+        radial-gradient(ellipse 70% 55% at 78% 16%, var(--weather-mass), transparent 72%),
+        radial-gradient(ellipse 60% 50% at 12% 86%, var(--weather-teal), transparent 70%),
+        linear-gradient(170deg, var(--weather-deep), var(--void) 70%);
 }
 
 @supports (height: 100lvh) {
@@ -42,8 +34,6 @@
     opacity: 1;
 }
 
-.bezel,
-main,
 .footer {
     position: relative;
     z-index: 1;

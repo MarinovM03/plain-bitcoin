@@ -9,7 +9,9 @@ const BUDGETS = {
     css: 15 * KB,
     fonts: 80 * KB,
     stage: 170 * KB,
-    postcard: 30 * KB,
+    scene: 30 * KB,
+    homeScene: 35 * KB,
+    postcard: 20 * KB,
 };
 
 function gzipSize(path) {
@@ -23,8 +25,12 @@ const initial = [
 const styles = [...html.matchAll(/<link rel="stylesheet"[^>]*href="\/([^"]+\.css)"/g)].map(([, path]) => path);
 const assets = readdirSync(new URL('assets/', dist));
 const fonts = readdirSync(new URL('fonts/', dist)).filter((name) => name.endsWith('.woff2'));
+// The stage as it loads by default: the page-side driver, the worker and the worker's shared chunks.
 const stage = assets.filter((name) => /^(stage|worker)-.+\.js$/.test(name));
-const gauges = assets.filter((name) => /^(gauge-|paint-).+\.js$/.test(name));
+// Without OffscreenCanvas the same engine runs on the page instead; it is reported, never loaded with the worker.
+const direct = assets.filter((name) => /^engine-.+\.js$/.test(name));
+const scenes = assets.filter((name) => /^scene-(home|left|power|convert|dca|address)-.+\.js$/.test(name));
+const readouts = assets.filter((name) => /^readout-.+\.js$/.test(name));
 const postcard = assets.filter((name) => /^postcard-.+\.js$/.test(name));
 
 const sum = (paths) => paths.reduce((total, path) => total + gzipSize(path), 0);
@@ -37,11 +43,22 @@ const rows = [
         fonts.reduce((total, name) => total + statSync(new URL(`fonts/${name}`, dist)).size, 0),
         BUDGETS.fonts,
     ],
-    ['Stage and worker: the body (gzip)', sum(inAssets(stage)), BUDGETS.stage],
+    ['Stage: driver, worker, renderer, weather, pointer mapping (gzip)', sum(inAssets(stage)), BUDGETS.stage],
+    [
+        'Stage without a worker: driver and page-side engine (gzip)',
+        sum(inAssets([...stage.filter((n) => n.startsWith('stage-')), ...direct])),
+        BUDGETS.stage,
+    ],
+    ...scenes.map((name) => [
+        `Scene ${name.replace(/^scene-(\w+)-.+$/, '$1')}, loaded only on its route (gzip)`,
+        gzipSize(`assets/${name}`),
+        name.startsWith('scene-home-') ? BUDGETS.homeScene : BUDGETS.scene,
+    ]),
     ['Postcard printer, loaded on first share intent (gzip)', sum(inAssets(postcard)), BUDGETS.postcard],
 ];
 
-let failed = initial.length === 0 || styles.length === 0 || stage.length !== 2 || postcard.length === 0;
+let failed =
+    initial.length === 0 || styles.length === 0 || stage.length < 2 || scenes.length !== 6 || postcard.length === 0;
 if (initial.some((path) => /postcard-/.test(path))) {
     console.error('The postcard printer must not load with the page.');
     failed = true;
@@ -51,7 +68,7 @@ for (const [label, size, limit] of rows) {
     failed ||= !ok;
     console.log(`${ok ? 'ok  ' : 'OVER'} ${label}: ${(size / KB).toFixed(2)} kB of ${limit / KB} kB`);
 }
-for (const name of [...stage, ...postcard, ...gauges]) {
+for (const name of [...stage, ...direct, ...postcard, ...readouts]) {
     console.log(`     ${name.replace(/-[\w-]{8}\.js$/, '')}: ${(gzipSize(`assets/${name}`) / KB).toFixed(2)} kB`);
 }
 if (failed) {

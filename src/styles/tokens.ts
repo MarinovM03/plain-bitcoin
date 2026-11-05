@@ -1,19 +1,22 @@
 /**
- * Two families that never mix. The weather (the body behind the plates) uses `void`, `smoke`, `isobar` and
- * `isobarIndex` only, and never rises above WEATHER_CEILING in relative luminance outside a real block pulse.
- * The readout (gauges, graphs, postcards) uses solid ink on opaque plates: `ink`, `inkDim`, `inkCool` and `btc`.
+ * Two families that never mix. The weather (the moving background around the plates) is continuous tone in
+ * `void` and the four `weather*` tokens only, and never rises above WEATHER_CEILING in relative luminance outside a
+ * real block pulse. The readout (scenes, graphs, postcards) is solid ink and lit solid objects on opaque plates:
+ * `ink`, `inkDim`, `inkCool`, `inkWarm` and `btc`.
  */
 export const TOKENS = {
     void: '#05070a',
-    smoke: '#13212f',
-    isobar: '#3d4f61',
-    isobarIndex: '#4d6377',
+    weatherDeep: '#0b1622',
+    weatherMass: '#1b3350',
+    weatherTeal: '#163c40',
+    weatherCrest: '#24465e',
     plate: '#0c1016',
     well: '#151b23',
     edge: '#2a3441',
     ink: '#eef2f6',
     inkDim: '#9ba6b3',
     inkCool: '#86bde8',
+    inkWarm: '#e8dfcf',
     btc: '#f7931a',
 
     fontBody: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
@@ -40,11 +43,19 @@ export const TOKENS = {
     spaceL: '2rem',
     spaceXl: '3.5rem',
     duration: '160ms',
-    flip: '320ms',
     ease: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
 } as const;
 
 export type TokenName = keyof typeof TOKENS;
 
 /** The weather never gets brighter than this, outside a real block pulse: it can never compete with a readout. */
-export const WEATHER_CEILING = 0.12;
+export const WEATHER_CEILING = 0.1;
+
+/** The weather family, in the order the shader blends it: ground, deep, two cool masses, the brightest crest. */
+export const WEATHER = {
+    void: TOKENS.void,
+    deep: TOKENS.weatherDeep,
+    mass: TOKENS.weatherMass,
+    teal: TOKENS.weatherTeal,
+    crest: TOKENS.weatherCrest,
+} as const;

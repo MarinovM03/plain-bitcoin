@@ -1,4 +1,7 @@
-export const MAX_PLATES = 12;
+export const MAX_PLATES = 16;
+export const MAX_SHADOWS = 6;
+/** CSS px per field unit: the size of one soft mass of the background. */
+export const FIELD_PX = 420;
 
 export const FULLSCREEN_VERTEX = `
 attribute vec2 aCorner;
@@ -15,10 +18,13 @@ precision mediump float;
 `;
 
 /**
- * Pass 1, at a low resolution (one texel per few CSS pixels): a domain-warped fbm that never stops drifting. Two warp
- * octaves move in different directions at different speeds, over a slow advection, so it never reads as a texture
- * sliding past. Near a mounted plate the field is pushed outward, so the isobars wrap around the instrument.
- * r = front field (the isobars), g = back smoke (larger, slower: depth), b = distance to the nearest plate / 256.
+ * Background pass 1, at a low internal resolution (one texel per few CSS px): a soft domain-warped fbm. Two warp
+ * octaves travel in different directions at different speeds over a slow advection, so the field breathes and never
+ * reads as a texture sliding past or a loop. Continuous tone only: no lines, contours, dots or cells come out of it.
+ * r = density, g = which cool family the mass leans to (ink blue or teal).
+ *
+ * Rows are written top-down in CSS space (row 0 of the texture is the bottom of the screen) and pass 2 reads them
+ * back the same way, so a point on the field and the pixel showing it can never be mirrored.
  */
 export const FIELD_FRAGMENT = `${PRECISION}
 uniform vec2 uCells;
@@ -27,10 +33,6 @@ uniform float uTime;
 uniform float uSeed;
 uniform float uWarp;
 uniform float uDrift;
-uniform float uScroll;
-uniform vec3 uLight;
-uniform vec4 uPlates[${MAX_PLATES}];
-uniform float uPlateCount;
 
 float hash(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -41,7 +43,7 @@ float hash(vec2 p) {
 float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
+    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
@@ -57,65 +59,40 @@ float fbm(vec2 p) {
 }
 
 void main() {
-    vec2 cell = vec2(floor(gl_FragCoord.x), uCells.y - 1.0 - floor(gl_FragCoord.y));
-    vec2 css = (cell + 0.5) * uCell;
-    vec2 doc = css + vec2(0.0, uScroll);
-
-    float nearest = 4096.0;
-    vec2 normal = vec2(0.0);
-    for (int i = 0; i < ${MAX_PLATES}; i++) {
-        if (float(i) >= uPlateCount) break;
-        vec4 plate = uPlates[i];
-        vec2 extent = plate.zw * 0.5;
-        vec2 rel = doc - (plate.xy + extent);
-        vec2 q = abs(rel) - extent;
-        vec2 outside = max(q, 0.0);
-        float d = length(outside) + min(max(q.x, q.y), 0.0);
-        if (d < nearest) {
-            nearest = d;
-            normal = length(outside) > 0.0
-                ? sign(rel) * outside / length(outside)
-                : (q.x > q.y ? vec2(sign(rel.x), 0.0) : vec2(0.0, sign(rel.y)));
-        }
-    }
-    vec2 flowed = css - normal * 54.0 * exp(-max(nearest, 0.0) / 80.0);
-    vec2 toLight = uLight.xy - flowed;
-    flowed += toLight * 0.16 * uLight.z * exp(-dot(toLight, toLight) / 52000.0);
-
+    vec2 css = vec2(gl_FragCoord.x, uCells.y - gl_FragCoord.y) * uCell;
     float t = uTime * uDrift;
-    vec2 p = (flowed + vec2(0.0, uScroll * 0.22)) / 300.0 + vec2(uSeed, uSeed * 0.61) + vec2(t, -0.42 * t);
-    vec2 q = vec2(fbm(p + vec2(0.9 * t, -0.6 * t)), fbm(p + vec2(5.2 - 0.7 * t, 1.3 + 0.8 * t)));
-    vec2 r = vec2(fbm(p + uWarp * q + vec2(1.7 + 0.45 * t, 9.2)), fbm(p + uWarp * q + vec2(8.3, 2.8 - 0.38 * t)));
-    float front = fbm(p + (0.8 + 0.3 * uWarp) * r);
-
-    vec2 b = (flowed + vec2(0.0, uScroll * 0.08)) / 620.0 + vec2(3.1 - uSeed * 0.43, 7.7) + vec2(0.35 * t, 0.12 * t);
-    vec2 bq = vec2(fbm(b + vec2(0.3 * t, 0.2 * t)), fbm(b + vec2(4.1, 1.9 - 0.25 * t)));
-    float back = fbm(b + 1.5 * bq);
-
-    gl_FragColor = vec4(front, back, clamp(max(nearest, 0.0) / 256.0, 0.0, 1.0), 1.0);
+    vec2 p = css / ${FIELD_PX.toFixed(1)} + vec2(uSeed, uSeed * 0.61) + vec2(t, -0.35 * t);
+    vec2 q = vec2(fbm(p + vec2(0.7 * t, -0.5 * t)), fbm(p + vec2(5.2 - 0.6 * t, 1.3 + 0.7 * t)));
+    vec2 r = vec2(fbm(p + uWarp * q + vec2(1.7 + 0.4 * t, 9.2)), fbm(p + uWarp * q + vec2(8.3, 2.8 - 0.33 * t)));
+    float density = fbm(p + uWarp * r);
+    float family = fbm(p * 0.5 + vec2(3.1 - 0.2 * t, 7.7 + 0.15 * t));
+    gl_FragColor = vec4(density, family, 0.0, 1.0);
 }`;
 
 /**
- * Pass 2, at the internal render resolution: isobar contours of the front field, a line every band and a brighter
- * index line every fifth, over a dim back smoke. Line width comes from the field's own gradient, so lines stay
- * thin however packed they get. Plates cast a soft contact shadow. Outside a real pulse nothing here can get brighter
- * than the isobar index colour; the pulse alone carries orange, as a front sweeping out from the block meter.
+ * Background pass 2, at the canvas resolution: the field upscaled smoothly and toned into the cool family, between
+ * the deep ground and the brightest crest token. Every colour here is a blend of weather tokens, so outside a real
+ * block pulse nothing can be brighter than the crest. Plates are filled with the exact plate colour (so a frame of
+ * scroll lag can never show weather inside one) and cast a soft shadow onto the field around them. The pulse alone
+ * carries orange: a soft bloom rolling out from the status line's block number.
  */
-export const CONTOUR_FRAGMENT = `${PRECISION}
+export const COMPOSITE_FRAGMENT = `${PRECISION}
 uniform sampler2D uField;
 uniform vec2 uCells;
 uniform float uCell;
 uniform vec2 uRes;
 uniform float uScale;
-uniform float uBands;
-uniform float uGlow;
+uniform float uContrast;
 uniform float uIntro;
 uniform vec3 uPulse;
-uniform vec3 uLight;
+uniform vec4 uPlates[${MAX_PLATES}];
+uniform float uPlateCount;
 uniform vec3 uVoid;
-uniform vec3 uSmoke;
-uniform vec3 uLine;
-uniform vec3 uIndex;
+uniform vec3 uDeep;
+uniform vec3 uMass;
+uniform vec3 uTeal;
+uniform vec3 uCrest;
+uniform vec3 uPlate;
 uniform vec3 uBtc;
 
 float grain(vec2 p) {
@@ -127,41 +104,123 @@ float grain(vec2 p) {
 void main() {
     vec2 dev = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
     vec2 css = dev / uScale;
-    vec2 uv = (css / uCell) / uCells;
-    vec2 texel = 1.0 / uCells;
-    vec4 field = texture2D(uField, uv);
-    float east = texture2D(uField, uv + vec2(texel.x, 0.0)).r - texture2D(uField, uv - vec2(texel.x, 0.0)).r;
-    float south = texture2D(uField, uv + vec2(0.0, texel.y)).r - texture2D(uField, uv - vec2(0.0, texel.y)).r;
-    float slope = length(vec2(east, south)) / (2.0 * uCell) * uBands;
 
-    float v = field.r * uBands;
-    float band = floor(v + 0.5);
-    float index = 1.0 - step(0.5, mod(band, 5.0));
-    float px = abs(fract(v + 0.5) - 0.5) / max(slope, 0.0008);
-    float width = mix(0.7, 1.15, index);
-    float soft = 0.8 / uScale;
-    float line = 1.0 - smoothstep(width - soft, width + soft, px);
-
-    float smoke = smoothstep(0.38, 0.86, field.g);
-    vec3 color = mix(uVoid, uSmoke, smoke * 0.95);
-
-    float pulse = 0.0;
-    if (uPulse.z >= 0.0) {
-        float reach = uPulse.z * length(uRes / uScale) * 1.2;
-        float d = distance(css, uPulse.xy) - reach;
-        pulse = exp(-(d * d) / 9800.0) * (1.0 - uPulse.z * uPulse.z);
+    float nearest = 4096.0;
+    for (int i = 0; i < ${MAX_PLATES}; i++) {
+        if (float(i) >= uPlateCount) break;
+        vec4 plate = uPlates[i];
+        vec2 extent = plate.zw * 0.5;
+        vec2 q = abs(css - (plate.xy + extent)) - extent + 8.0;
+        float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 8.0;
+        nearest = min(nearest, d);
     }
-    vec2 toLight = css - uLight.xy;
-    float light = uLight.z * exp(-dot(toLight, toLight) / 40000.0);
+    if (nearest <= 0.0) {
+        gl_FragColor = vec4(uPlate, 1.0);
+        return;
+    }
 
-    vec3 ink = mix(uLine, uIndex, index);
-    float strength = line * (0.62 + 0.38 * uGlow) * uIntro * (1.0 + 0.3 * light);
-    color = mix(color, ink, clamp(strength, 0.0, 1.0));
-    color = mix(color, uBtc, clamp(pulse * (0.18 + 0.82 * line), 0.0, 1.0));
+    vec2 uv = vec2(css.x / (uCell * uCells.x), 1.0 - css.y / (uCell * uCells.y));
+    vec4 field = texture2D(uField, uv);
+    float d = field.r;
+    vec3 mass = mix(uMass, uTeal, smoothstep(0.35, 0.7, field.g));
+    vec3 color = mix(uVoid, uDeep, smoothstep(0.18, 0.5, d));
+    color = mix(color, mass, smoothstep(0.42, 0.72, d) * uContrast);
+    color = mix(color, uCrest, smoothstep(0.6, 0.86, d) * uContrast * 0.9);
+    color = mix(uVoid, color, uIntro);
 
-    float plate = field.b * 256.0;
-    color *= 1.0 - 0.62 * exp(-plate / 22.0);
+    if (uPulse.z >= 0.0) {
+        float reach = uPulse.z * length(uRes / uScale) * 1.1;
+        float ring = distance(css, uPulse.xy) - reach;
+        float bloom = exp(-(ring * ring) / 16200.0) * (1.0 - uPulse.z) * (1.0 - uPulse.z);
+        color = mix(color, uBtc, clamp(bloom * (0.3 + 0.4 * d), 0.0, 1.0));
+    }
 
-    color += (grain(floor(dev)) - 0.5) * 0.006;
+    color *= 1.0 - 0.55 * exp(-nearest / 18.0);
+    color += (grain(floor(dev)) - 0.5) * 0.004;
+    gl_FragColor = vec4(max(color, 0.0), 1.0);
+}`;
+
+export const SOLID_VERTEX = `
+attribute vec3 aPos;
+attribute vec3 aNormal;
+attribute float aCell;
+uniform mat4 uViewProj;
+uniform mat4 uModel;
+uniform mat3 uNormalM;
+uniform float uFill;
+uniform float uVisible;
+varying vec3 vNormal;
+varying vec3 vWorld;
+varying float vFilled;
+void main() {
+    vFilled = (aCell >= 0.0 && aCell < uFill) ? 1.0 : 0.0;
+    vec3 p = aCell >= uVisible ? vec3(0.0) : aPos;
+    vec4 world = uModel * vec4(p, 1.0);
+    vWorld = world.xyz;
+    vNormal = uNormalM * aNormal;
+    gl_Position = uViewProj * world;
+}`;
+
+/**
+ * Solid parts: a cool sky and dark ground hemisphere, one warm key light, a soft rim and a little specular on the
+ * rounded edges, with a baked ambient occlusion that darkens toward the ground. Matte and calm, so the object reads
+ * as a made thing rather than a render. A hovered part lifts evenly in light, warmed toward orange.
+ */
+export const SOLID_FRAGMENT = `${PRECISION}
+uniform vec3 uColor;
+uniform vec3 uFillColor;
+uniform vec3 uEye;
+uniform vec3 uKey;
+uniform vec3 uSky;
+uniform vec3 uGround;
+uniform vec3 uBtc;
+uniform float uGroundY;
+uniform float uLift;
+uniform float uGlow;
+uniform float uOrtho;
+uniform vec3 uToward;
+varying vec3 vNormal;
+varying vec3 vWorld;
+varying float vFilled;
+void main() {
+    vec3 n = normalize(vNormal);
+    if (!gl_FrontFacing) n = -n;
+    vec3 base = mix(uColor, uFillColor, vFilled);
+    vec3 v = uOrtho > 0.5 ? uToward : normalize(uEye - vWorld);
+    vec3 ambient = mix(uGround, uSky, 0.5 + 0.5 * n.y);
+    float key = max(dot(n, uKey), 0.0);
+    float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+    vec3 h = normalize(uKey + v);
+    float spec = pow(max(dot(n, h), 0.0), 48.0) * 0.22;
+    float ao = mix(0.62, 1.0, smoothstep(0.0, 0.45, vWorld.y - uGroundY));
+    // A raised light floor keeps every face in its own ink: a shadowed orange stays orange, never brown.
+    vec3 light = vec3(0.4) + ambient * 0.42 + key * 0.5;
+    vec3 color = base * light * ao + spec + rim * 0.1 * uSky;
+    color += base * uGlow * 0.35;
+    color += uLift * (base * 0.26 + uBtc * 0.1 + uBtc * rim * 0.3);
     gl_FragColor = vec4(color, 1.0);
+}`;
+
+/**
+ * The table the object stands on: a pool of the well colour fading into the plate, so the scene's edges meet the
+ * plate with no seam, darkened under each object by a baked soft contact shadow.
+ */
+export const GROUND_FRAGMENT = `${PRECISION}
+uniform vec3 uWell;
+uniform vec3 uPlate;
+uniform vec4 uPool;
+uniform vec4 uShadows[${MAX_SHADOWS}];
+uniform float uShadowK[${MAX_SHADOWS}];
+varying vec3 vWorld;
+varying vec3 vNormal;
+varying float vFilled;
+void main() {
+    float r = length(vWorld.xz - uPool.xy) / uPool.z;
+    vec3 color = mix(uWell, uPlate, smoothstep(0.25, 1.0, r));
+    float shade = 0.0;
+    for (int i = 0; i < ${MAX_SHADOWS}; i++) {
+        vec2 q = (vWorld.xz - uShadows[i].xy) / max(uShadows[i].zw, vec2(0.0001));
+        shade = max(shade, uShadowK[i] * exp(-dot(q, q) * 2.4));
+    }
+    gl_FragColor = vec4(color * (1.0 - 0.7 * shade), 1.0);
 }`;

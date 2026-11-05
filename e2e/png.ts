@@ -92,3 +92,12 @@ export function near(a: readonly number[], b: readonly number[], tolerance = 6):
 export function postcardName(tool: string): RegExp {
     return new RegExp(String.raw`^plain-bitcoin-${tool}-\d{4}-\d{2}-\d{2}\.png$`);
 }
+
+/** WCAG relative luminance of an 8-bit RGB triple. */
+export function luminance([r, g, b]: readonly number[]): number {
+    const channel = (value = 0) => {
+        const c = value / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}

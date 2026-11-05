@@ -116,7 +116,7 @@ function patch(state: Painted, frame: Gauge): void {
 }
 
 /**
- * Draws a gauge into its element. The first paint shows the finished frame at once (the gauge flip is the motion);
+ * Draws a readout into its element. The first paint shows the finished frame at once (arriving never animates);
  * a new structure plays its build; the same structure morphs in place. Reduced motion never builds.
  */
 export function paintGauge(element: HTMLElement, frame: Gauge, reduced: boolean): void {

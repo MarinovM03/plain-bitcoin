@@ -1,8 +1,8 @@
-import { TOOL_IDS, type ToolId } from '../tools/index.ts';
+import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
 import { renderConvertDetail, renderConvertInputs, renderConvertMore } from './convert-view.ts';
-import { ADDRESS, CONVERT, FIELDS, GAUGE_LABEL, LEFT_PAGE, POWER, SCENE, TOOL_PAGE, TOOLS } from './copy.ts';
+import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, POWER, SCENE, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { moreOptions, noteLine, resultBlock, sceneWindow, shareSection, sourceLine } from './output.ts';
@@ -59,20 +59,17 @@ function calculator(id: CalculatorId): Calculator {
 
 function head(id: ToolId): SafeHtml {
     return html`<div class="tool__head">
-    <p class="tool__kicker">${GAUGE_LABEL(TOOL_IDS.indexOf(id) + 1, TOOLS[id].name)}</p>
     <h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>
     <p class="tool__question">${TOOLS[id].question}</p>
 </div>`;
 }
 
-/** One gauge face on the chassis: the mount stays put, the face inside it flips in on a change of mode. */
-function face(id: ToolId, window: SafeHtml, panel: SafeHtml, below: SafeHtml): SafeHtml {
+/** A tool page: one screen plate holding the scene and the answer side by side, and a plate below for the rest. */
+function screen(id: ToolId, scene: SafeHtml, panel: SafeHtml, below: SafeHtml): SafeHtml {
     return html`<article class="tool tool--${id}">
-    <div class="mount" data-plate>
-        <div class="gauge">
-            ${window}
-            ${panel}
-        </div>
+    <div class="tool__screen" data-plate>
+        ${scene}
+        ${panel}
     </div>
     <div class="tool__below" data-plate>${below}</div>
 </article>`;
@@ -81,7 +78,7 @@ function face(id: ToolId, window: SafeHtml, panel: SafeHtml, below: SafeHtml): S
 function renderCalculator(id: CalculatorId): SafeHtml {
     const address = id === 'address';
     const parts = calculator(id);
-    return face(
+    return screen(
         id,
         sceneWindow({ head: head(id), caption: parts.caption }),
         html`<form class="tool__panel tool__inputs" aria-label="${address ? TOOL_PAGE.addressLabel : TOOL_PAGE.inputsLabel}" novalidate>
@@ -119,7 +116,7 @@ function renderLeft(): SafeHtml {
             <dd id="left-${id}">${LEFT_PAGE.pending}</dd>
         </div>`,
     );
-    return face(
+    return screen(
         'left',
         sceneWindow({ head: head('left'), caption: SCENE.left }),
         html`<div class="tool__panel">

@@ -1,4 +1,4 @@
-import { SHARE, TOOL_PAGE } from './copy.ts';
+import { SCENE_PARTS_LABEL, SHARE, TOOL_PAGE } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
 export const EMPTY_FIGURE = '—';
@@ -13,15 +13,24 @@ export function resultBlock(options: { id: string; label: string; empty: string 
 </section>`;
 }
 
-/** The gauge's window: an opaque screen on the plate. Nothing of the body shows through it. */
-export function sceneWindow(options: { head: SafeHtml; caption: string }): SafeHtml {
+/**
+ * The scene: a title, the window the stage draws the tool's model into (with the SVG readout inside it for when
+ * the 3D stage is off), engraved tags laid over it, a caption, a callout for the part in hand, and the same parts as
+ * buttons for the keyboard. The window is the one place in a plate the stage shows through.
+ */
+export function sceneWindow(options: { head: SafeHtml | ''; caption: string }): SafeHtml {
     return html`<div class="scene">
     ${options.head}
-    <div id="scene-plot" class="scene__plot" aria-hidden="true"></div>
+    <div class="scene__window" data-scene-window>
+        <div id="scene-plot" class="scene__plot" aria-hidden="true"></div>
+        <div class="scene__tags" aria-hidden="true"></div>
+    </div>
     <div class="scene__foot">
         <p id="scene-caption" class="scene__caption">${options.caption}</p>
+        <p class="scene__about"></p>
         <p class="scene__callout" aria-live="polite" hidden></p>
     </div>
+    <div class="scene__parts" role="group" aria-label="${SCENE_PARTS_LABEL}"></div>
 </div>`;
 }
 
@@ -34,7 +43,7 @@ export function moreOptions(label: string, body: SafeHtml): SafeHtml {
 
 export function shareBar(): SafeHtml {
     return html`<div class="share-bar" role="group" aria-label="${SHARE.label}">
-    <button class="button button--primary share-bar__print" type="button" data-share="print" disabled><span class="share-bar__slot" aria-hidden="true"></span>${SHARE.print}</button>
+    <button class="button button--primary share-bar__print" type="button" data-share="print" disabled>${SHARE.print}</button>
     <button class="button" type="button" data-share="download" disabled>${SHARE.download}</button>
     <a class="button share-bar__post" href="https://x.com/intent/post" data-share-post target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">${SHARE.post} <span aria-hidden="true">↗</span></a>
 </div>`;

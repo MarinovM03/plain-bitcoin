@@ -7,22 +7,20 @@ export interface ChainState {
 }
 
 /**
- * What the body is set to at a moment. Every value comes from the chain state and the clock, or is a constant:
- * nothing here is random, and nothing here is ever drawn as a number on screen.
+ * What the background is set to at a moment. Every value comes from the chain state and the clock, or is a
+ * constant: nothing here is random, and nothing here is ever drawn as a number on screen.
  */
 export interface Weather {
-    /** The field's signature, from the block height: each block lays the isobars out differently. */
+    /** Where in the field the drift starts, from the block height: each block lays the masses out differently. */
     seed: number;
     /** 0 right after a block, building towards 1 as minutes pass without one. */
     tension: number;
-    /** Isobar lines per field unit: sparse and calm after a block, packed tight after a long wait. */
-    bands: number;
     /** How strongly the field folds over itself. */
     warp: number;
-    /** Drift speed, in field units per second. Always above zero: the body never stands still while seen. */
+    /** Drift speed, in field units per second. Always above zero: the background never stands still while seen. */
     drift: number;
-    /** Line brightness, 0..1 of the weather ceiling. */
-    glow: number;
+    /** How far the masses separate from the deep ground, 0..1 of the weather ceiling. */
+    contrast: number;
     minutes: number;
     estimated: boolean;
 }
@@ -39,23 +37,22 @@ export function minutesSince(blockTime: number | null, nowMs: number): number | 
 }
 
 export function tensionAt(minutes: number): number {
-    return 1 - Math.exp(-Math.max(0, minutes) / TENSION_MINUTES);
+    return 1 - Math.exp(-Math.max(0, Number.isFinite(minutes) ? minutes : UNKNOWN_MINUTES) / TENSION_MINUTES);
 }
 
-/** The field is shaped by these four, all from tension; exported so tests can sweep it. */
-export function moodAt(tension: number): Pick<Weather, 'bands' | 'warp' | 'drift' | 'glow'> {
+/** The field is shaped by these three, all from tension; exported so tests can sweep it. */
+export function moodAt(tension: number): Pick<Weather, 'warp' | 'drift' | 'contrast'> {
     const t = Number.isFinite(tension) ? Math.min(1, Math.max(0, tension)) : 0.5;
     return {
-        bands: 6 + 10 * t,
-        warp: 1.1 + 2.2 * t,
-        drift: 0.05 + 0.04 * t,
-        glow: 0.45 + 0.55 * t,
+        warp: 0.9 + 1.7 * t,
+        drift: 0.075 + 0.065 * t,
+        contrast: 0.5 + 0.5 * t,
     };
 }
 
 /**
- * The one mapping from the chain to the body. Pure: the same state and clock always give the same weather.
- * An estimated tip (no live reading) gets the neutral mood: the body never pretends to know a wait it does not.
+ * The one mapping from the chain to the background. Pure: the same state and clock always give the same weather.
+ * An estimated tip (no live reading) gets the neutral mood: it never pretends to know a wait it does not.
  */
 export function chainWeather(chain: ChainState | null, nowMs: number): Weather {
     const known = chain !== null && Number.isSafeInteger(chain.height) && chain.height >= 0;

@@ -15,21 +15,23 @@ describe('html', () => {
 });
 
 describe('renderHome', () => {
-    it('links every tool once, in order, each tile with a preview slot', () => {
+    it('links every tool once, in order, each tile tied to its miniature on the table', () => {
         const markup = renderHome().value;
         const hrefs = [...markup.matchAll(/class="tile" href="([^"]+)"/g)].map((match) => match[1]);
         expect(hrefs).toEqual(TOOL_IDS.map((id) => `#/${id}`));
         for (const id of TOOL_IDS) {
-            expect(markup).toContain(`data-preview="${id}"`);
+            expect(markup).toContain(`data-tile="${id}"`);
             expect(markup).toContain(TOOLS[id].question);
             expect(markup).toContain(escapeHtml(TOOLS[id].preview));
         }
     });
 
-    it('opens with one headline on the overview plate, every tile a plate, and a print control', () => {
+    it('opens with one headline on the overview plate, the diorama on its own plate, every tile a plate', () => {
         const markup = renderHome().value;
         expect(markup).toContain('class="overview" aria-labelledby="home-heading" data-plate');
-        expect(markup.match(/class="tile" href="[^"]+" data-plate/g)).toHaveLength(TOOL_IDS.length);
+        expect(markup).toMatch(/class="home__stage"[^>]*data-plate/);
+        expect(markup.indexOf('data-scene-window')).toBeGreaterThan(markup.indexOf('class="home__stage"'));
+        expect(markup.match(/class="tile" href="[^"]+" data-tile="[^"]+" data-plate/g)).toHaveLength(TOOL_IDS.length);
         expect(markup).toContain('data-share="print"');
         expect(markup.match(/<h1/g)).toHaveLength(1);
         expect(markup).toContain(HOME.headline);
@@ -64,21 +66,25 @@ describe('renderToolPage', () => {
         expect(markup).toMatch(/<a [^>]*data-share-post[^>]*aria-disabled="true"/);
     });
 
-    it('mounts every gauge as one opaque plate on a still mount, with its details on a plate below', () => {
+    it('puts every tool on one screen plate, scene beside the answer, with its details on a plate below', () => {
         for (const id of TOOL_IDS) {
             const markup = renderToolPage(id).value;
-            expect(markup).toContain('<div class="mount" data-plate>');
-            expect(markup.indexOf('class="gauge"')).toBeGreaterThan(markup.indexOf('class="mount"'));
+            expect(markup).toContain('<div class="tool__screen" data-plate>');
+            expect(markup.indexOf('data-scene-window')).toBeGreaterThan(markup.indexOf('class="tool__screen"'));
             expect(markup).toContain('class="tool__below" data-plate');
-            expect(markup).toContain(`Gauge 0${TOOL_IDS.indexOf(id) + 1}`);
+            for (const gone of ['class="mount"', 'class="gauge"', 'Gauge 0', 'bezel', 'knob'])
+                expect(markup).not.toContain(gone);
         }
     });
 
-    it('gives every calculator one scene window: a plot the stage paints, a caption and a callout slot', () => {
-        for (const id of ['power', 'convert', 'dca', 'address'] as const) {
+    it('gives every tool one scene window: the SVG readout, engraved tags, a caption, a callout and its parts', () => {
+        for (const id of TOOL_IDS) {
             const markup = renderToolPage(id).value;
+            expect(markup).toContain('<div class="scene__window" data-scene-window>');
             expect(markup).toContain('<div id="scene-plot" class="scene__plot" aria-hidden="true"></div>');
+            expect(markup).toContain('<div class="scene__tags" aria-hidden="true"></div>');
             expect(markup).toContain('class="scene__callout"');
+            expect(markup).toContain('class="scene__parts" role="group"');
         }
     });
 

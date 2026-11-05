@@ -6,7 +6,7 @@ export interface LoopState {
     quality: Quality;
     /** Something changed that has not been drawn yet: a new scene, a resize, a chain update. */
     dirty: boolean;
-    /** A pulse, the intro or the pointer bend is still moving. */
+    /** A pulse, the intro, a drag, a scene settling or a highlight easing is still moving. */
     animating: boolean;
     lost: boolean;
 }

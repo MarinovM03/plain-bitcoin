@@ -44,7 +44,7 @@ test('home shows the shell, the headline and every tool as a live tile, in order
     await expect(page.locator('[data-tile-figure="power"]')).toHaveText(/^£1,000 in 2015 → £[\d,]+ as bitcoin$/);
     await expect(page.locator('[data-tile-figure="dca"]')).toHaveText(/^£50 a week since 2020 → £[\d,]+$/);
     await expect(page.locator('[data-tile-figure="address"]')).toHaveText(HOME.addressFigure);
-    await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(TOOL_IDS.length);
+    await expect(page.locator('.home__stage #scene-plot > svg.gauge-svg')).toHaveCount(1);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
     for (const row of await page.locator('.tile').all()) {

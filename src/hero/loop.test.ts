@@ -13,9 +13,14 @@ describe('render loop gate', () => {
         expect(frameMode({ ...base, quality: 'lite' }, LITE)).toBe('ambient');
     });
 
-    it('raises to the active rate for a morph or a pulse, and never asks for 60 fps', () => {
+    it('raises to the active rate while a scene is turned, settles or pulses; ambient stays in the calm band', () => {
         expect(frameMode({ ...base, animating: true }, full)).toBe('active');
-        for (const settings of [full, TIER_SETTINGS.phone, LITE]) expect(settings.activeFps).toBeLessThanOrEqual(30);
+        expect(full.activeFps).toBeLessThanOrEqual(60);
+        for (const settings of [TIER_SETTINGS.phone, LITE]) expect(settings.activeFps).toBeLessThanOrEqual(30);
+        expect(full.ambientFps).toBeGreaterThanOrEqual(20);
+        expect(full.ambientFps).toBeLessThanOrEqual(30);
+        expect(TIER_SETTINGS.phone.ambientFps).toBeGreaterThanOrEqual(15);
+        expect(TIER_SETTINGS.phone.ambientFps).toBeLessThanOrEqual(24);
     });
 
     it('sleeps when the page is hidden, the context is lost or the canvas was given up', () => {

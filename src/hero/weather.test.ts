@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { FIELD_PX } from './shaders.ts';
 import { chainWeather, minutesSince, moodAt, UNKNOWN_MINUTES } from './weather.ts';
 
 const NOW = Date.UTC(2026, 10, 1, 12, 0);
@@ -7,7 +8,7 @@ const at = (minutes: number, estimated = false) =>
 
 describe('chainWeather', () => {
     it('is calm right after a block and builds tension monotonically from 1 to 25 minutes', () => {
-        const keys = ['tension', 'bands', 'warp', 'drift', 'glow'] as const;
+        const keys = ['tension', 'warp', 'drift', 'contrast'] as const;
         let previous = at(1);
         for (let minutes = 2; minutes <= 25; minutes += 1) {
             const next = at(minutes);
@@ -18,13 +19,14 @@ describe('chainWeather', () => {
         expect(at(1).tension).toBeLessThan(0.1);
         expect(at(25).tension).toBeGreaterThan(0.85);
         expect(at(240).tension).toBeLessThan(1);
-        expect(at(25).bands).toBeGreaterThan(at(1).bands * 2);
+        expect(at(25).warp).toBeGreaterThan(at(1).warp * 1.8);
+        expect(at(25).drift).toBeGreaterThan(at(1).drift * 1.5);
     });
 
-    it('always drifts: even the calmest body moves, so it reads as alive within two seconds', () => {
+    it('always drifts: even the calmest background moves, so it reads as alive within two seconds', () => {
         const calm = at(0);
-        // One field unit is about 300 CSS px, so this is at least 15 px a second of plain advection.
-        expect(calm.drift * 300 * 2).toBeGreaterThan(25);
+        // One field unit is FIELD_PX CSS px: plain advection alone moves the masses over 40 px in two seconds.
+        expect(calm.drift * FIELD_PX * 2).toBeGreaterThan(40);
         expect(moodAt(Number.NaN).drift).toBeGreaterThan(0);
     });
 

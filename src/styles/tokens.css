@@ -1,14 +1,16 @@
 :root {
     --void: #05070a;
-    --smoke: #13212f;
-    --isobar: #3d4f61;
-    --isobar-index: #4d6377;
+    --weather-deep: #0b1622;
+    --weather-mass: #1b3350;
+    --weather-teal: #163c40;
+    --weather-crest: #24465e;
     --plate: #0c1016;
     --well: #151b23;
     --edge: #2a3441;
     --ink: #eef2f6;
     --ink-dim: #9ba6b3;
     --ink-cool: #86bde8;
+    --ink-warm: #e8dfcf;
     --btc: #f7931a;
 
     --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -35,6 +37,5 @@
     --space-l: 2rem;
     --space-xl: 3.5rem;
     --duration: 160ms;
-    --flip: 320ms;
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }

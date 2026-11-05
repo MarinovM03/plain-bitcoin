@@ -22,8 +22,6 @@ async function ready(page: Page, id: ToolId): Promise<void> {
     const answer = id === 'left' ? '#left-figure' : '#tool-result-figure';
     await expect(page.locator(answer)).toHaveText(/\d|[A-Z][a-z]/);
     await expect(page.locator('#scene-plot > svg.gauge-svg')).toHaveCount(1);
-    // A face still flipping in measures shorter than it is: wait until it has landed.
-    await expect(page.locator('main')).not.toHaveAttribute('data-flip', /./);
 }
 
 async function boxes(page: Page, id: ToolId) {

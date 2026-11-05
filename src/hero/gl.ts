@@ -1,5 +1,19 @@
-import { TOKENS } from '../styles/tokens.ts';
-import { CONTOUR_FRAGMENT, FIELD_FRAGMENT, FULLSCREEN_VERTEX, MAX_PLATES } from './shaders.ts';
+import { TOKENS, WEATHER } from '../styles/tokens.ts';
+import type { Camera } from './camera.ts';
+import { hexRgb, normalMatrix, type Vec3 } from './gfx/math.ts';
+import { type Mesh, STRIDE } from './gfx/mesh.ts';
+import type { BufferBox } from './pointer.ts';
+import type { Ground, Item, Shadow } from './scenes/types.ts';
+import {
+    COMPOSITE_FRAGMENT,
+    FIELD_FRAGMENT,
+    FULLSCREEN_VERTEX,
+    GROUND_FRAGMENT,
+    MAX_PLATES,
+    MAX_SHADOWS,
+    SOLID_FRAGMENT,
+    SOLID_VERTEX,
+} from './shaders.ts';
 import { isSoftwareRenderer } from './tier.ts';
 
 export class SoftwareRendererError extends Error {
@@ -7,7 +21,6 @@ export class SoftwareRendererError extends Error {
 }
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
-type Vec3 = readonly [number, number, number];
 export type Rect = [number, number, number, number];
 
 export interface WeatherFrame {
@@ -15,16 +28,23 @@ export interface WeatherFrame {
     seed: number;
     warp: number;
     drift: number;
-    bands: number;
-    glow: number;
-    scroll: number;
+    contrast: number;
     intro: number;
     /** Origin x, y in CSS px and progress 0..1; progress < 0 means no pulse. */
     pulse: Vec3;
-    /** Pointer x, y in CSS px and strength 0..1. */
-    light: Vec3;
-    /** Mounted plates, in document CSS px. */
+    /** Mounted plates, in viewport CSS px. */
     plates: readonly Rect[];
+}
+
+export interface SceneDraw {
+    viewport: BufferBox;
+    camera: Camera;
+    ortho: boolean;
+    items: readonly Item[];
+    ground: Ground | null;
+    shadows: readonly Shadow[];
+    /** Current highlight strength per part, 0..1. */
+    lift: ReadonlyMap<string, number>;
 }
 
 export interface Surface {
@@ -41,7 +61,7 @@ export interface Surface {
 export interface Renderer {
     readonly ready: boolean;
     resize(cssWidth: number, cssHeight: number, scale: number): Surface;
-    draw(weather: WeatherFrame): void;
+    draw(weather: WeatherFrame, scene: SceneDraw | null): void;
     restore(): void;
     dispose(): void;
     /** Test hook: drop and bring back the context, as a GPU reset would. */
@@ -50,65 +70,31 @@ export interface Renderer {
 
 const CONTEXT: WebGLContextAttributes = {
     alpha: false,
-    antialias: false,
-    depth: false,
+    antialias: true,
+    depth: true,
     stencil: false,
     premultipliedAlpha: false,
     preserveDrawingBuffer: false,
     powerPreference: 'low-power',
 };
 
-const FIELD_UNIFORMS = [
-    'uCells',
-    'uCell',
-    'uTime',
-    'uSeed',
-    'uWarp',
-    'uDrift',
-    'uScroll',
-    'uLight',
-    'uPlates',
-    'uPlateCount',
-] as const;
-const CONTOUR_UNIFORMS = [
-    'uField',
-    'uCells',
-    'uCell',
-    'uRes',
-    'uScale',
-    'uBands',
-    'uGlow',
-    'uIntro',
-    'uPulse',
-    'uLight',
-    'uVoid',
-    'uSmoke',
-    'uLine',
-    'uIndex',
-    'uBtc',
-] as const;
-
-export function hexRgb(hex: string): Vec3 {
-    const value = Number.parseInt(hex.slice(1), 16);
-    return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
-}
-
-/** CSS pixels per field texel: the isobars are smooth curves, so a coarse field is enough and keeps phones cool. */
+/** CSS pixels per field texel: the field is soft continuous tone, so a coarse texture is plenty and keeps phones cool. */
 export function fieldCell(cssWidth: number): number {
-    return cssWidth < 640 ? 5 : 4;
+    return cssWidth < 640 ? 6 : 5;
 }
 
 export function surfaceFor(cssWidth: number, cssHeight: number, scale: number): Surface {
     const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
-    const width = Math.max(1, Math.round(cssWidth * s));
-    const height = Math.max(1, Math.round(cssHeight * s));
-    const cell = fieldCell(cssWidth);
+    const css = (value: number) => (Number.isFinite(value) && value > 0 ? value : 1);
+    const width = Math.max(1, Math.round(css(cssWidth) * s));
+    const height = Math.max(1, Math.round(css(cssHeight) * s));
+    const cell = fieldCell(css(cssWidth));
     return {
         width,
         height,
-        scale: width / Math.max(1, cssWidth),
+        scale: width / css(cssWidth),
         cell,
-        cells: [Math.ceil(cssWidth / cell) + 2, Math.ceil(cssHeight / cell) + 2],
+        cells: [Math.ceil(css(cssWidth) / cell) + 1, Math.ceil(css(cssHeight) / cell) + 1],
     };
 }
 
@@ -128,6 +114,35 @@ interface Program {
     uniforms: Map<string, WebGLUniformLocation | null>;
 }
 
+interface Uploaded {
+    vbo: WebGLBuffer | null;
+    ibo: WebGLBuffer | null;
+    version: number;
+    count: number;
+    used: number;
+}
+
+/** Buffers no scene has drawn for this many frames are freed: a route's meshes go when its scene does. */
+const PRUNE_FRAMES = 240;
+
+const PALETTE = {
+    void: hexRgb(TOKENS.void),
+    deep: hexRgb(WEATHER.deep),
+    mass: hexRgb(WEATHER.mass),
+    teal: hexRgb(WEATHER.teal),
+    crest: hexRgb(WEATHER.crest),
+    plate: hexRgb(TOKENS.plate),
+    well: hexRgb(TOKENS.well),
+    btc: hexRgb(TOKENS.btc),
+    sky: [0.5, 0.56, 0.64] as Vec3,
+    ground: [0.12, 0.12, 0.13] as Vec3,
+};
+const KEY: Vec3 = (() => {
+    const k: Vec3 = [-0.45, 0.8, 0.55];
+    const length = Math.hypot(...k);
+    return [k[0] / length, k[1] / length, k[2] / length];
+})();
+
 export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allowSoftware: boolean): Renderer {
     const surface = canvas as HTMLCanvasElement;
     const context = (surface.getContext('webgl2', CONTEXT) ?? surface.getContext('webgl', CONTEXT)) as GL | null;
@@ -141,19 +156,17 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
 
     let parallel = gl.getExtension('KHR_parallel_shader_compile');
     let field: Program;
-    let contour: Program;
+    let composite: Program;
+    let solid: Program;
+    let ground: Program;
     let corners: WebGLBuffer | null = null;
     let target: WebGLFramebuffer | null = null;
     let texture: WebGLTexture | null = null;
     let linked = false;
     let size: Surface = surfaceFor(1, 1, 1);
-    const palette = {
-        void: hexRgb(TOKENS.void),
-        smoke: hexRgb(TOKENS.smoke),
-        line: hexRgb(TOKENS.isobar),
-        index: hexRgb(TOKENS.isobarIndex),
-        btc: hexRgb(TOKENS.btc),
-    };
+    const uploads = new Map<number, Uploaded>();
+    let drawn = 0;
+    let groundMesh: Mesh | null = null;
 
     function shader(type: number, source: string): WebGLShader {
         const created = gl.createShader(type);
@@ -163,56 +176,53 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
         return created;
     }
 
-    function program(fragment: string): Program {
+    function program(vertex: string, fragment: string, attributes: readonly string[]): Program {
         const created = gl.createProgram();
         if (!created) throw new Error('Program could not be created');
-        gl.attachShader(created, shader(gl.VERTEX_SHADER, FULLSCREEN_VERTEX));
+        gl.attachShader(created, shader(gl.VERTEX_SHADER, vertex));
         gl.attachShader(created, shader(gl.FRAGMENT_SHADER, fragment));
-        gl.bindAttribLocation(created, 0, 'aCorner');
+        for (const [i, name] of attributes.entries()) gl.bindAttribLocation(created, i, name);
         gl.linkProgram(created);
         return { program: created, uniforms: new Map() };
     }
 
     function build(): void {
         parallel = gl.getExtension('KHR_parallel_shader_compile');
-        field = program(FIELD_FRAGMENT);
-        contour = program(CONTOUR_FRAGMENT);
+        field = program(FULLSCREEN_VERTEX, FIELD_FRAGMENT, ['aCorner']);
+        composite = program(FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT, ['aCorner']);
+        solid = program(SOLID_VERTEX, SOLID_FRAGMENT, ['aPos', 'aNormal', 'aCell']);
+        ground = program(SOLID_VERTEX, GROUND_FRAGMENT, ['aPos', 'aNormal', 'aCell']);
         corners = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, corners);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
         target = null;
         texture = null;
         linked = false;
+        uploads.clear();
     }
 
     function finishLink(): boolean {
-        const all = [field, contour];
+        const all = [field, composite, solid, ground];
         if (parallel && !all.every(({ program: p }) => gl.getProgramParameter(p, parallel?.COMPLETION_STATUS_KHR ?? 0)))
             return false;
         for (const { program: p } of all) {
             if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('Stage shaders did not link');
         }
-        for (const name of FIELD_UNIFORMS) field.uniforms.set(name, gl.getUniformLocation(field.program, name));
-        for (const name of CONTOUR_UNIFORMS) contour.uniforms.set(name, gl.getUniformLocation(contour.program, name));
         linked = true;
         return true;
     }
 
-    /** Half floats keep the isobars smooth; plain bytes still work, with slightly stepped lines. */
+    function u(p: Program, name: string): WebGLUniformLocation | null {
+        if (!p.uniforms.has(name)) p.uniforms.set(name, gl.getUniformLocation(p.program, name));
+        return p.uniforms.get(name) ?? null;
+    }
+
+    /** Half floats keep the soft field free of banding; plain bytes still work, with the dither hiding the steps. */
     function allocate(w: number, h: number): void {
         if (webgl2 && gl.getExtension('EXT_color_buffer_float')) {
             const gl2 = gl as WebGL2RenderingContext;
             gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA16F, w, h, 0, gl2.RGBA, gl2.HALF_FLOAT, null);
             return;
-        }
-        const half = !webgl2 ? gl.getExtension('OES_texture_half_float') : null;
-        if (half && gl.getExtension('OES_texture_half_float_linear')) {
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, half.HALF_FLOAT_OES, null);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, target);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-            const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            if (complete) return;
         }
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     }
@@ -233,54 +243,148 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
     }
 
     function fullscreen(): void {
+        gl.disableVertexAttribArray(1);
+        gl.disableVertexAttribArray(2);
         gl.bindBuffer(gl.ARRAY_BUFFER, corners);
         gl.enableVertexAttribArray(0);
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    function drawField(frame: WeatherFrame): void {
-        const u = (name: string) => field.uniforms.get(name) ?? null;
-        const plates = plateUniform(frame.plates);
+    function drawWeather(frame: WeatherFrame): void {
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.SCISSOR_TEST);
         gl.bindFramebuffer(gl.FRAMEBUFFER, target);
         gl.viewport(0, 0, size.cells[0], size.cells[1]);
         gl.useProgram(field.program);
-        gl.uniform2f(u('uCells'), size.cells[0], size.cells[1]);
-        gl.uniform1f(u('uCell'), size.cell);
-        gl.uniform1f(u('uTime'), frame.time);
-        gl.uniform1f(u('uSeed'), frame.seed);
-        gl.uniform1f(u('uWarp'), frame.warp);
-        gl.uniform1f(u('uDrift'), frame.drift);
-        gl.uniform1f(u('uScroll'), frame.scroll);
-        gl.uniform3fv(u('uLight'), frame.light);
-        gl.uniform4fv(u('uPlates'), plates.data);
-        gl.uniform1f(u('uPlateCount'), plates.count);
+        gl.uniform2f(u(field, 'uCells'), size.cells[0], size.cells[1]);
+        gl.uniform1f(u(field, 'uCell'), size.cell);
+        gl.uniform1f(u(field, 'uTime'), frame.time);
+        gl.uniform1f(u(field, 'uSeed'), frame.seed);
+        gl.uniform1f(u(field, 'uWarp'), frame.warp);
+        gl.uniform1f(u(field, 'uDrift'), frame.drift);
         fullscreen();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
 
-    function drawContours(frame: WeatherFrame): void {
-        const u = (name: string) => contour.uniforms.get(name) ?? null;
+        const plates = plateUniform(frame.plates);
         gl.viewport(0, 0, size.width, size.height);
-        gl.useProgram(contour.program);
+        gl.useProgram(composite.program);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.uniform1i(u('uField'), 0);
-        gl.uniform2f(u('uCells'), size.cells[0], size.cells[1]);
-        gl.uniform1f(u('uCell'), size.cell);
-        gl.uniform2f(u('uRes'), size.width, size.height);
-        gl.uniform1f(u('uScale'), size.scale);
-        gl.uniform1f(u('uBands'), frame.bands);
-        gl.uniform1f(u('uGlow'), frame.glow);
-        gl.uniform1f(u('uIntro'), frame.intro);
-        gl.uniform3fv(u('uPulse'), frame.pulse);
-        gl.uniform3fv(u('uLight'), frame.light);
-        gl.uniform3fv(u('uVoid'), palette.void);
-        gl.uniform3fv(u('uSmoke'), palette.smoke);
-        gl.uniform3fv(u('uLine'), palette.line);
-        gl.uniform3fv(u('uIndex'), palette.index);
-        gl.uniform3fv(u('uBtc'), palette.btc);
+        gl.uniform1i(u(composite, 'uField'), 0);
+        gl.uniform2f(u(composite, 'uCells'), size.cells[0], size.cells[1]);
+        gl.uniform1f(u(composite, 'uCell'), size.cell);
+        gl.uniform2f(u(composite, 'uRes'), size.width, size.height);
+        gl.uniform1f(u(composite, 'uScale'), size.scale);
+        gl.uniform1f(u(composite, 'uContrast'), frame.contrast);
+        gl.uniform1f(u(composite, 'uIntro'), frame.intro);
+        gl.uniform3fv(u(composite, 'uPulse'), frame.pulse);
+        gl.uniform4fv(u(composite, 'uPlates'), plates.data);
+        gl.uniform1f(u(composite, 'uPlateCount'), plates.count);
+        gl.uniform3fv(u(composite, 'uVoid'), PALETTE.void);
+        gl.uniform3fv(u(composite, 'uDeep'), PALETTE.deep);
+        gl.uniform3fv(u(composite, 'uMass'), PALETTE.mass);
+        gl.uniform3fv(u(composite, 'uTeal'), PALETTE.teal);
+        gl.uniform3fv(u(composite, 'uCrest'), PALETTE.crest);
+        gl.uniform3fv(u(composite, 'uPlate'), PALETTE.plate);
+        gl.uniform3fv(u(composite, 'uBtc'), PALETTE.btc);
         fullscreen();
+    }
+
+    function bindMesh(mesh: Mesh): number {
+        let entry = uploads.get(mesh.id);
+        if (!entry) {
+            entry = { vbo: gl.createBuffer(), ibo: gl.createBuffer(), version: 0, count: 0, used: drawn };
+            uploads.set(mesh.id, entry);
+        }
+        entry.used = drawn;
+        gl.bindBuffer(gl.ARRAY_BUFFER, entry.vbo);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, entry.ibo);
+        if (entry.version !== mesh.version) {
+            gl.bufferData(gl.ARRAY_BUFFER, mesh.data, gl.DYNAMIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.DYNAMIC_DRAW);
+            entry.version = mesh.version;
+            entry.count = mesh.indices.length;
+        }
+        const bytes = STRIDE * 4;
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
+        gl.enableVertexAttribArray(2);
+        gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
+        return entry.count;
+    }
+
+    function common(p: Program, scene: SceneDraw): void {
+        gl.useProgram(p.program);
+        gl.uniformMatrix4fv(u(p, 'uViewProj'), false, scene.camera.viewProj);
+        gl.uniform1f(u(p, 'uFill'), -1e9);
+        gl.uniform1f(u(p, 'uVisible'), 1e9);
+    }
+
+    function drawGround(scene: SceneDraw, pool: Ground): void {
+        groundMesh ??= groundPlane();
+        common(ground, scene);
+        const span = pool.radius * 6;
+        gl.uniformMatrix4fv(
+            u(ground, 'uModel'),
+            false,
+            new Float32Array([span, 0, 0, 0, 0, 1, 0, 0, 0, 0, span, 0, pool.x, pool.y, pool.z, 1]),
+        );
+        gl.uniformMatrix3fv(u(ground, 'uNormalM'), false, new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]));
+        gl.uniform3fv(u(ground, 'uWell'), PALETTE.well);
+        gl.uniform3fv(u(ground, 'uPlate'), PALETTE.plate);
+        gl.uniform4f(u(ground, 'uPool'), pool.x, pool.z, pool.radius, 0);
+        const shadows = new Float32Array(MAX_SHADOWS * 4);
+        const strength = new Float32Array(MAX_SHADOWS);
+        for (const [i, shadow] of scene.shadows.slice(0, MAX_SHADOWS).entries()) {
+            shadows.set([shadow.x, shadow.z, shadow.rx, shadow.rz], i * 4);
+            strength[i] = shadow.strength;
+        }
+        gl.uniform4fv(u(ground, 'uShadows'), shadows);
+        gl.uniform1fv(u(ground, 'uShadowK'), strength);
+        const count = bindMesh(groundMesh);
+        gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+    }
+
+    function drawScene(scene: SceneDraw): void {
+        const box = scene.viewport;
+        if (box.width <= 0 || box.height <= 0) return;
+        gl.enable(gl.SCISSOR_TEST);
+        gl.scissor(box.x, box.y, box.width, box.height);
+        gl.viewport(box.x, box.y, box.width, box.height);
+        gl.clearColor(PALETTE.plate[0], PALETTE.plate[1], PALETTE.plate[2], 1);
+        gl.clearDepth(1);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.disable(gl.CULL_FACE);
+        if (scene.ground) drawGround(scene, scene.ground);
+        common(solid, scene);
+        gl.uniform3fv(u(solid, 'uEye'), scene.camera.eye);
+        gl.uniform3fv(u(solid, 'uToward'), scene.camera.toward);
+        gl.uniform1f(u(solid, 'uOrtho'), scene.ortho ? 1 : 0);
+        gl.uniform3fv(u(solid, 'uKey'), KEY);
+        gl.uniform3fv(u(solid, 'uSky'), PALETTE.sky);
+        gl.uniform3fv(u(solid, 'uGround'), PALETTE.ground);
+        gl.uniform3fv(u(solid, 'uBtc'), PALETTE.btc);
+        gl.uniform1f(u(solid, 'uGroundY'), scene.ground?.y ?? -1e6);
+        for (const item of scene.items) {
+            if (item.hidden) continue;
+            gl.uniformMatrix4fv(u(solid, 'uModel'), false, item.model);
+            gl.uniformMatrix3fv(u(solid, 'uNormalM'), false, normalMatrix(item.model));
+            gl.uniform3fv(u(solid, 'uColor'), item.color);
+            gl.uniform3fv(u(solid, 'uFillColor'), item.fill?.color ?? item.color);
+            gl.uniform1f(u(solid, 'uFill'), item.fill ? item.fill.count : -1e9);
+            gl.uniform1f(u(solid, 'uVisible'), item.fill?.visible ?? 1e9);
+            gl.uniform1f(u(solid, 'uLift'), item.part ? (scene.lift.get(item.part) ?? 0) : 0);
+            gl.uniform1f(u(solid, 'uGlow'), item.glow ?? 0);
+            const count = bindMesh(item.mesh);
+            gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
+        }
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.SCISSOR_TEST);
     }
 
     build();
@@ -296,10 +400,19 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
             ensureTarget();
             return size;
         },
-        draw(frame) {
+        draw(frame, scene) {
             if (!linked || gl.isContextLost()) return;
-            drawField(frame);
-            drawContours(frame);
+            drawn += 1;
+            drawWeather(frame);
+            if (scene) drawScene(scene);
+            if (drawn % PRUNE_FRAMES === 0) {
+                for (const [id, entry] of uploads) {
+                    if (drawn - entry.used < PRUNE_FRAMES) continue;
+                    gl.deleteBuffer(entry.vbo);
+                    gl.deleteBuffer(entry.ibo);
+                    uploads.delete(id);
+                }
+            }
         },
         restore() {
             build();
@@ -314,5 +427,18 @@ export function createRenderer(canvas: HTMLCanvasElement | OffscreenCanvas, allo
             lose.loseContext();
             setTimeout(() => lose.restoreContext(), 300);
         },
+    };
+}
+
+function groundPlane(): Mesh {
+    const data = new Float32Array([
+        -0.5, 0, -0.5, 0, 1, 0, -1, 0.5, 0, -0.5, 0, 1, 0, -1, 0.5, 0, 0.5, 0, 1, 0, -1, -0.5, 0, 0.5, 0, 1, 0, -1,
+    ]);
+    return {
+        id: -1,
+        data,
+        indices: new Uint16Array([0, 3, 2, 0, 2, 1]),
+        bounds: { min: [-0.5, 0, -0.5], max: [0.5, 0, 0.5] },
+        version: 1,
     };
 }

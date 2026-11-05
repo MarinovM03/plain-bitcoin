@@ -20,7 +20,7 @@ async function open(page: Page, route: string) {
     await page.goto(`/?hero=plain#/${route}`);
     if (route === 'address') await page.locator('#address-input').fill(TAPROOT);
     if (route !== '' && route !== 'left') await expect(page.locator('[data-share="print"]')).toBeEnabled();
-    if (route === '') await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(TOOL_IDS.length);
+    if (route === '') await expect(page.locator('.home__stage #scene-plot > svg.gauge-svg')).toHaveCount(1);
     if (route === 'left') await expect(page.locator('#left-note')).not.toBeEmpty();
     const live = route === '' || route === 'left' || route === 'convert';
     if (live) await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
@@ -66,7 +66,7 @@ test('the keyboard reaches every tool from home in reading order and lands on it
     const order: string[] = [];
     const expected = [
         SITE_NAME,
-        ...TOOL_IDS.map((id, i) => `${String(i + 1).padStart(2, '0')}${NAV.short[id]}`),
+        ...TOOL_IDS.map((id) => NAV.short[id]),
         `${FOOTER.handle} ↗`,
         'mempool.space',
         SHARE.print,
