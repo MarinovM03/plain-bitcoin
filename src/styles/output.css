@@ -66,7 +66,7 @@
     font-size: var(--step-tiny);
 }
 
-/* Print, download, post: the printer is the first control, and it carries a little paper slot. */
+/* Share, download, post: the postcard is the first control. */
 .share-bar {
     display: grid;
     grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -112,19 +112,6 @@
 
 .button[aria-disabled="true"] {
     pointer-events: none;
-}
-
-.share-bar__slot {
-    flex: none;
-    width: 0.875rem;
-    height: 0.3125rem;
-    border-radius: 1px;
-    background: var(--void);
-    box-shadow: inset 0 1px 0 #000;
-}
-
-.button:disabled .share-bar__slot {
-    background: var(--edge);
 }
 
 @media (hover: hover) {

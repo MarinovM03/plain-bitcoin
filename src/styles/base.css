@@ -75,11 +75,11 @@ a {
 }
 
 /*
- * Opaque instrument plates. Every readout, tile, panel and control group sits on one; the body shows only in the
- * gutters around them, never through them.
+ * Opaque plates. Every scene, answer, tile, panel and control group sits on one; the moving background shows only in
+ * the gutters around them, never through them.
  */
-.bezel,
-.gauge,
+.tool__screen,
+.home__stage,
 .tool__below,
 .overview,
 .tile,
@@ -94,9 +94,8 @@ a {
         0 1.25rem 2.5rem -1.5rem #000;
 }
 
-/* Engraved labels: small mono capitals, the instrument's own voice. */
+/* Engraved labels: small mono capitals, hardware restraint in type only. */
 .engraved,
-.tool__kicker,
 .overview__kicker,
 .tile__kicker,
 .result__label,

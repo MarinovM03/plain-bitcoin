@@ -31,6 +31,26 @@ export function dcaFrame(data: SceneData): DcaFrame | null {
     return { t0, t1: t1 > t0 ? t1 : t0 + 1, max: max > 0 ? max : 1, length };
 }
 
+export interface PlotBox {
+    top: number;
+    base: number;
+    left: number;
+    right: number;
+}
+
+/** Where the series sit inside the chart, in CSS px. The SVG axes and the 3D ridge's front view share this box. */
+export function dcaPlotBox(raw: Viewport): PlotBox {
+    const view = safeView(raw);
+    const size = labelSize(view);
+    const mini = view.mini;
+    return {
+        top: mini ? 4 : size * 3.6,
+        base: mini ? view.height - 4 : view.height - size * 2.1,
+        left: mini ? 2 : 4,
+        right: view.width - (mini ? 4 : 8),
+    };
+}
+
 export function niceStep(max: number, ticks = 3): number {
     const raw = max / ticks;
     const power = 10 ** Math.floor(Math.log10(raw));
@@ -79,7 +99,7 @@ function legend(view: Viewport, size: number): Mark[] {
 export function dcaLayout(data: SceneData, raw: Viewport): Gauge {
     const view = safeView(raw);
     const frame = dcaFrame(data);
-    const { width: w, height: h, mini } = view;
+    const { mini } = view;
     const size = labelSize(view);
     if (!frame || data.id !== 'dca') {
         return gauge(view, {
@@ -89,10 +109,7 @@ export function dcaLayout(data: SceneData, raw: Viewport): Gauge {
             summary: 'marks=0;end=0;worth=',
         });
     }
-    const top = mini ? 4 : size * 3.6;
-    const base = mini ? h - 4 : h - size * 2.1;
-    const left = mini ? 2 : 4;
-    const right = w - (mini ? 4 : 8);
+    const { top, base, left, right } = dcaPlotBox(view);
     const x = (t: number) => left + ((finite(t) - frame.t0) / (frame.t1 - frame.t0)) * (right - left);
     const y = (value: number) => base - (Math.max(0, finite(value)) / frame.max) * (base - top);
     const marks: Mark[] = [];

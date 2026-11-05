@@ -4,15 +4,16 @@ import type { ChainState } from './weather.ts';
 export type { CharRole, DcaMarks, SceneData, SceneId, ScenePayload } from '../gauges/types.ts';
 export type { ChainState } from './weather.ts';
 
-export type StageChange = 'scene' | 'data' | 'chain' | 'pulse' | 'previews';
+export type StageChange = 'scene' | 'data' | 'chain' | 'pulse' | 'focus';
 
 export interface StageSnapshot {
-    /** The newest payload for the gauge on screen; only this one is ever drawn. */
+    /** The newest payload for the scene on screen; only this one is ever drawn. */
     readonly scene: ScenePayload | null;
     readonly plot: HTMLElement | null;
     readonly chain: ChainState | null;
     readonly pulses: number;
-    readonly previews: ReadonlyMap<HTMLElement, ScenePayload>;
+    /** A part the page points at from outside the scene (a home tile in hand), or null. */
+    readonly focus: string | null;
 }
 
 export type StageListener = (snapshot: StageSnapshot, change: StageChange) => void;
@@ -24,12 +25,12 @@ export interface StageBus {
     update(data: SceneData): void;
     clear(): void;
     chain(state: ChainState, arrived: boolean): void;
-    preview(element: HTMLElement, data: SceneData): void;
+    focus(part: string | null): void;
     current(): StageSnapshot;
     subscribe(listener: StageListener): () => void;
 }
 
-/** The gauge window carries what it was last asked to show, so tests and the painter can agree on it. */
+/** The scene carries what it was last asked to show, so tests, the SVG readout and the 3D scene agree on it. */
 function markWindow(plot: HTMLElement | null, payload: ScenePayload): void {
     const scene = plot?.closest<HTMLElement>('.scene');
     if (!scene) return;
@@ -40,7 +41,7 @@ function markWindow(plot: HTMLElement | null, payload: ScenePayload): void {
 export function createStageBus(paint: Painter): StageBus {
     const listeners = new Set<StageListener>();
     let rev = 0;
-    let snapshot: StageSnapshot = { scene: null, plot: null, chain: null, pulses: 0, previews: new Map() };
+    let snapshot: StageSnapshot = { scene: null, plot: null, chain: null, pulses: 0, focus: null };
 
     function emit(next: StageSnapshot, change: StageChange): void {
         snapshot = next;
@@ -67,20 +68,17 @@ export function createStageBus(paint: Painter): StageBus {
             if (snapshot.plot) paint(snapshot.plot, payload);
         },
         clear() {
-            emit({ ...snapshot, scene: stamp({ id: 'home' }), plot: null, previews: new Map() }, 'scene');
+            emit({ ...snapshot, scene: null, plot: null, focus: null }, 'scene');
+        },
+        focus(part) {
+            if (part === snapshot.focus) return;
+            emit({ ...snapshot, focus: part }, 'focus');
         },
         chain(state, arrived) {
             emit(
                 { ...snapshot, chain: state, pulses: snapshot.pulses + (arrived ? 1 : 0) },
                 arrived ? 'pulse' : 'chain',
             );
-        },
-        preview(element, data) {
-            const payload = stamp(data);
-            const previews = new Map(snapshot.previews);
-            previews.set(element, payload);
-            emit({ ...snapshot, previews }, 'previews');
-            paint(element, payload);
         },
         current() {
             return snapshot;
@@ -128,11 +126,10 @@ async function flush(): Promise<void> {
         if (width <= 0 || height <= 0) continue;
         const last = drawn.get(element);
         if (last && last.payload === payload && last.width === width && last.height === height) continue;
-        const own = element.id === 'scene-plot';
-        const frame = layout(payload.data, { width, height, mini: !own });
+        const frame = layout(payload.data, { width, height, mini: false });
         paintGauge(element, frame, reducedMotion());
         drawn.set(element, { payload, width, height });
-        const scene = own ? element.closest<HTMLElement>('.scene') : null;
+        const scene = element.closest<HTMLElement>('.scene');
         if (scene) {
             const callout = scene.querySelector<HTMLElement>('.scene__callout');
             if (callout) bindTips(element, callout);

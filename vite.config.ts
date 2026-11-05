@@ -138,7 +138,20 @@ export default defineConfig(({ mode }) => {
         base: '/',
         define: { 'import.meta.env.VITE_SITE_URL': JSON.stringify(siteUrl) },
         plugins: [contentSecurityPolicy(), cloudflareHeaders(), shell(siteUrl)],
-        worker: { format: 'es' },
+        worker: {
+            format: 'es',
+            rolldownOptions: {
+                output: {
+                    // One chunk per route's scene, loaded only when that route shows it.
+                    chunkFileNames: (chunk: { facadeModuleId: string | null }) => {
+                        const scene = /[\\/]hero[\\/]scenes[\\/](\w+)\.ts$/.exec(chunk.facadeModuleId ?? '')?.[1];
+                        return scene && scene !== 'index'
+                            ? `assets/scene-${scene}-[hash].js`
+                            : 'assets/stage-[name]-[hash].js';
+                    },
+                },
+            },
+        },
         build: {
             target: 'es2022',
             rolldownOptions: {
@@ -147,7 +160,8 @@ export default defineConfig(({ mode }) => {
                         const id = chunk.facadeModuleId ?? '';
                         const tool = /[\\/]tools[\\/](\w+)[\\/]index\.ts$/.exec(id)?.[1];
                         if (tool) return `assets/tool-${tool}-[hash].js`;
-                        if (/[\\/]gauges[\\/]/.test(id)) return 'assets/gauge-[name]-[hash].js';
+                        if (chunk.name === 'scene') return 'assets/tool-scene-link-[hash].js';
+                        if (/[\\/]gauges[\\/]/.test(id)) return 'assets/readout-[name]-[hash].js';
                         if (/[\\/]postcard[\\/](tray|render)\.ts$/.test(id)) return 'assets/postcard-[name]-[hash].js';
                         return 'assets/[name]-[hash].js';
                     },

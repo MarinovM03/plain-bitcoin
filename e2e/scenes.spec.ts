@@ -139,7 +139,7 @@ test('left: the column splits at the real issued amount, and a band reads out it
     await expect(page.locator('.scene__callout')).toBeHidden();
 });
 
-test('switching gauges mid-flip shows the new face at once, never the old one, and back and forward land right', async ({
+test('switching tools mid-tween shows the new scene at once, never the old one, and back and forward land right', async ({
     page,
     isMobile,
 }) => {
@@ -171,7 +171,7 @@ test('switching gauges mid-flip shows the new face at once, never the old one, a
     expect((await settled(page)).scene).toBe('dca');
 });
 
-test('the gauge takes input during the flip', async ({ page, isMobile }) => {
+test('a tool takes input while its scene is still arriving', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Checked once, on desktop');
     await page.goto('/?hero=phone#/left');
     await page
@@ -216,7 +216,7 @@ test('after the GPU context is lost and restored, the body draws again and the g
     await page.goto('/?hero=phone#/convert');
     await waitForStage(page);
     await settled(page);
-    await page.evaluate(() => (window as unknown as { __stage: { loseContext(): void } }).__stage.loseContext());
+    await page.evaluate(() => (window as unknown as { __pbStage: { loseContext(): void } }).__pbStage.loseContext());
     await page.waitForTimeout(1_000);
     const before = await frames(page);
     await page.locator('#convert-sats').fill('777');
@@ -225,11 +225,14 @@ test('after the GPU context is lost and restored, the body draws again and the g
     expect(real(found)).toEqual([]);
 });
 
-test('home tiles each carry a solid-ink drawing of their gauge, on the plain tier too', async ({ page }) => {
+test('on the plain tier the diorama window shows the supply readout as solid-ink SVG at the real height', async ({
+    page,
+}) => {
     await page.goto('/?hero=plain');
-    await expect(page.locator('.tile__preview > svg.gauge-svg')).toHaveCount(5);
-    await expect(page.locator('[data-preview="dca"] .dca-chart__line--value')).toHaveAttribute('points', /\d/);
-    await expect(page.locator('[data-preview="power"] .g-col')).toHaveCount(2);
+    await expect(page.locator('.home__stage #scene-plot > svg.gauge-svg')).toHaveCount(1);
+    await expect(page.locator('.home__stage .scene')).toHaveAttribute('data-scene', 'home');
+    await expect(page.locator('.home__stage .scene')).toHaveAttribute('data-summary', /^issued=\d+/);
+    await expect(page.locator('.home__stage .scene')).not.toHaveAttribute('data-gl', /.*/);
 });
 
 test('the plain-tier DCA chart is a real SVG whose end point and label match the answer', async ({ page }) => {

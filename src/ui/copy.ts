@@ -4,28 +4,29 @@ import type { Fiat } from '../util/format.ts';
 export const SITE_NAME = 'Plain Bitcoin';
 
 export const PRODUCT =
-    'Plain Bitcoin is a living chain instrument that prints shareable postcards of plain Bitcoin truths.';
+    'Plain Bitcoin is a living chain instrument: a handcrafted scene for every tool, and a shareable postcard for every plain Bitcoin truth.';
 
 export const SITE_DESCRIPTION =
-    'A living chain instrument that prints shareable postcards of plain Bitcoin truths. Everything runs in your browser.';
+    'A handcrafted scene for every Bitcoin tool, and a shareable postcard for every plain Bitcoin truth. Everything runs in your browser.';
 
 export const OG_IMAGE = {
     path: 'og.png',
     width: 1200,
     height: 628,
-    kicker: 'Plain Bitcoin · the instrument',
+    kicker: 'Plain Bitcoin',
     number: '21,000,000',
-    line: 'Bitcoin, measured live. Every answer prints as a postcard.',
+    line: 'Bitcoin, measured live. A model for every tool, a postcard for every answer.',
     source: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    alt: 'Plain Bitcoin postcard: 21,000,000, Bitcoin measured live, with the supply bar issued in white and still to mine in orange.',
+    alt: 'Plain Bitcoin postcard: 21,000,000, Bitcoin measured live, with the supply bar issued in bone and still to mine in orange.',
 } as const;
 
 export const HOME = {
-    kicker: 'The instrument · five gauges',
+    kicker: 'Five tools · one chain',
     headline: 'Bitcoin, measured live.',
-    lead: 'One instrument reading the chain. The lines behind it take their mood from real block timing, and every answer prints as a postcard.',
-    promise: 'A living chain instrument that prints postcards of plain Bitcoin truths.',
-    toolsLabel: 'The gauges',
+    lead: 'Each tool is a small model you can turn, built from the same numbers as its answer. Every answer makes a postcard.',
+    promise: 'A handcrafted scene for every tool, and a postcard for every plain Bitcoin truth.',
+    toolsLabel: 'The tools',
+    sceneLabel: 'The chain on the table',
     leftFigure: (left: string) => `${left} left`,
     convertFigure: (gbp: string) => `1 sat = ${gbp}`,
     powerFigure: (then: string, now: string) => `${then} in 2015 → ${now} as bitcoin`,
@@ -62,7 +63,6 @@ export const STATUS = {
     since: (age: string) => `${age} since last block`,
     estimatedSince: (age: string) => `est. ${age} since last block`,
     unknownTime: 'block time unknown',
-    dial: 'Time since the last block, against the 10-minute target',
 } as const;
 
 export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
@@ -98,7 +98,7 @@ export const TOOLS: Record<ToolId, { name: string; question: string; preview: st
     },
 };
 
-export const GAUGE_LABEL = (index: number, name: string) => `Gauge ${String(index).padStart(2, '0')} · ${name}`;
+export const SCENE_PARTS_LABEL = 'Parts of the model';
 
 export const TOOL_PAGE = {
     inputsLabel: 'Your numbers',
@@ -153,7 +153,7 @@ export const GAUGE = {
 
 export const SHARE = {
     label: 'Share',
-    print: 'Print postcard',
+    print: 'Share postcard',
     download: 'Download',
     post: 'Post on X',
     copyImage: 'Copy image',
@@ -162,15 +162,15 @@ export const SHARE = {
     square: 'Square',
     format: 'Postcard shape',
     close: 'Close',
-    tray: 'Print tray',
-    printing: 'Printing…',
-    printed: 'Printed. Copy it, save it or post it.',
+    tray: 'Share tray',
+    printing: 'Making the postcard…',
+    printed: 'Your postcard is ready. Copy it, save it or post it.',
     copied: 'Image copied.',
-    copyUnsupported: "Copy isn't supported here — use Download.",
-    postCopied: 'Image copied — paste it into your post.',
+    copyUnsupported: "Copy isn't supported here, use Download.",
+    postCopied: 'Image copied. Paste it into your post.',
     postNoImage: 'Download the image first, then add it to your post.',
     downloaded: 'Postcard saved as a PNG.',
-    failed: 'Could not print the postcard. Try again.',
+    failed: 'Could not make the postcard. Try again.',
     handle: '@PlainBTC',
     via: 'via @PlainBTC',
     madeHere: 'Made in your browser. Nothing is uploaded.',
@@ -538,7 +538,7 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    motion: 'The moving lines are ambient motion, not live activity. Their mood comes from real block timing; orange sweeps through only when a real block arrives.',
+    motion: 'The background motion is decoration, not live activity. Its mood comes from real block timing; orange rolls through only when a real block arrives.',
     toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',
     handle: '@PlainBTC',

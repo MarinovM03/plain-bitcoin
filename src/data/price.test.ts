@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPriceFeed, fetchQuote, LAST_CLOSE, PRICE_APIS, type PriceQuote, parseQuote } from './price.ts';
-import dailyGbp from './prices/daily-gbp.json';
-import dailyUsd from './prices/daily-usd.json';
-import latest from './prices/latest.json';
+import dailyGbp from './prices/daily-gbp.json' with { type: 'json' };
+import dailyUsd from './prices/daily-usd.json' with { type: 'json' };
+import latest from './prices/latest.json' with { type: 'json' };
 
 const NOW = Date.UTC(2026, 9, 30, 19, 20);
 

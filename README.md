@@ -1,32 +1,35 @@
 # Plain Bitcoin
 
-Plain Bitcoin is a living chain instrument that prints shareable postcards of plain Bitcoin truths. It lives at [plainbitcoin.org](https://plainbitcoin.org).
+Plain Bitcoin is a living chain instrument: a handcrafted scene for every tool, and a shareable postcard for every plain Bitcoin truth. It lives at [plainbitcoin.org](https://plainbitcoin.org).
 
-The site is one instrument: a bezel with the live meters (block height, price, and a dial of real time since the last block), five mode switches, and one gauge face mounted on a body that is always moving. Changing mode flips the face on its mount; the body keeps flowing underneath.
+A slim top bar (the five tools, @PlainBTC and one status line: block height, price, minutes since the last block, with "est." wherever a value is an estimate) sits over five tool pages and a home page. Each page shows its answer in plain text beside a small model of the same truth that you can turn, point at and tap.
 
-- **Left to mine**: the 21 million as one column, a band per halving era, issued in ink and still to mine in orange, with a ×10 loupe on the last two million. From the real block height and the subsidy schedule.
-- **Purchasing power**: what an old amount of money is worth today, and what it would be in bitcoin, as two solid columns on one baseline (a labelled log scale when one is ten times the other).
-- **Converter**: sats, BTC, GBP and USD at the live price, with whole-sat math, on a grid of 1,000 cells that zooms by ten.
-- **Buying on a schedule**: weekly, fortnightly or monthly buys since any month from July 2010, compared with one lump sum: worth at each buy in orange, money put in in white, the lump sum dashed in steel.
-- **Address lookup**: tells the address type, checks the Base58Check, Bech32 or Bech32m checksum and points at a likely typo, all offline, with each character in its own cell. The public balance comes from mempool.space only after a clear note and a tap.
+- **Left to mine: the 21 million ingot.** All 21 million bitcoin as one bar, cut into a slab per halving era. Each slab is exactly as long as the coins its era issues, so the volumes are the supply. Issued coin is bone, the unmined rest is orange, and a thinner bar in front magnifies the last 2 million 10.5 times, labelled as such. When a real block arrives, the next 3.125 BTC drops onto the issued side.
+- **Purchasing power: the balance.** Cash kept as steel notes on one pan, the same money put into bitcoin as orange coins on the other, stacked on the same scale as the bars below the answer. The beam reads the ratio on a labelled log dial, 8° for each ×10, and stops at ×1000.
+- **Converter: the sat cube.** One bitcoin as one block of exactly 100,000,000 sats (1,000 cells of 100,000 sats; each of those 1,000 cells of 100 sats; each of those a tray of 100 single sats). Your amount is the orange cells. Tap the next cell to focus into it, down to single sats.
+- **Buying on a schedule: the ridge.** Seen front on, it is the honest chart, on the same axes as the SVG: worth at each buy in orange, money put in in white, the lump sum dashed in steel. Drag it and each buy turns out to be a solid step of a ridge.
+- **Address lookup: the key cut.** What you type is cut into a key blade, one tooth per character. When the checksum proves the address, every pin seats and the plug turns; a character that cannot be in the address leaves its pin stuck up exactly where it fails. The public balance comes from mempool.space only after a clear note and a tap.
+- **Home: the chain on the table.** The last blocks stacked on a table, the top one engraved with the real tip, with the five tools as small models around it. Point at one to light its tile, tap it to open the tool.
+
+Every size, count and angle in a scene comes from the same numbers as the answer beside it, handed over on one typed bus. Drag turns a scene a little and it eases back; pointing at a part names it; the same parts are buttons for the keyboard. Without WebGL, on Save-Data or on slow hardware, each scene is the matching solid-ink SVG drawing instead.
 
 One static site. No backend, no accounts, no cookies. The site never asks for keys, seeds or signatures.
 
-## The instrument
+## The living background
 
-Two visual families never mix. The **body** behind and around the plates is weather: drifting isobar contours over deep smoke, cool and dim, never brighter than a fixed ceiling. The **readouts** (gauges, graphs, postcards) are solid ink on opaque charcoal plates. The body never shows through a graph, a label or a line of text.
+Two visual families never mix. The **background** around the plates is continuous tone only: soft, slowly folding masses of deep slate, ink blue and teal, never brighter than a fixed ceiling. No lines, contours, dots or cells. The **readouts** (the scenes, graphs and postcards) are lit solid objects and hard ink on opaque charcoal plates; the background never shows through a scene, a graph, a label or a line of text.
 
-The body always moves while the page is visible. That motion is ambient, not live activity: it does not stand for transactions, a mempool, trades or anything else, and no number on the page comes from it. Its mood comes from real chain data only. The block height sets the pattern; the minutes since the last block slowly pack the isobars tighter and fold them harder (an estimated block time gives a neutral mood instead); and a real new block sends one orange front out from the block meter, then the body calms again. Nothing else is orange in the body. The isobars bend around the mounted plates and darken softly at their edges. On a desktop with a mouse they lean gently towards the pointer.
+The background always moves while the page is visible. That motion is decoration, not live activity: it does not stand for transactions, a mempool, trades or anything else, and no number on the page comes from it. Its mood comes from real chain data only. The block height sets where the drift starts; the minutes since the last block slowly fold the field harder and speed it up (an estimated block time gives a neutral mood instead); and a real new block sends one soft orange bloom out from the block number in the status line, and reaches the scene on screen too, then the field calms again. Nothing else in the background is orange.
 
-The body fetches nothing. It receives only the block height and block time from the page, plus where the plates sit. It loads after the page has painted; every answer and input works before it arrives. It draws in a worker at about 30 frames a second on a desktop and 20 on a phone, at a reduced internal resolution, and stops in a background tab. With reduced motion it draws one still frame from the current chain state and redraws only when that changes. On Save-Data, without WebGL or on slow hardware it steps down to fewer frames, then to still frames, then to a plain CSS version of the same isobars. The gauges are SVG in every case, so the buying-on-a-schedule chart is always a real chart that matches the answer.
+The stage fetches nothing. It receives only the block height and time from the page, plus where the plates and the scene window sit. It loads after the page has painted; every answer and input works before it arrives. One WebGL context draws the background and the scene of the page you are on, in a worker where the browser allows it, at about 24 frames a second on a desktop and 18 on a phone, faster only while a scene is being turned or is settling. It stops in a background tab. With reduced motion it draws one still frame from the current chain state and redraws only when something changes. On Save-Data, without WebGL or on slow hardware it steps down to fewer frames, then to still frames, then to a plain CSS version of the same soft masses and the SVG drawings.
 
 ## Postcards
 
-Every answer can be printed. Print postcard feeds a postcard out of the gauge's printer into a tray: one big number, exactly as the page shows it, one plain sentence, a small drawing made from the same numbers, the source and as-of time, and a quiet Plain Bitcoin · plainbitcoin.org · @PlainBTC rail. Wide is 1200 x 628 (exported at 2400 x 1256), which shows uncropped in an X timeline; Square is 1080 x 1080 (2160 x 2160).
+Every answer makes a postcard. Share postcard slides the real postcard up into a tray: one big number, exactly as the page shows it, one plain sentence, a small drawing of the tool's scene made from the same numbers (the ingot's slabs, the balance, the sat grid, the ridge's lines, the key with its type on the bow), the source and as-of time, and a quiet Plain Bitcoin · plainbitcoin.org · @PlainBTC rail. Wide is 1200 x 628 (exported at 2400 x 1256), which shows uncropped in an X timeline; Square is 1080 x 1080 (2160 x 2160).
 
-From the tray: Copy image, Download, Share (where the phone supports sharing files) and Post on X, which copies the image and opens a post with the sentence, a link back to the gauge and "via @PlainBTC". X does not let a link attach an image, so the tray says when the image is on the clipboard and the post is yours to finish.
+From the tray: Copy image, Download, Share (where the phone supports sharing files) and Post on X, which copies the image and opens a post with the sentence, a link back to the tool and "via @PlainBTC". X does not let a link attach an image, so the tray says when the image is on the clipboard and the post is yours to finish.
 
-Postcards are drawn in your browser on a canvas with the site's own fonts. Nothing is uploaded and no request is made while printing, copying or downloading. A typed address is never printed in full, only its type, its checksum result and its first and last four characters; the sample addresses print in full.
+Postcards are drawn in your browser on a canvas with the site's own fonts. Nothing is uploaded and no request is made while making, copying or downloading one. A typed address is never printed in full, only its type, its checksum result and its first and last four characters; the sample addresses print in full.
 
 ## Privacy: what leaves your browser, and when
 
@@ -36,7 +39,7 @@ Postcards are drawn in your browser on a canvas with the site's own fonts. Nothi
 | Bitcoin price       | On the home page, Bitcoin left to mine and the converter, while the tab is visible, at most once a minute | mempool.space, or CoinGecko if it fails        |
 | One address balance | Only when you tap Look up on the address page, after a note that names the service                        | mempool.space                                  |
 
-The meters in the bezel share those two requests with the tool on the same page; there is one of each, never two. On purchasing power, buying on a schedule and address lookup it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Purchasing power and buying on a schedule work from bundled files and make no requests. Nothing you type is stored, logged or put in the URL. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
+The status line shares those two requests with the tool on the same page; there is one of each, never two. On purchasing power, buying on a schedule and address lookup it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Purchasing power and buying on a schedule work from bundled files and make no requests. Nothing you type is stored, logged or put in the URL. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
 
 If a seed phrase, private key (WIF), extended private key or a descriptor holding one is pasted into the address field, the page clears the field at once and says why. It looks through numbering, labels, punctuation, other wordlists and invisible characters, and nothing about it is sent or kept. Extended public keys are refused too, because they reveal a whole wallet.
 
@@ -84,7 +87,7 @@ npm run dev
 
 `VITE_SITE_URL` sets the canonical URL, the Open Graph and Twitter tags and the address on the postcards at build time (default `https://plainbitcoin.org/`).
 
-Size budgets (gzip): first-load JS under 35 kB, CSS under 15 kB, fonts under 80 kB, the body (its loader and worker) under 170 kB, loaded only after first paint, and the postcard printer, loaded only on the first sign of sharing, reported on its own.
+Size budgets (gzip): first-load JS under 35 kB, CSS under 15 kB, fonts under 80 kB, the stage (driver, worker, renderer, background and pointer mapping) under 170 kB, loaded only after first paint, each tool scene under 30 kB (home under 35 kB), loaded only on its own route, and the postcard renderer under 20 kB, loaded only on the first sign of sharing.
 
 CI (GitHub Actions) runs lint, typecheck, unit tests, build, the budget check and the Chromium end-to-end tests on every push and pull request.
 
@@ -117,26 +120,27 @@ To check a build locally first: `VITE_SITE_URL=https://plainbitcoin.org npm run 
 
 Run these on real phones before each launch. The automated tests cover the same ground in emulators, but not the share sheet, real keypads or Safari's own behaviour.
 
-- **Portrait**: on every gauge the meters, the drawing, the first input and the answer are on the first screen at 360 px wide, with no sideways scroll.
+- **Portrait**: on every tool the status line, the scene, the first input and the answer are on the first screen at 360 px wide, with no sideways scroll.
 - **Keyboard up**: typing in a field shrinks the picture so the answer stays visible; tapping a button after typing does not make it jump.
 - **Landscape**: picture on the left, inputs and answer on the right, nothing pinned but the background.
-- **One-handed reach**: amount fields, presets, Print postcard, Paste and Look up are reachable with a thumb; nothing important sits only at the top.
+- **One-handed reach**: amount fields, presets, Share postcard, Paste and Look up are reachable with a thumb; nothing important sits only at the top.
+- **Scenes**: a sideways drag turns each model and it eases back; a vertical swipe on a scene still scrolls the page; a tap on a part names it, right under the finger.
 - **Keypads**: amount fields open the number keypad; the address field does not autocorrect or capitalise.
-- **Print tray**: Print postcard feeds the postcard out; Share opens the system share sheet with the PNG and the sentence (iOS Safari, Android Chrome); Copy image and Post on X put the image on the clipboard and open X with the sentence.
+- **Share tray**: Share postcard slides the postcard up; Share opens the system share sheet with the PNG and the sentence (iOS Safari, Android Chrome); Copy image and Post on X put the image on the clipboard and open X with the sentence.
 - **Paste**: the Paste button on the address page fills the field (iOS shows its own Paste prompt).
-- **Body**: scrolling is never trapped; the isobars visibly drift without touching anything, never show through a plate, and nothing draws in a background tab.
+- **Background**: scrolling is never trapped; the background visibly drifts without touching anything, never shows through a plate, and nothing draws in a background tab.
 - **Offline**: with flight mode on after the first load, the counter says "estimated, offline" and the converter uses the last close, both labelled.
 - **Safari**: Web Inspector, Network: each font file downloads once; no console errors.
-- **Save-Data / Low Data Mode**: the body is the plain CSS isobars instead of WebGL; the gauges are unchanged.
-- **Reduced motion**: with Reduce Motion on, the body is one still frame, gauges swap without flipping and postcards appear without feeding.
+- **Save-Data / Low Data Mode**: the background is plain CSS and each scene is its SVG drawing instead of WebGL.
+- **Reduced motion**: with Reduce Motion on, the background is one still frame, scenes land on their answer at once and postcards appear without sliding.
 
 ## Layout
 
 ```
 src/app      hash router
-src/hero     the body: stage bus, chain-weather mapping and the WebGL engine (the only code that may use WebGL; draws in a worker)
-src/gauges   the five gauge faces: pure layouts in solid ink, and the SVG painter
-src/postcard postcard words, layout, canvas renderer, print tray and share bar
+src/hero     the stage: bus, pointer mapping, chain-weather mapping, the WebGL renderer and one scene per route (the only code that may use WebGL; draws in a worker)
+src/gauges   the SVG readouts: pure layouts in solid ink, drawn when WebGL is off
+src/postcard postcard words, layout, canvas renderer, share tray and share bar
 src/tools    one folder per tool
 src/model    pure, unit-tested math
 src/data     public API clients and bundled data snapshots

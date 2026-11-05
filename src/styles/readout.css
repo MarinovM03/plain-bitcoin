@@ -8,10 +8,6 @@
     overflow: visible;
 }
 
-.tile__preview > .gauge-svg {
-    position: static;
-}
-
 .gauge-svg text {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -196,7 +192,7 @@
     fill: var(--void);
 }
 
-/* Builds: only when a gauge's structure changes. Arriving on a route never builds; the flip carries that. */
+/* Builds: only when a readout's structure changes. Arriving on a route never builds. */
 .is-build--grow .gauge-body > rect:not(.g-band) {
     transform-box: fill-box;
     transform-origin: 50% 100%;

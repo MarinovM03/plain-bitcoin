@@ -13,7 +13,7 @@ export interface DcaMarks {
 }
 
 export type SceneData =
-    | { id: 'home' }
+    | { id: 'home'; height: number }
     | { id: 'left'; height: number }
     | {
           id: 'power';

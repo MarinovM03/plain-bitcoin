@@ -27,8 +27,10 @@ describe('stage bus', () => {
         bus.update({ id: 'convert', sats: 2 });
         bus.clear();
         bus.show(plot, { id: 'dca', fiat: 'GBP', worth: '', alt: '', t: [], value: [], invested: [], lump: [] });
-        expect(revs).toEqual([...revs].sort((a, b) => a - b));
-        expect(new Set(revs).size).toBe(revs.length);
+        const stamped = revs.filter((rev) => rev >= 0);
+        expect(stamped).toEqual([...stamped].sort((a, b) => a - b));
+        expect(new Set(stamped).size).toBe(stamped.length);
+        expect(revs).toContain(-1);
         expect(Object.isFrozen(bus.current().scene)).toBe(true);
     });
 
@@ -50,28 +52,35 @@ describe('stage bus', () => {
         expect(changes).toEqual(['chain', 'pulse', 'chain']);
     });
 
-    it('paints the newest payload for every scene it is shown or updated with, and for previews', () => {
+    it('paints the newest payload for every scene it is shown or updated with', () => {
         const paint = vi.fn<(element: HTMLElement, payload: ScenePayload) => void>();
         const bus = createStageBus(paint);
         bus.show(plot, { id: 'left', height: 1 });
         bus.update({ id: 'left', height: 2 });
-        bus.preview(plot, { id: 'convert', sats: 9 });
-        bus.show(null, { id: 'home' });
+        bus.update({ id: 'convert', sats: 9 });
+        bus.show(null, { id: 'home', height: 3 });
         expect(paint.mock.calls.map(([, payload]) => payload.data)).toEqual([
             { id: 'left', height: 1 },
             { id: 'left', height: 2 },
-            { id: 'convert', sats: 9 },
         ]);
-        expect(bus.current().previews.size).toBe(1);
     });
 
-    it('clears back to the empty home scene with no plot and no previews', () => {
+    it('clears to no scene and no plot, so the stage hides the old scene at once', () => {
         const bus = createStageBus(() => {});
         bus.show(plot, { id: 'convert', sats: 1 });
-        bus.preview(plot, { id: 'convert', sats: 1 });
+        bus.focus('filled');
         bus.clear();
-        expect(bus.current()).toMatchObject({ scene: { data: { id: 'home' } }, plot: null });
-        expect(bus.current().previews.size).toBe(0);
+        expect(bus.current()).toMatchObject({ scene: null, plot: null, focus: null });
+    });
+
+    it('passes a part pointed at from outside the scene once, and ignores repeats', () => {
+        const bus = createStageBus(() => {});
+        const changes: string[] = [];
+        bus.subscribe((_, change) => changes.push(change));
+        bus.focus('left');
+        bus.focus('left');
+        bus.focus(null);
+        expect(changes).toEqual(['focus', 'focus']);
     });
 
     it('stops telling a listener once it unsubscribes', () => {

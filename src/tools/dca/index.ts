@@ -23,8 +23,8 @@ interface DailySeries extends DailyCloses {
 }
 
 const LOADERS: Record<Fiat, () => Promise<DailySeries>> = {
-    GBP: () => import('../../data/prices/daily-gbp.json').then((module) => module.default),
-    USD: () => import('../../data/prices/daily-usd.json').then((module) => module.default),
+    GBP: () => import('../../data/prices/daily-gbp.json', { with: { type: 'json' } }).then((module) => module.default),
+    USD: () => import('../../data/prices/daily-usd.json', { with: { type: 'json' } }).then((module) => module.default),
 };
 
 function lastDayMs(series: DailyCloses): number {

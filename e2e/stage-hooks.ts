@@ -6,6 +6,10 @@ export interface SceneState {
     settled: string | undefined;
     pending: boolean;
     summary: string | undefined;
+    /** The 3D scene's own account, when the stage draws one. */
+    gl: boolean;
+    glSettled: string | undefined;
+    glSummary: string | undefined;
 }
 
 export async function frames(page: Page): Promise<number> {
@@ -21,17 +25,21 @@ export async function sceneState(page: Page): Promise<SceneState> {
             settled: scene?.dataset.settled,
             pending: scene?.dataset.pending !== undefined,
             summary: scene?.dataset.summary,
+            gl: scene?.dataset.gl !== undefined,
+            glSettled: scene?.dataset.glSettled,
+            glSummary: scene?.dataset.glSummary,
         };
     });
 }
 
-/** Waits until the gauge on screen shows the newest payload the tool sent. */
+/** Waits until the scene on screen shows the newest payload the tool sent: the SVG readout, and the 3D scene too. */
 export async function settled(page: Page): Promise<SceneState> {
     await expect
         .poll(
             async () => {
                 const state = await sceneState(page);
-                return !state.pending && state.rev !== undefined && state.settled === state.rev;
+                const svg = !state.pending && state.rev !== undefined && state.settled === state.rev;
+                return svg && (!state.gl || state.glSettled === state.rev);
             },
             { timeout: 15_000 },
         )

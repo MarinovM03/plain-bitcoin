@@ -70,7 +70,6 @@ function trayMarkup(): string {
         <p class="tray__title">${SHARE.tray}</p>
         <button class="button tray__close" type="button" data-tray="close">${SHARE.close}</button>
     </div>
-    <div class="tray__slot" aria-hidden="true"><span class="tray__led"></span></div>
     <div class="tray__paper"><canvas class="tray__card" role="img"></canvas></div>
     <fieldset class="field segmented tray__format">
         <legend class="visually-hidden">${SHARE.format}</legend>
@@ -94,20 +93,20 @@ function say(message: string): void {
     if (tray) tray.status.textContent = message;
 }
 
-/** The machine prints: the real postcard feeds out of the slot. Reduced motion shows it at once. */
+/** The real postcard, drawn from the answer on the page, slides up into the tray. Reduced motion shows it at once. */
 async function print(current: Tray, card: Postcard): Promise<void> {
     const mine = ++current.printing;
     current.card = card;
     current.post.href = postUrl(card, current.site);
     say(SHARE.printing);
-    current.paper.classList.remove('is-feeding');
+    current.paper.classList.remove('is-arriving');
     await renderPostcard(card, current.format, current.site, undefined, current.canvas);
     if (mine !== current.printing) return;
     current.canvas.setAttribute('aria-label', card.alt);
     current.dialog.dataset.format = current.format;
     if (!prefersReducedMotion()) {
         void current.paper.offsetWidth;
-        current.paper.classList.add('is-feeding');
+        current.paper.classList.add('is-arriving');
     }
     say(SHARE.printed);
     const file = fileOf(await canvasBlob(current.canvas), card);

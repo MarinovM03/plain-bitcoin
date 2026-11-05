@@ -1,6 +1,6 @@
 /**
  * Quality levels, best first. `full` and `lite` drift continuously; `still` draws only when something changes;
- * `plain` gives the canvas up for the CSS field.
+ * `plain` gives the canvas up for the CSS background and the SVG readouts.
  */
 export const LEVELS = ['full', 'lite', 'still', 'plain'] as const;
 
@@ -9,21 +9,21 @@ export type Quality = (typeof LEVELS)[number];
 export interface LevelSettings {
     /** Ambient frame rate while nothing but the weather moves. 0 = no ambient frames. */
     ambientFps: number;
-    /** Frame rate while a block pulse travels, the mood resets or the pointer bend eases out. */
+    /** Frame rate while something moves on purpose: a drag, a scene settling, a block pulse. */
     activeFps: number;
     /** Highest device pixel ratio honoured. */
     dprCap: number;
-    /** Internal render scale on top of that: the body is drawn smaller and upscaled, which also keeps it soft. */
+    /** Canvas render scale on top of that. The weather field itself is always computed at a few CSS px per texel. */
     renderScale: number;
 }
 
 export const TIER_SETTINGS: Record<'full' | 'phone', LevelSettings> = {
-    full: { ambientFps: 30, activeFps: 30, dprCap: 1.5, renderScale: 0.75 },
-    phone: { ambientFps: 20, activeFps: 24, dprCap: 1.25, renderScale: 0.6 },
+    full: { ambientFps: 24, activeFps: 60, dprCap: 1.5, renderScale: 1 },
+    phone: { ambientFps: 18, activeFps: 30, dprCap: 1.5, renderScale: 1 },
 };
 
-export const LITE: LevelSettings = { ambientFps: 15, activeFps: 20, dprCap: 1, renderScale: 0.5 };
-export const STILL: LevelSettings = { ambientFps: 0, activeFps: 30, dprCap: 1, renderScale: 0.5 };
+export const LITE: LevelSettings = { ambientFps: 15, activeFps: 30, dprCap: 1, renderScale: 1 };
+export const STILL: LevelSettings = { ambientFps: 0, activeFps: 30, dprCap: 1, renderScale: 1 };
 
 export function settingsFor(quality: Quality, tier: 'full' | 'phone'): LevelSettings {
     if (quality === 'full') return TIER_SETTINGS[tier];

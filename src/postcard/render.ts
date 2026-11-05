@@ -32,10 +32,10 @@ function small(
     context.fillText(value, x, y);
 }
 
-/** A bar of supply: issued in ink with a plate-coloured cut at each halving, still-to-mine in orange. */
+/** The ingot as a bar: issued in bone with a plate-coloured cut at each halving, still-to-mine in orange. */
 function supplyBar(context: Context, issued: number, from: number, x: number, y: number, w: number, h: number): void {
     const at = (value: number) => x + ((Math.min(MAX_SUPPLY, Math.max(from, value)) - from) / (MAX_SUPPLY - from)) * w;
-    context.fillStyle = TOKENS.ink;
+    context.fillStyle = TOKENS.inkWarm;
     context.fillRect(x, y, at(issued) - x, h);
     context.fillStyle = TOKENS.btc;
     context.fillRect(at(issued), y, x + w - at(issued), h);
@@ -64,37 +64,72 @@ function drawSupply(context: Context, box: Box, issued: number, undated: boolean
     small(context, '0', box.x, topY - 10);
     small(context, '21,000,000 BTC', box.x + box.w, topY - 10, TOKENS.inkDim, 'right');
     small(context, '19M', box.x, lowY + bar + 24);
-    small(context, 'the last 2M, ×10', box.x + box.w, lowY + bar + 24, TOKENS.inkDim, 'right');
+    small(context, 'the last 2M, ×10.5', box.x + box.w, lowY + bar + 24, TOKENS.inkDim, 'right');
     // A card with no as-of date (the link preview) never states a count that will go stale.
     if (undated) return;
     const left = Math.floor((MAX_SUPPLY - issued) / SATS_PER_BTC);
     small(context, `${formatWhole(left)} to mine`, box.x + box.w, lowY - 12, TOKENS.btc, 'right');
 }
 
-function drawColumns(context: Context, box: Box, signature: Extract<Signature, { kind: 'columns' }>): void {
+/** Degrees the balance tips for every tenfold between the pans, stopping at a thousandfold: the scene's own rule. */
+const TILT_PER_DECADE = 8;
+const MAX_DECADES = 3;
+
+/** The balance: cash notes in steel on one pan, bitcoin coins in orange on the other, the beam tipped by the ratio. */
+function drawBalance(context: Context, box: Box, signature: Extract<Signature, { kind: 'columns' }>): void {
     if (!(signature.cash > 0) || !(signature.bitcoin > 0)) return;
     const scale = barScale([signature.cash, signature.bitcoin]);
-    const base = box.y + box.h - 30;
-    const top = box.y + 30;
-    const column = Math.min(110, box.w * 0.3);
-    const gap = Math.min(70, box.w * 0.16);
-    const left = box.x + (box.w - column * 2 - gap) / 2;
-    const parts = [
-        { fill: scale.widths[0] ?? 0, colour: TOKENS.inkCool, name: 'Kept as cash', value: signature.cashLabel },
-        { fill: scale.widths[1] ?? 0, colour: TOKENS.btc, name: 'As bitcoin', value: signature.bitcoinLabel },
-    ];
-    parts.forEach((part, i) => {
-        const x = left + i * (column + gap);
-        const h = Math.max(3, part.fill * (base - top - 24));
-        context.fillStyle = TOKENS.well;
-        context.fillRect(x, top + 24, column, base - top - 24);
-        context.fillStyle = part.colour;
-        context.fillRect(x, base - h, column, h);
-        small(context, part.value, x + column / 2, base - h - 10, part.colour, 'center');
-        small(context, part.name, x + column / 2, base + 24, TOKENS.inkDim, 'center');
-    });
+    const decades = Math.max(-MAX_DECADES, Math.min(MAX_DECADES, Math.log10(signature.bitcoin / signature.cash)));
+    const angle = (decades * TILT_PER_DECADE * Math.PI) / 180;
+    const cx = box.x + box.w / 2;
+    const pivot = box.y + box.h * 0.22;
+    const arm = Math.min(box.w * 0.4, 150);
+    const hang = box.h * 0.3;
+    const stackMax = box.h * 0.36;
     context.fillStyle = TOKENS.inkDim;
-    context.fillRect(left - 12, base, column * 2 + gap + 24, 2);
+    context.fillRect(cx - 3, pivot, 6, box.h * 0.72);
+    context.fillRect(cx - 54, box.y + box.h * 0.94, 108, 8);
+    const sides = [
+        {
+            dir: -1,
+            fill: scale.widths[0] ?? 0,
+            colour: TOKENS.inkCool,
+            value: signature.cashLabel,
+            name: 'Kept as cash',
+        },
+        { dir: 1, fill: scale.widths[1] ?? 0, colour: TOKENS.btc, value: signature.bitcoinLabel, name: 'As bitcoin' },
+    ];
+    for (const side of sides) {
+        const ex = cx + side.dir * arm * Math.cos(angle);
+        const ey = pivot + side.dir * arm * Math.sin(angle);
+        const pan = ey + hang;
+        context.strokeStyle = TOKENS.inkDim;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(ex, ey);
+        context.lineTo(ex - 46, pan);
+        context.moveTo(ex, ey);
+        context.lineTo(ex + 46, pan);
+        context.stroke();
+        context.fillStyle = TOKENS.inkWarm;
+        context.fillRect(ex - 56, pan, 112, 6);
+        const height = Math.max(4, stackMax * side.fill);
+        const pieces = Math.max(1, Math.min(10, Math.round(height / 10)));
+        const each = height / pieces;
+        context.fillStyle = side.colour;
+        for (let k = 0; k < pieces; k += 1) context.fillRect(ex - 36, pan - (k + 1) * each, 72, Math.max(1, each - 2));
+        small(context, side.value, ex, pan + 28, side.colour, 'center');
+    }
+    context.save();
+    context.translate(cx, pivot);
+    context.rotate(angle);
+    context.fillStyle = TOKENS.ink;
+    context.fillRect(-arm - 8, -4, arm * 2 + 16, 8);
+    context.restore();
+    context.fillStyle = TOKENS.btc;
+    context.beginPath();
+    context.arc(cx, pivot, 7, 0, Math.PI * 2);
+    context.fill();
     if (scale.log) small(context, 'log scale', box.x + box.w, box.y + 14, TOKENS.inkDim, 'right');
 }
 
@@ -173,33 +208,37 @@ function drawLines(context: Context, box: Box, signature: Extract<Signature, { k
     small(context, 'lump sum', box.x + 162, box.y + 14, TOKENS.inkCool);
 }
 
-function drawStamp(context: Context, box: Box, signature: Extract<Signature, { kind: 'stamp' }>): void {
-    const w = Math.min(box.w, 360);
-    const h = Math.min(box.h, 220);
+const KEY_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/** The key: a bow stamped with the address type and a blade cut from the characters the postcard shows. */
+function drawKey(context: Context, box: Box, signature: Extract<Signature, { kind: 'stamp' }>): void {
+    const w = Math.min(box.w, 460);
     const x = box.x + (box.w - w) / 2;
-    const y = box.y + (box.h - h) / 2;
-    context.save();
-    context.translate(x + w / 2, y + h / 2);
-    context.rotate((-3 * Math.PI) / 180);
-    context.strokeStyle = TOKENS.btc;
-    context.lineWidth = 4;
-    context.strokeRect(-w / 2, -h / 2, w, h);
-    context.lineWidth = 1.5;
-    context.strokeRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20);
+    const cy = box.y + box.h * 0.5;
+    const bowR = Math.min(box.h * 0.3, 74);
+    const bowX = x + bowR;
+    context.strokeStyle = TOKENS.inkWarm;
+    context.lineWidth = 14;
+    context.beginPath();
+    context.arc(bowX, cy, bowR - 7, 0, Math.PI * 2);
+    context.stroke();
+    const bladeX = bowX + bowR;
+    const bladeW = x + w - bladeX;
+    context.fillStyle = TOKENS.inkWarm;
+    context.fillRect(bladeX - 8, cy - 10, bladeW + 8, 22);
+    const chars = [...signature.shown.replace('…', '')];
+    const tooth = bladeW / Math.max(12, chars.length);
+    chars.forEach((char, i) => {
+        const index = KEY_ALPHABET.indexOf(char);
+        const depth = 6 + ((index >= 0 ? index % 8 : 7) / 7) * 26;
+        context.fillRect(bladeX + i * tooth + 1, cy - 10 - depth, Math.max(1, tooth - 3), depth);
+    });
     context.textAlign = 'center';
     context.fillStyle = TOKENS.btc;
-    context.font = font('display', 46);
-    context.fillText(signature.type, 0, -h / 2 + 78);
-    context.font = font('mono', 16);
-    context.fillText(`${signature.encoding.toUpperCase()} · CHECKSUM VALID`, 0, -h / 2 + 112);
-    context.fillStyle = TOKENS.ink;
-    const groups = signature.shown.match(/.{1,4}/g) ?? [signature.shown];
-    const perLine = signature.shown.includes('…') ? groups.length : 4;
-    context.font = font('mono', signature.shown.includes('…') ? 22 : 15);
-    for (let row = 0; row * perLine < groups.length && row < 4; row += 1) {
-        context.fillText(groups.slice(row * perLine, row * perLine + perLine).join(' '), 0, -h / 2 + 148 + row * 20);
-    }
-    context.restore();
+    context.font = font('mono', Math.round(bowR * 0.26));
+    context.fillText(signature.type.toUpperCase(), bowX, cy + bowR * 0.09);
+    small(context, `${signature.encoding} · checksum valid`, x + w, cy + 46, TOKENS.btc, 'right');
+    small(context, signature.shown, x + w, cy + 70, TOKENS.ink, 'right');
 }
 
 function drawSignature(context: Context, box: Box, signature: Signature): void {
@@ -212,7 +251,7 @@ function drawSignature(context: Context, box: Box, signature: Signature): void {
             drawSupply(context, box, signature.issued, signature.undated === true);
             break;
         case 'columns':
-            drawColumns(context, box, signature);
+            drawBalance(context, box, signature);
             break;
         case 'cells':
             drawCells(context, box, signature.sats);
@@ -221,7 +260,7 @@ function drawSignature(context: Context, box: Box, signature: Signature): void {
             drawLines(context, box, signature);
             break;
         case 'stamp':
-            drawStamp(context, box, signature);
+            drawKey(context, box, signature);
             break;
     }
     context.restore();
