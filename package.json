@@ -20,10 +20,10 @@
         "lint": "biome check ."
     },
     "devDependencies": {
-        "@axe-core/playwright": "4.13.0",
-        "@biomejs/biome": "^2.5.14",
+        "@axe-core/playwright": "4.14.0",
+        "@biomejs/biome": "^2.6.4",
         "@playwright/test": "1.63.0",
-        "@types/node": "^22.20.4",
+        "@types/node": "^26.6.6",
         "typescript": "^7.0.2",
         "vite": "^8.3.1",
         "vitest": "^5.0.2"
