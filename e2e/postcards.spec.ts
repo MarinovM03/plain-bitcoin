@@ -109,7 +109,7 @@ for (const { tool, route, figure, prepare } of CASES) {
     });
 }
 
-test('the printer loads only on a first sign of sharing, never with the page', async ({ page, isMobile }) => {
+test('the postcard renderer loads only on a first sign of sharing, never with the page', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Checked once, on desktop');
     const chunks: string[] = [];
     page.on('request', (request) => {
@@ -133,13 +133,13 @@ test('Copy image says plainly when this browser cannot copy images', async ({ pa
     await expect(page.locator('.tray__status')).toHaveText(SHARE.copyUnsupported);
 });
 
-test('the print feeds out of the slot, and appears at once under reduced motion', async ({ page }) => {
+test('the postcard slides up into the tray, and appears at once under reduced motion', async ({ page }) => {
     await page.goto('/?hero=plain#/dca');
     await page.locator('[data-share="print"]').click();
-    await expect(page.locator('.tray__paper')).toHaveClass(/is-feeding/);
+    await expect(page.locator('.tray__paper')).toHaveClass(/is-arriving/);
     await page.locator('.tray [data-tray="close"]').click();
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.locator('[data-share="print"]').click();
     await expect(page.locator('.tray__status')).toHaveText(SHARE.printed);
-    await expect(page.locator('.tray__paper')).not.toHaveClass(/is-feeding/);
+    await expect(page.locator('.tray__paper')).not.toHaveClass(/is-arriving/);
 });
