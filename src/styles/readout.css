@@ -1,4 +1,4 @@
-/* The readout family: solid ink on the plate. No halftone, no soft dots, nothing borrowed from the weather. */
+/* The pictures: solid ink on an opaque plate. */
 .gauge-svg {
     position: absolute;
     inset: 0;
@@ -257,11 +257,11 @@
 }
 
 @media (min-width: 64rem) {
-    .scene .gauge-svg text {
+    .picture .gauge-svg text {
         font-size: 12px;
     }
 
-    .scene .gauge-svg .g-label--small {
+    .picture .gauge-svg .g-label--small {
         font-size: 10.5px;
     }
 }

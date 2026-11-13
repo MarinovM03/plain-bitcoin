@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LAST_CLOSE, type PriceQuote } from '../data/price.ts';
-import { blockAge, chainState, statusView } from './status.ts';
+import { blockAge, statusView } from './status.ts';
 
 const NOW = Date.UTC(2026, 9, 30, 19, 26);
 const LIVE: PriceQuote = {
@@ -55,20 +55,5 @@ describe('blockAge', () => {
     it('says when the block time is unknown instead of guessing', () => {
         expect(blockAge({ source: 'live', time: null }, NOW)).toBe('block time unknown');
         expect(blockAge({ source: 'live', time: NOW / 1000 - 20 }, NOW)).toBe('<1 min since last block');
-    });
-});
-
-describe('chainState', () => {
-    it('hands the stage the height, the block time in ms and whether it is an estimate', () => {
-        expect(chainState({ height: 5, source: 'live', time: 100 })).toEqual({
-            height: 5,
-            blockTime: 100_000,
-            estimated: false,
-        });
-        expect(chainState({ height: 5, source: 'offline', time: null })).toEqual({
-            height: 5,
-            blockTime: null,
-            estimated: true,
-        });
     });
 });

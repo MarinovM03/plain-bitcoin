@@ -1,23 +1,22 @@
 import './styles/main.css';
 import { startRouter } from './app/router.ts';
-import { stage, startStage } from './hero/bus.ts';
 import { mountCounter } from './tools/left/counter.ts';
 import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
-import { bindFields, trackMore, watchTyping } from './ui/field-behaviour.ts';
+import { bindFields } from './ui/field-behaviour.ts';
 import { mountHome, renderHome } from './ui/home.ts';
 import { html } from './ui/html.ts';
-import { markCurrent, trackChrome } from './ui/shell.ts';
+import { bindMenu, markCurrent, trackChrome } from './ui/shell.ts';
 import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
-import { afterFirstPaint, byId, find } from './util/dom.ts';
+import { byId, find } from './util/dom.ts';
 
 const SITE = import.meta.env.VITE_SITE_URL;
 
 const main = byId('main');
 const announcer = byId('announcer');
 trackChrome(find(document, '.topbar'));
-startStage(byId('stage'), afterFirstPaint);
-const status = mountStatus(byId('status'));
+bindMenu(byId<HTMLDetailsElement>('menu'));
+const status = mountStatus(byId('status'), document.querySelector<SVGPathElement>('#barcode path'));
 const announce = (message: string) => {
     announcer.textContent = message;
 };
@@ -32,7 +31,6 @@ startRouter(({ route, initial, notFound }) => {
     for (const cleanup of cleanups) cleanup();
     cleanups = [];
     const view = ++viewCount;
-    stage.clear();
 
     const prerendered = initial && route === 'home' && !notFound;
     if (!prerendered) {
@@ -41,14 +39,14 @@ startRouter(({ route, initial, notFound }) => {
         main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${page}</div>`.value;
     }
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
+    document.documentElement.dataset.route = route;
     markCurrent(route);
     status.setRoute(route);
     bindFields(main);
-    cleanups.push(watchTyping(main), trackMore(main));
 
-    if (route === 'home') cleanups.push(mountHome(main, SITE));
-    if (route === 'home' || route === 'left') cleanups.push(mountCounter(main, announce));
+    if (route === 'home') cleanups.push(mountHome(main, SITE, announce));
     if (route === 'left') {
+        cleanups.push(mountCounter(main, announce));
         import('./tools/left/index.ts').then(({ mountLeft }) => {
             whileCurrent(view, () => mountLeft(main, SITE));
         });

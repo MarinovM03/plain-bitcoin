@@ -21,7 +21,7 @@ async function ready(page: Page, id: ToolId): Promise<void> {
     if (id === 'address') await page.locator('#address-input').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
     const answer = id === 'left' ? '#left-figure' : '#tool-result-figure';
     await expect(page.locator(answer)).toHaveText(/\d|[A-Z][a-z]/);
-    await expect(page.locator('#scene-plot > svg.gauge-svg')).toHaveCount(1);
+    await expect(page.locator('#picture-plot > svg.gauge-svg')).toHaveCount(1);
 }
 
 async function boxes(page: Page, id: ToolId) {
@@ -38,12 +38,11 @@ async function boxes(page: Page, id: ToolId) {
                 height: window.innerHeight,
                 width: window.innerWidth,
                 parts: {
-                    status: box('#status'),
-                    scene: box('.scene'),
-                    graph: box(dca ? '#scene-plot .dca-chart' : '#scene-plot'),
-                    input: left ? null : box(input),
+                    title: box('h1'),
+                    ...(left ? {} : { input: box(input) }),
                     figure: box(left ? '#left-figure' : '#tool-result-figure'),
                     answer: box(left ? '#left-supply' : '#tool-result'),
+                    ...(dca ? { graph: box('#picture-plot .dca-chart') } : {}),
                 },
             };
         },
@@ -51,7 +50,7 @@ async function boxes(page: Page, id: ToolId) {
     );
 }
 
-test('on every viewport, status, scene, primary input and answer share the first screen', async ({
+test('on every viewport the plain name, the first input and the answer share the first screen, and so does the DCA graph', async ({
     page,
     isMobile,
 }) => {
@@ -65,7 +64,6 @@ test('on every viewport, status, scene, primary input and answer share the first
             const measured = await boxes(page, id);
             expect(measured.scrollY).toBe(0);
             for (const [part, box] of Object.entries(measured.parts)) {
-                if (part === 'input' && id === 'left') continue;
                 const where = `#/${id} ${part} at ${width}x${height}`;
                 expect(box, where).not.toBeNull();
                 expect(box?.top ?? -1, where).toBeGreaterThanOrEqual(0);
@@ -88,7 +86,8 @@ test('typing on a phone keeps the answer on screen', async ({ page, isMobile }) 
         for (const selector of ['#tool-result-figure', '#tool-result']) {
             const box = await page.locator(selector).boundingBox();
             expect(box?.y ?? -1, `${id} ${selector}`).toBeGreaterThanOrEqual(0);
-            expect((box?.y ?? 0) + (box?.height ?? 0), `${id} ${selector}`).toBeLessThanOrEqual(844);
+            // A phone keyboard takes about 40% of the screen; the answer sits above where it would rise to.
+            expect((box?.y ?? 0) + (box?.height ?? 0), `${id} ${selector}`).toBeLessThanOrEqual(844 * 0.62);
         }
     }
 });

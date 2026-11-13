@@ -1,157 +1,288 @@
 import { hrefFor } from '../app/routes.ts';
-import { heightFeed, type Tip } from '../data/height.ts';
+import { advanceChain, type ChainEffect, EMPTY_CHAIN } from '../chain/machine.ts';
+import { chainStill } from '../chain/still.ts';
+import { type ChainBlock, heightFeed, type Tip } from '../data/height.ts';
 import { priceFeed } from '../data/price.ts';
-import { stage } from '../hero/bus.ts';
+import { mountHero } from '../hero/bus.ts';
 import { SATS_PER_BTC, supplyAt } from '../model/supply.ts';
 import { bindShareBar } from '../postcard/bar.ts';
 import { siteAddress } from '../postcard/site.ts';
 import { homePostcard } from '../postcard/words.ts';
+import { TOKENS } from '../styles/tokens.ts';
 import { TOOL_IDS, type ToolId } from '../tools/index.ts';
-import { afterFirstPaint } from '../util/dom.ts';
-import { formatFiatPrecise, formatMoney, formatWhole } from '../util/format.ts';
-import { HOME, NAV, TOOLS } from './copy.ts';
+import { afterFirstPaint, find } from '../util/dom.ts';
+import {
+    formatFiatPrecise,
+    formatMinutes,
+    formatShortDay,
+    formatUtcClock,
+    formatWhole,
+    isoDayMs,
+} from '../util/format.ts';
+import { CHAIN, HOME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
-import { sceneWindow, shareBar } from './output.ts';
-import { HOME_SCENE } from './scene-copy.ts';
+import { shareBar } from './output.ts';
 
-function renderTile(id: ToolId, index: number): SafeHtml {
-    return html`<li class="tiles__item tiles__item--${id}">
-        <a class="tile" href="${hrefFor(id)}" data-tile="${id}" data-plate>
-            <span class="tile__kicker" aria-hidden="true">${String(index + 1).padStart(2, '0')} · ${NAV.short[id]}</span>
-            <span class="tile__figure" data-tile-figure="${id}">${TOOLS[id].preview}</span>
-            <span class="tile__text">
-                <span class="tile__name">${TOOLS[id].name}</span>
-                <span class="tile__question">${TOOLS[id].question}</span>
-            </span>
+const LEGEND_TICK_MS = 15_000;
+
+/** The two tools with a live fact; their rows hold its line from the first paint so nothing shifts when it arrives. */
+const LIVE_FACTS: ReadonlySet<ToolId> = new Set<ToolId>(['left', 'convert']);
+
+function renderRow(id: ToolId): SafeHtml {
+    const fact = LIVE_FACTS.has(id) ? html`<span class="tool-row__fact" data-fact="${id}"></span>` : '';
+    return html`<li class="tool-list__item">
+        <a class="tool-row" href="${hrefFor(id)}" data-tool="${id}">
+            <span class="tool-row__name">${TOOLS[id].name}</span>
+            <span class="tool-row__description">${TOOLS[id].description}</span>
+            ${fact}
         </a>
     </li>`;
 }
 
 function renderCautions(): SafeHtml {
     const lines = HOME.cautions.map((line) => html`<li class="cautions__item">${line}</li>`);
-    return html`<section class="cautions" aria-labelledby="cautions-heading" data-plate>
+    return html`<section class="cautions" aria-labelledby="cautions-heading">
     <h2 id="cautions-heading" class="cautions__heading">${HOME.cautionsHeading}</h2>
     <ul class="cautions__list">${lines}</ul>
 </section>`;
 }
 
+/**
+ * Home: the headline and the five tools as plain links, beside the chain. The chain's picture is decoration for the
+ * eye (hidden from assistive tech and never clickable); the lines under it and the list below say the same in words.
+ */
 export function renderHome(): SafeHtml {
+    const columns = Object.values(CHAIN.columns).map((name) => html`<th scope="col">${name}</th>`);
     return html`<div class="home">
-    <section class="overview" aria-labelledby="home-heading" data-plate>
-        <p class="overview__kicker">${HOME.kicker}</p>
-        <h1 id="home-heading" class="overview__heading" tabindex="-1">${HOME.headline}</h1>
-        <p class="overview__lead">${HOME.lead}</p>
-        <div class="overview__print">${shareBar()}<p id="home-status" class="visually-hidden" aria-live="polite"></p></div>
+    <section class="hero" aria-labelledby="home-heading">
+        <div class="hero__intro">
+            <h1 id="home-heading" class="hero__heading" tabindex="-1">${HOME.headline}</h1>
+            <p class="hero__lead">${HOME.lead}</p>
+            <nav class="tool-list" aria-label="${HOME.toolsHeading}">
+                <ul class="tool-list__rows">${TOOL_IDS.map(renderRow)}</ul>
+            </nav>
+        </div>
+        <div class="hero__stage">
+            <div id="chain" class="chain" data-hero="still" aria-hidden="true">
+                <div id="chain-still" class="chain__still"></div>
+            </div>
+            <div class="chain__legend">
+                <p id="chain-forming" class="chain__forming">${CHAIN.waiting}</p>
+                <p id="chain-newest" class="chain__newest"></p>
+            </div>
+        </div>
     </section>
-    <section class="home__stage" aria-label="${HOME.sceneLabel}" data-plate>
-        ${sceneWindow({ head: '', caption: HOME_SCENE.description })}
+    <section class="chain-about" aria-label="${CHAIN.label}">
+        <p class="chain-about__explain">${CHAIN.explain}</p>
+        <details class="chain-about__list">
+            <summary class="chain-about__summary">${CHAIN.listSummary}</summary>
+            <div class="chain-about__scroll" tabindex="0" role="region" aria-label="${CHAIN.tableLabel}">
+                <table class="chain-table">
+                    <thead><tr>${columns}</tr></thead>
+                    <tbody id="chain-rows"></tbody>
+                </table>
+            </div>
+        </details>
+        <p id="chain-source" class="source-line"></p>
     </section>
-    <section class="tiles" aria-label="${HOME.toolsLabel}">
-        <ul class="tiles__grid">${TOOL_IDS.map(renderTile)}</ul>
+    <section class="home__share" aria-labelledby="share-heading">
+        <h2 id="share-heading" class="home__share-heading">${HOME.shareHeading}</h2>
+        ${shareBar()}
+        <p id="home-status" class="visually-hidden" aria-live="polite"></p>
     </section>
     ${renderCautions()}
 </div>`;
 }
 
-function readingOf(tip: Tip) {
-    return { supply: supplyAt(tip.height), api: tip.source === 'live' ? tip.api : null, checkedAt: tip.checkedAt };
+function megabytes(bytes: number): string {
+    return CHAIN.megabytes((bytes / 1_000_000).toFixed(2));
 }
 
-/** The default questions, answered with the same model math the gauges use; loaded after first paint. */
-async function defaults(): Promise<{ cash: string; bitcoin: string; worth: string } | null> {
-    const [{ powerData }, { purchasingPower }, { dca }, daily] = await Promise.all([
-        import('../data/power.ts'),
-        import('../model/power.ts'),
-        import('../model/dca.ts'),
-        import('../data/prices/daily-gbp.json', { with: { type: 'json' } }),
-    ]);
-    const power = purchasingPower(1000, '2015-01', powerData('GBP'));
-    const plan = dca({ amount: 50, frequency: 'weekly', start: '2020-01-01', feePercent: 0 }, daily.default);
-    if (!power.ok || !plan.ok) return null;
-    return {
-        cash: formatMoney(power.result.amount, 'GBP'),
-        bitcoin: formatMoney(power.result.btcValueNow, 'GBP'),
-        worth: formatMoney(plan.result.valueNow, 'GBP'),
-    };
+function cell(text: string, className = ''): HTMLTableCellElement {
+    const element = document.createElement('td');
+    element.textContent = text;
+    if (className) element.className = className;
+    return element;
 }
 
-export function mountHome(root: HTMLElement, siteUrl: string): () => void {
+function blockRow(block: ChainBlock, nowSeconds: number, dated: boolean): HTMLTableRowElement {
+    const row = document.createElement('tr');
+    const found =
+        block.time === null
+            ? CHAIN.unknown
+            : dated
+              ? CHAIN.ago(formatMinutes(nowSeconds - block.time))
+              : formatUtcClock(block.time * 1000);
+    row.append(
+        cell(formatWhole(block.height), 'chain-table__figure'),
+        cell(found),
+        cell(block.txCount === null ? CHAIN.unknown : formatWhole(block.txCount), 'chain-table__figure'),
+        cell(block.size === null ? CHAIN.unknown : megabytes(block.size), 'chain-table__figure'),
+        cell(block.hash === null ? CHAIN.unknown : `…${block.hash.slice(-12)}`, 'chain-table__figure'),
+    );
+    return row;
+}
+
+export function mountHome(root: HTMLElement, siteUrl: string, announce: (message: string) => void): () => void {
     const heights = heightFeed();
     const prices = priceFeed();
     const site = siteAddress(siteUrl);
-    const status = root.querySelector<HTMLElement>('#home-status');
-    const plot = root.querySelector<HTMLElement>('#scene-plot');
-    const figure = (id: ToolId) => root.querySelector<HTMLElement>(`[data-tile-figure="${id}"]`);
-    let shownHeight = -1;
+    const host = find(root, '#chain');
+    const stillLayer = find(root, '#chain-still');
+    const forming = find(root, '#chain-forming');
+    const newest = find(root, '#chain-newest');
+    const rows = find(root, '#chain-rows');
+    const source = find(root, '#chain-source');
+    const status = find(root, '#home-status');
+    const fact = (id: ToolId) => root.querySelector<HTMLElement>(`[data-fact="${id}"]`);
+    const hero = mountHero(host, afterFirstPaint);
+    let chain = EMPTY_CHAIN;
+    /** Where the shown blocks came from when no API vouches for them right now: a saved day, or nothing. */
+    let savedOn: string | null = null;
     let disposed = false;
+
     const share = bindShareBar(root, {
-        postcard: () => homePostcard(readingOf(heights.tip)),
+        postcard: () => {
+            const tip = heights.tip;
+            return homePostcard({
+                supply: supplyAt(tip.height),
+                api: tip.source === 'live' ? tip.api : null,
+                checkedAt: tip.checkedAt,
+            });
+        },
         site,
         onStatus: (message) => {
-            if (status) status.textContent = message;
+            status.textContent = message;
         },
     });
     share.setEnabled(true);
 
-    function renderLeft(): void {
-        const left = Math.floor(supplyAt(heights.tip.height).left / SATS_PER_BTC);
-        const target = figure('left');
-        if (target) target.textContent = HOME.leftFigure(`${formatWhole(left)} BTC`);
-        const height = heights.tip.height;
-        if (plot && height !== shownHeight) {
-            if (shownHeight < 0) stage.show(plot, { id: 'home', height });
-            else stage.update({ id: 'home', height });
-            shownHeight = height;
+    /** The newest block's own timestamp, only while a live feed stands behind it. */
+    function formingSince(tip: Tip): number | null {
+        const first = chain.blocks[0];
+        if (savedOn !== null || tip.source !== 'live' || !first || first.height !== tip.height) return null;
+        return first.time ?? tip.time;
+    }
+
+    function renderStill(): void {
+        const { clientWidth: width, clientHeight: height } = host;
+        if (width < 2 || height < 2 || chain.blocks.length === 0) return;
+        const since = formingSince(heights.tip);
+        stillLayer.innerHTML = chainStill(chain.blocks, {
+            width,
+            height,
+            nowSeconds: since === null ? null : Date.now() / 1000,
+            forming: since !== null,
+            ink: TOKENS.void,
+        });
+    }
+
+    function renderLegend(): void {
+        const tip = heights.tip;
+        const now = Date.now() / 1000;
+        const first = chain.blocks[0];
+        const last = chain.blocks[chain.blocks.length - 1];
+        const since = formingSince(tip);
+        if (!first || !last) {
+            forming.textContent = CHAIN.waiting;
+            newest.textContent = '';
+            return;
         }
+        if (savedOn !== null) {
+            forming.textContent = CHAIN.saved(
+                formatWhole(last.height),
+                formatWhole(first.height),
+                formatShortDay(isoDayMs(savedOn)),
+            );
+        } else if (since === null) {
+            forming.textContent =
+                tip.source === 'offline' && tip.blocksAt !== null
+                    ? CHAIN.lastSeen(formatUtcClock(tip.blocksAt))
+                    : CHAIN.formingUnknown;
+        } else {
+            forming.textContent = CHAIN.forming(formatMinutes(now - since));
+        }
+        host.dataset.state = savedOn !== null ? 'saved' : since === null ? 'stale' : 'live';
+        const height = formatWhole(first.height);
+        const headline =
+            since === null || first.time === null
+                ? CHAIN.newestUnknown(height)
+                : CHAIN.newest(height, formatMinutes(now - first.time));
+        const contents =
+            first.txCount !== null && first.size !== null
+                ? ` ${CHAIN.contents(formatWhole(first.txCount), megabytes(first.size))}`
+                : '';
+        newest.textContent = headline + contents;
+        rows.replaceChildren(...chain.blocks.map((block) => blockRow(block, now, since !== null)));
+        source.textContent =
+            savedOn !== null
+                ? ''
+                : tip.blocksAt !== null
+                  ? CHAIN.source(tip.api ?? 'mempool.space', formatUtcClock(tip.blocksAt))
+                  : '';
+    }
+
+    function show(effect: ChainEffect): void {
+        hero.show({ blocks: chain.blocks, formingSince: formingSince(heights.tip), effect });
+        host.dataset.advances = String(chain.advances);
+        host.dataset.tip = String(chain.blocks[0]?.height ?? '');
+        renderStill();
+    }
+
+    function take(blocks: readonly ChainBlock[]): void {
+        const { state, effect } = advanceChain(chain, blocks);
+        chain = state;
+        show(effect);
+    }
+
+    function onTip(tip: Tip): void {
+        if (tip.blocks.length > 0) {
+            // Live blocks replace a saved set outright: nothing was "just found".
+            if (savedOn !== null) chain = EMPTY_CHAIN;
+            savedOn = null;
+            const before = chain.advances;
+            take(tip.blocks);
+            if (chain.advances > before) announce(CHAIN.arrived(formatWhole(tip.height)));
+        } else if (tip.source === 'offline' && chain.blocks.length === 0) {
+            import('../data/chain-snapshot.ts')
+                .then(({ SNAPSHOT }) => {
+                    if (disposed || chain.blocks.length > 0) return;
+                    savedOn = SNAPSHOT.asOf;
+                    take(SNAPSHOT.blocks);
+                    renderLegend();
+                })
+                .catch(() => {});
+        }
+        renderLegend();
+        const left = Math.floor(supplyAt(tip.height).left / SATS_PER_BTC);
+        const target = fact('left');
+        if (target) target.textContent = HOME.leftFact(`${formatWhole(left)} BTC`);
         share.refresh();
     }
 
     function renderPrice(): void {
-        const target = figure('convert');
+        const target = fact('convert');
         if (target)
-            target.textContent = HOME.convertFigure(formatFiatPrecise(prices.quote.value.gbp / SATS_PER_BTC, 'GBP'));
+            target.textContent = HOME.convertFact(formatFiatPrecise(prices.quote.value.gbp / SATS_PER_BTC, 'GBP'));
     }
 
-    // A tile in hand lifts its miniature on the table, the same as pointing at the miniature lights the tile.
-    const tiles = [...root.querySelectorAll<HTMLElement>('.tile[data-tile]')];
-    const lift = (event: Event) => stage.focus((event.currentTarget as HTMLElement).dataset.tile ?? null);
-    const drop = () => stage.focus(null);
-    for (const tile of tiles) {
-        tile.addEventListener('pointerenter', lift);
-        tile.addEventListener('focus', lift);
-        tile.addEventListener('pointerleave', drop);
-        tile.addEventListener('blur', drop);
-    }
-
-    const address = figure('address');
-    if (address) address.textContent = HOME.addressFigure;
-    const stopHeights = heights.subscribe(renderLeft);
+    const resizes = new ResizeObserver(renderStill);
+    resizes.observe(host);
+    const ticker = window.setInterval(() => {
+        if (!document.hidden) renderLegend();
+    }, LEGEND_TICK_MS);
+    const stopHeights = heights.subscribe(onTip);
     const stopPrices = prices.subscribe(renderPrice);
-    renderLeft();
+    onTip(heights.tip);
     renderPrice();
-    afterFirstPaint(() => {
-        if (disposed) return;
-        defaults()
-            .then((answers) => {
-                if (!answers || disposed) return;
-                const power = figure('power');
-                const plan = figure('dca');
-                if (power) power.textContent = HOME.powerFigure(answers.cash, answers.bitcoin);
-                if (plan) plan.textContent = HOME.dcaFigure(answers.worth);
-            })
-            .catch(() => {});
-    });
 
     return () => {
         disposed = true;
+        window.clearInterval(ticker);
+        resizes.disconnect();
         stopHeights();
         stopPrices();
         share.dispose();
-        for (const tile of tiles) {
-            tile.removeEventListener('pointerenter', lift);
-            tile.removeEventListener('focus', lift);
-            tile.removeEventListener('pointerleave', drop);
-            tile.removeEventListener('blur', drop);
-        }
+        hero.dispose();
     };
 }

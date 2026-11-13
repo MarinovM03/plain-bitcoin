@@ -2,10 +2,10 @@ import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
 import { renderConvertDetail, renderConvertInputs, renderConvertMore } from './convert-view.ts';
-import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, POWER, SCENE, TOOL_PAGE, TOOLS } from './copy.ts';
+import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, PICTURE, POWER, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
-import { moreOptions, noteLine, resultBlock, sceneWindow, shareSection, sourceLine } from './output.ts';
+import { moreOptions, noteLine, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs, renderPowerMore } from './power-view.ts';
 
 type CalculatorId = Exclude<ToolId, 'left'>;
@@ -31,66 +31,66 @@ function calculator(id: CalculatorId): Calculator {
                 inputs: renderPowerInputs(EARLIEST_MONTH, thisMonth()),
                 more: [POWER.presetsLabel, renderPowerMore()],
                 detail: renderPowerDetail(),
-                caption: SCENE.powerEmpty,
+                caption: PICTURE.powerEmpty,
             };
         case 'convert':
             return {
                 inputs: renderConvertInputs(),
                 more: [CONVERT.presetsLabel, renderConvertMore()],
                 detail: renderConvertDetail(),
-                caption: SCENE.convertEmpty,
+                caption: PICTURE.convertEmpty,
             };
         case 'dca':
             return {
                 inputs: renderDcaInputs(),
                 more: [FIELDS.more, renderDcaMore(EARLIEST_MONTH, thisMonth())],
                 detail: renderDcaDetail(),
-                caption: SCENE.dcaEmpty,
+                caption: PICTURE.dcaEmpty,
             };
         case 'address':
             return {
                 inputs: renderAddressInputs(),
                 more: [ADDRESS.samplesLabel, renderAddressMore()],
                 detail: renderAddressDetail(),
-                caption: SCENE.addressEmpty,
+                caption: PICTURE.addressEmpty,
             };
     }
 }
 
 function head(id: ToolId): SafeHtml {
-    return html`<div class="tool__head">
+    return html`<header class="tool__head">
     <h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>
-    <p class="tool__question">${TOOLS[id].question}</p>
-</div>`;
+    <p class="tool__description">${TOOLS[id].description}</p>
+</header>`;
 }
 
-/** A tool page: one screen plate holding the scene and the answer side by side, and a plate below for the rest. */
-function screen(id: ToolId, scene: SafeHtml, panel: SafeHtml, below: SafeHtml): SafeHtml {
+/**
+ * A tool page, in reading order: its plain name, the inputs, the answer, the picture, then sharing and the rest.
+ * On a wide screen the picture stands beside the calculator instead of under the answer.
+ */
+function page(id: ToolId, screen: SafeHtml, below: SafeHtml): SafeHtml {
     return html`<article class="tool tool--${id}">
-    <div class="tool__screen" data-plate>
-        ${scene}
-        ${panel}
-    </div>
-    <div class="tool__below" data-plate>${below}</div>
+    <div class="tool__screen">${head(id)}${screen}</div>
+    <div class="tool__below">${below}</div>
 </article>`;
 }
 
 function renderCalculator(id: CalculatorId): SafeHtml {
     const address = id === 'address';
     const parts = calculator(id);
-    return screen(
+    return page(
         id,
-        sceneWindow({ head: head(id), caption: parts.caption }),
-        html`<form class="tool__panel tool__inputs" aria-label="${address ? TOOL_PAGE.addressLabel : TOOL_PAGE.inputsLabel}" novalidate>
+        html`<form class="tool__inputs" aria-label="${address ? TOOL_PAGE.addressLabel : TOOL_PAGE.inputsLabel}" novalidate>
             <div class="tool__fields">${parts.inputs}</div>
-            ${resultBlock({
-                id: 'tool-result',
-                label: address ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
-                empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
-            })}
-            ${shareSection()}
-            ${moreOptions(...parts.more)}
-        </form>`,
+        </form>
+        ${resultBlock({
+            id: 'tool-result',
+            label: address ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
+            empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
+        })}
+        ${pictureFrame(parts.caption)}
+        ${shareSection()}
+        <form class="tool__more" novalidate>${moreOptions(...parts.more)}</form>`,
         html`${parts.detail}
         ${sourceLine(TOOLS[id].privacy, address ? ADDRESS.sourceIdle : TOOL_PAGE.sourcePending)}`,
     );
@@ -116,18 +116,16 @@ function renderLeft(): SafeHtml {
             <dd id="left-${id}">${LEFT_PAGE.pending}</dd>
         </div>`,
     );
-    return screen(
+    return page(
         'left',
-        sceneWindow({ head: head('left'), caption: SCENE.left }),
-        html`<div class="tool__panel">
-            <section class="result" aria-labelledby="left-label">
-                <p id="left-label" class="result__label">${LEFT_PAGE.resultLabel}</p>
-                <p id="left-figure" class="result__figure"><span class="result__empty">${LEFT_PAGE.figureEmpty}</span></p>
-                <p id="left-supply" class="result__sentence"></p>
-                <p id="left-note" class="result__detail"></p>
-            </section>
-            ${shareSection(html`<p id="left-status" class="visually-hidden" aria-live="polite"></p>`)}
-        </div>`,
+        html`<section class="result" aria-labelledby="left-label">
+            <p id="left-label" class="result__label">${LEFT_PAGE.resultLabel}</p>
+            <p id="left-figure" class="result__figure"><span class="result__empty">${LEFT_PAGE.figureEmpty}</span></p>
+            <p id="left-supply" class="result__sentence"></p>
+            <p id="left-note" class="result__detail"></p>
+        </section>
+        ${pictureFrame(PICTURE.left)}
+        ${shareSection(html`<p id="left-status" class="visually-hidden" aria-live="polite"></p>`)}`,
         html`<section class="details" aria-labelledby="numbers-heading">
             <h2 id="numbers-heading" class="details__title">${LEFT_PAGE.numbersHeading}</h2>
             <dl id="numbers-panel" class="stats">${cells}</dl>

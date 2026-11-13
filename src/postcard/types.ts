@@ -4,7 +4,7 @@ export type PostcardTool = 'home' | 'left' | 'power' | 'convert' | 'dca' | 'addr
 
 export type PostcardFormat = 'wide' | 'square';
 
-/** The small drawing on a postcard: made from the same numbers as the answer, never from the weather. */
+/** The small drawing on a postcard: made from the same numbers as the answer. */
 export type Signature =
     | { kind: 'supply'; issued: number; max: number; undated?: boolean }
     | { kind: 'columns'; cash: number; bitcoin: number; cashLabel: string; bitcoinLabel: string }

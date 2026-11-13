@@ -107,7 +107,7 @@ describe('leftPostcard', () => {
         });
         expect(card.number).toBe('894,203.1019 BTC');
         expect(card.line).toBe('894,203 BTC are still to be mined.');
-        expect(card.kicker).toBe('Left to mine · block 973,854');
+        expect(card.kicker).toBe('How much bitcoin is left · block 973,854');
         expect(card.source).toBe(
             'Block 973,854 · height via mempool.space · 30 Oct 2026, 18:06 UTC · supply from the issuance schedule',
         );
@@ -115,7 +115,7 @@ describe('leftPostcard', () => {
 
     it('says est. on an estimated height, and never claims a source it did not use', () => {
         const card = leftPostcard({ supply: supplyAt(973_854), api: null, checkedAt: 0 });
-        expect(card.kicker).toBe('Left to mine · block 973,854 est.');
+        expect(card.kicker).toBe('How much bitcoin is left · block 973,854 est.');
         expect(card.source).toMatch(/^Block 973,854 est\. · estimated at one block every 10 minutes/);
         expect(card.source).not.toContain('mempool');
     });
@@ -123,7 +123,7 @@ describe('leftPostcard', () => {
     it('gives home its own postcard: the block height as the number, and the 21M issued share', () => {
         const card = homePostcard({ supply: supplyAt(973_854), api: 'mempool.space', checkedAt: 0 });
         expect(card.number).toBe('973,854');
-        expect(card.line).toBe('Bitcoin, measured live. 20,105,796 of 21,000,000 BTC issued.');
+        expect(card.line).toBe('Bitcoin, block by block. 20,105,796 of 21,000,000 BTC issued.');
         expect(card.route).toBe('');
     });
 });

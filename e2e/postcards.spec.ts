@@ -49,7 +49,7 @@ for (const { tool, route, figure, prepare } of CASES) {
     test(`#/${route} prints a postcard: 2400 x 1256, plate to the corners, the page's own number, nothing sent`, async ({
         page,
     }) => {
-        await page.goto(`/?hero=plain#/${route}`);
+        await page.goto(`/?hero=still#/${route}`);
         if (route === '' || route === 'left')
             await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
         await prepare?.(page);
@@ -115,7 +115,7 @@ test('the postcard renderer loads only on a first sign of sharing, never with th
     page.on('request', (request) => {
         if (/\/assets\/postcard-/.test(request.url())) chunks.push(request.url());
     });
-    await page.goto('/?hero=plain#/convert');
+    await page.goto('/?hero=still#/convert');
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
     await page.waitForTimeout(1_500);
     expect(chunks).toEqual([]);
@@ -127,14 +127,14 @@ test('Copy image says plainly when this browser cannot copy images', async ({ pa
     await page.addInitScript(() => {
         Object.defineProperty(window, 'ClipboardItem', { value: undefined, configurable: true });
     });
-    await page.goto('/?hero=plain#/convert');
+    await page.goto('/?hero=still#/convert');
     await page.locator('[data-share="print"]').click();
     await page.locator('.tray [data-tray="copy"]').click();
     await expect(page.locator('.tray__status')).toHaveText(SHARE.copyUnsupported);
 });
 
 test('the postcard slides up into the tray, and appears at once under reduced motion', async ({ page }) => {
-    await page.goto('/?hero=plain#/dca');
+    await page.goto('/?hero=still#/dca');
     await page.locator('[data-share="print"]').click();
     await expect(page.locator('.tray__paper')).toHaveClass(/is-arriving/);
     await page.locator('.tray [data-tray="close"]').click();

@@ -97,17 +97,17 @@ export function layoutPostcard(card: Postcard, format: PostcardFormat, measure: 
     const inner = width - margin * 2;
     const signatureWidth = wide ? 360 : inner;
     const column = wide ? inner - signatureWidth - 48 : inner;
-    const kickerSize = wide ? 20 : 22;
+    const kickerSize = wide ? 24 : 26;
     const kicker: TextBox = {
-        text: card.kicker.toUpperCase(),
+        text: card.kicker,
         x: margin,
         y: margin + kickerSize,
         size: kickerSize,
-        face: 'mono',
+        face: 'display',
         tone: 'dim',
         align: 'left',
     };
-    kicker.text = clip(measure, kicker.text, font('mono', kickerSize), inner);
+    kicker.text = clip(measure, kicker.text, font('display', kickerSize), inner);
 
     const numberSize = fitSize(measure, card.number, 'display', column, wide ? 150 : 190, 40);
     const numberTop = kicker.y + (wide ? 44 : 64);

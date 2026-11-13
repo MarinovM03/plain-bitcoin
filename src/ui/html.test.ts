@@ -3,7 +3,10 @@ import { TOOL_IDS } from '../tools/index.ts';
 import { HOME, LEFT_PAGE, TOOLS } from './copy.ts';
 import { renderHome } from './home.ts';
 import { escapeHtml, html } from './html.ts';
+import { renderHeader } from './shell.ts';
 import { renderToolPage } from './tool-page.ts';
+
+const BARE_LABELS = ['Left', 'Power', 'Convert', 'DCA', 'Address'];
 
 describe('html', () => {
     it('escapes interpolated text but keeps nested markup', () => {
@@ -14,46 +17,65 @@ describe('html', () => {
     });
 });
 
+describe('plain names', () => {
+    it('gives every route a plain name and a one-line description, never a bare short label', () => {
+        for (const id of TOOL_IDS) {
+            expect(TOOLS[id].name.split(' ').length).toBeGreaterThanOrEqual(4);
+            expect(TOOLS[id].description.length).toBeGreaterThan(20);
+            expect(BARE_LABELS).not.toContain(TOOLS[id].name);
+        }
+        expect(new Set(TOOL_IDS.map((id) => TOOLS[id].name)).size).toBe(TOOL_IDS.length);
+    });
+
+    it('lists every tool in the menu by its full name, as a plain link', () => {
+        const markup = renderHeader().value;
+        for (const id of TOOL_IDS) {
+            expect(markup).toContain(`href="#/${id}" data-nav="${id}"`);
+            expect(markup).toContain(escapeHtml(TOOLS[id].name));
+        }
+        const linkText = [...markup.matchAll(/<span class="menu__name">([^<]+)<\/span>/g)].map((match) => match[1]);
+        for (const label of BARE_LABELS) expect(linkText).not.toContain(label);
+    });
+});
+
 describe('renderHome', () => {
-    it('links every tool once, in order, each tile tied to its miniature on the table', () => {
+    it('links every tool once, in order, as a row with its name and description', () => {
         const markup = renderHome().value;
-        const hrefs = [...markup.matchAll(/class="tile" href="([^"]+)"/g)].map((match) => match[1]);
+        const hrefs = [...markup.matchAll(/class="tool-row" href="([^"]+)"/g)].map((match) => match[1]);
         expect(hrefs).toEqual(TOOL_IDS.map((id) => `#/${id}`));
         for (const id of TOOL_IDS) {
-            expect(markup).toContain(`data-tile="${id}"`);
-            expect(markup).toContain(TOOLS[id].question);
-            expect(markup).toContain(escapeHtml(TOOLS[id].preview));
+            expect(markup).toContain(escapeHtml(TOOLS[id].name));
+            expect(markup).toContain(escapeHtml(TOOLS[id].description));
         }
     });
 
-    it('opens with one headline on the overview plate, the diorama on its own plate, every tile a plate', () => {
+    it('opens with one headline, and hides the chain picture from assistive tech with words beside it', () => {
         const markup = renderHome().value;
-        expect(markup).toContain('class="overview" aria-labelledby="home-heading" data-plate');
-        expect(markup).toMatch(/class="home__stage"[^>]*data-plate/);
-        expect(markup.indexOf('data-scene-window')).toBeGreaterThan(markup.indexOf('class="home__stage"'));
-        expect(markup.match(/class="tile" href="[^"]+" data-tile="[^"]+" data-plate/g)).toHaveLength(TOOL_IDS.length);
-        expect(markup).toContain('data-share="print"');
         expect(markup.match(/<h1/g)).toHaveLength(1);
         expect(markup).toContain(HOME.headline);
-        expect(markup).not.toContain('hero');
+        expect(markup).toContain('id="chain" class="chain" data-hero="still" aria-hidden="true"');
+        expect(markup).toContain('id="chain-forming"');
+        expect(markup).toContain('id="chain-rows"');
+        expect(markup).toContain('data-share="print"');
+        for (const gone of ['data-tile', 'scene', 'data-plate']) expect(markup).not.toContain(gone);
     });
 });
 
 describe('renderToolPage', () => {
-    it('gives every calculator the scene, inputs, answer, share and source in that order', () => {
+    it('gives every calculator its name, inputs, answer, picture, share and source in that order', () => {
         for (const id of TOOL_IDS.filter((tool) => tool !== 'left')) {
             const markup = renderToolPage(id).value;
             const order = [
                 'class="tool__title"',
-                'id="scene-plot"',
-                'class="tool__panel tool__inputs"',
+                'class="tool__inputs"',
                 'class="result"',
+                'id="picture-plot"',
                 'class="share-bar"',
                 'class="tool__source"',
             ].map((part) => markup.indexOf(part));
             expect(order.every((at) => at >= 0)).toBe(true);
             expect([...order].sort((a, b) => a - b)).toEqual(order);
-            for (const gone of ['eyebrow', 'tool__dock', 'hero']) expect(markup).not.toContain(gone);
+            expect(markup).toContain(escapeHtml(TOOLS[id].name));
             expect(markup).toContain(escapeHtml(TOOLS[id].privacy));
         }
     });
@@ -66,31 +88,17 @@ describe('renderToolPage', () => {
         expect(markup).toMatch(/<a [^>]*data-share-post[^>]*aria-disabled="true"/);
     });
 
-    it('puts every tool on one screen plate, scene beside the answer, with its details on a plate below', () => {
+    it('leaves nothing of the 3D scenes on any tool page', () => {
         for (const id of TOOL_IDS) {
             const markup = renderToolPage(id).value;
-            expect(markup).toContain('<div class="tool__screen" data-plate>');
-            expect(markup.indexOf('data-scene-window')).toBeGreaterThan(markup.indexOf('class="tool__screen"'));
-            expect(markup).toContain('class="tool__below" data-plate');
-            for (const gone of ['class="mount"', 'class="gauge"', 'Gauge 0', 'bezel', 'knob'])
-                expect(markup).not.toContain(gone);
+            for (const gone of ['scene', 'data-plate', 'canvas', 'hero']) expect(markup).not.toContain(gone);
+            expect(markup).toContain('class="picture__callout"');
         }
     });
 
-    it('gives every tool one scene window: the SVG readout, engraved tags, a caption, a callout and its parts', () => {
-        for (const id of TOOL_IDS) {
-            const markup = renderToolPage(id).value;
-            expect(markup).toContain('<div class="scene__window" data-scene-window>');
-            expect(markup).toContain('<div id="scene-plot" class="scene__plot" aria-hidden="true"></div>');
-            expect(markup).toContain('<div class="scene__tags" aria-hidden="true"></div>');
-            expect(markup).toContain('class="scene__callout"');
-            expect(markup).toContain('class="scene__parts" role="group"');
-        }
-    });
-
-    it('puts the scene, a counting figure and an empty numbers panel on the Bitcoin left page', () => {
+    it('puts the picture, a counting figure and an empty numbers panel on the bitcoin-left page', () => {
         const markup = renderToolPage('left').value;
-        expect(markup).toContain('id="scene-plot"');
+        expect(markup).toContain('id="picture-plot"');
         expect(markup).toContain(`<span class="result__empty">${LEFT_PAGE.figureEmpty}</span>`);
         expect(markup).toContain('id="numbers-panel"');
     });
