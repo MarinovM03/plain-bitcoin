@@ -12,6 +12,8 @@ function tip(over: Partial<Tip>): Tip {
         api: 'mempool.space',
         checkedAt: NOW,
         seenAt: NOW,
+        blocks: [],
+        blocksAt: null,
         ...over,
     };
 }

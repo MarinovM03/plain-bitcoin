@@ -1,5 +1,6 @@
 import { type ChainStats, explorerUrl, fetchChainStats } from '../../data/address.ts';
-import type { CharRole } from '../../hero/bus.ts';
+import { mountPicture } from '../../gauges/mount.ts';
+import type { CharRole } from '../../gauges/types.ts';
 import {
     type Address,
     type AddressPart,
@@ -12,11 +13,10 @@ import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type AddressText, addressText } from '../../postcard/words.ts';
 import { ADDRESS_SAMPLES } from '../../ui/address-view.ts';
-import { ADDRESS, SCENE } from '../../ui/copy.ts';
+import { ADDRESS, PICTURE } from '../../ui/copy.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { find } from '../../util/dom.ts';
 import { formatBtcExact, formatSats, formatUtcStamp } from '../../util/format.ts';
-import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const MULTISIG_TYPES = new Set(['p2sh', 'p2wsh', 'p2tr']);
@@ -72,8 +72,8 @@ function charRoles(analysis: Address | InvalidAddress): CharRole[] {
 }
 
 function invalidCaption(analysis: InvalidAddress): string {
-    if (analysis.suspect !== null || analysis.reason === 'characters') return SCENE.addressBad;
-    return analysis.reason === 'checksum' ? SCENE.addressLoose : SCENE.address;
+    if (analysis.suspect !== null || analysis.reason === 'characters') return PICTURE.addressBad;
+    return analysis.reason === 'checksum' ? PICTURE.addressLoose : PICTURE.address;
 }
 
 function whyInvalid(analysis: InvalidAddress): string {
@@ -110,7 +110,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     const chain = find(root, '#address-chain');
     const explorer = find<HTMLAnchorElement>(root, '#address-explorer');
 
-    const scene = linkScene(root);
+    const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const samples = new Set<string>(Object.values(ADDRESS_SAMPLES));
     let address: Address | null = null;
@@ -276,16 +276,16 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         if (analysis.kind === 'address') {
             const kind = ADDRESS.figures[analysis.type];
             big.textContent = kind;
-            scene.set(
+            picture.set(
                 { ...empty, text: analysis.text, roles: charRoles(analysis), state: 'valid', kind },
-                SCENE.address,
+                PICTURE.address,
             );
             return;
         }
         if (analysis.kind === 'invalid') {
             const kind = analysis.reason === 'checksum' ? ADDRESS.figures.checksum : ADDRESS.figures.invalid;
             big.textContent = kind;
-            scene.set(
+            picture.set(
                 {
                     ...empty,
                     kind,
@@ -302,7 +302,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         if (analysis.kind === 'lightning') big.textContent = ADDRESS.figures.lightning;
         else if (analysis.kind === 'extended-public') big.textContent = ADDRESS.figures.extendedPublic;
         else big.textContent = EMPTY_FIGURE;
-        scene.set(empty, SCENE.addressEmpty);
+        picture.set(empty, PICTURE.addressEmpty);
     }
 
     function render(analysis: Analysis): void {
@@ -436,6 +436,6 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         window.clearTimeout(settleTimer);
         form.removeEventListener('submit', onSubmit);
         share.dispose();
-        scene.dispose();
+        picture.dispose();
     };
 }

@@ -1,10 +1,11 @@
-import type { DcaMarks } from '../../hero/bus.ts';
+import { mountPicture } from '../../gauges/mount.ts';
+import type { DcaMarks } from '../../gauges/types.ts';
 import { MAX_SATS } from '../../model/convert.ts';
 import { type DailyCloses, type DcaOutcome, dca, FREQUENCIES, type Frequency } from '../../model/dca.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type DcaText, dcaText } from '../../postcard/words.ts';
-import { DCA, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
+import { DCA, PICTURE, TOOL_PAGE } from '../../ui/copy.ts';
 import { DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
@@ -12,7 +13,6 @@ import { parseAmount } from '../../util/amount-input.ts';
 import { find, link } from '../../util/dom.ts';
 import { type Fiat, formatDay, isoDayMs } from '../../util/format.ts';
 import { type Month, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
-import { linkScene } from '../scene.ts';
 import { dcaMarks } from './marks.ts';
 
 const SETTLE_MS = 700;
@@ -23,8 +23,8 @@ interface DailySeries extends DailyCloses {
 }
 
 const LOADERS: Record<Fiat, () => Promise<DailySeries>> = {
-    GBP: () => import('../../data/prices/daily-gbp.json', { with: { type: 'json' } }).then((module) => module.default),
-    USD: () => import('../../data/prices/daily-usd.json', { with: { type: 'json' } }).then((module) => module.default),
+    GBP: () => import('../../data/prices/daily-gbp.ts').then((module) => module.default),
+    USD: () => import('../../data/prices/daily-usd.ts').then((module) => module.default),
 };
 
 function lastDayMs(series: DailyCloses): number {
@@ -51,7 +51,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     const panel = find(root, '#dca-detail');
     const notes = find(root, '#dca-notes');
 
-    const scene = linkScene(root);
+    const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const loaded = new Map<Fiat, DailySeries>();
     let text: DcaText | null = null;
@@ -110,9 +110,9 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
         panel.hidden = true;
-        scene.set(
+        picture.set(
             { id: 'dca', fiat: currency(), worth: '', alt: '', t: [], value: [], invested: [], lump: [] },
-            SCENE.dcaEmpty,
+            PICTURE.dcaEmpty,
         );
         share.setEnabled(false);
         settle(message);
@@ -126,7 +126,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
 
     // The chart, the answer and the postcard read the same marks: the last one is the figure above.
     function renderChart(words: DcaText, marks: DcaMarks, fiat: Fiat): void {
-        scene.set({ id: 'dca', fiat, worth: words.rows.worth, alt: words.chartAlt, ...marks }, SCENE.dca);
+        picture.set({ id: 'dca', fiat, worth: words.rows.worth, alt: words.chartAlt, ...marks }, PICTURE.dca);
     }
 
     function renderNotes(words: DcaText): void {
@@ -220,8 +220,11 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             });
     }
 
-    form.addEventListener('input', update);
-    form.addEventListener('change', update);
+    // The start month and the fee sit in a second form below the answer; both forms feed the same answer.
+    for (const inputs of [form, find<HTMLFormElement>(root, '.tool__more')]) {
+        inputs.addEventListener('input', update);
+        inputs.addEventListener('change', update);
+    }
     for (const button of presetButtons) {
         button.addEventListener('click', () => {
             const series = loaded.get(currency());
@@ -236,6 +239,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         disposed = true;
         window.clearTimeout(settleTimer);
         share.dispose();
-        scene.dispose();
+        picture.dispose();
     };
 }
