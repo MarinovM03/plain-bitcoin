@@ -11,9 +11,27 @@ export interface FakeChain {
 }
 
 export const FAKE_HEIGHT = HEIGHT_ANCHOR.height;
+export const FAKE_AGE_SECONDS = 252;
 
 export function leftFigure(height = FAKE_HEIGHT): string {
     return formatBtcExact(supplyAt(height).left);
+}
+
+/** A made-up but well-formed hash for a height: twenty zeros of "work", then digits that differ per block. */
+export function fakeHash(height: number): string {
+    const tail = (BigInt(height) * 0x9e3779b97f4a7c15n).toString(16).padStart(16, '0').slice(-16);
+    return `${'0'.repeat(20)}${tail.repeat(3).slice(0, 44)}`;
+}
+
+function fakeBlocks(tip: number, now: number) {
+    return Array.from({ length: 10 }, (_, index) => ({
+        id: fakeHash(tip - index),
+        height: tip - index,
+        timestamp: now - FAKE_AGE_SECONDS - index * 540,
+        tx_count: 1200 + ((tip - index) % 7) * 550,
+        size: 900_000 + ((tip - index) % 5) * 260_000,
+        weight: 3_990_000,
+    }));
 }
 
 export async function fakeHeightApi(page: Page, height = FAKE_HEIGHT): Promise<FakeChain> {
@@ -24,7 +42,7 @@ export async function fakeHeightApi(page: Page, height = FAKE_HEIGHT): Promise<F
         const headers = { 'access-control-allow-origin': '*' };
         if (url.endsWith('/blocks/tip/height')) return route.fulfill({ body: String(chain.height), headers });
         const at = Number(url.split('/').at(-1));
-        return route.fulfill({ json: [{ height: at, timestamp: Math.floor(Date.now() / 1000) - 252 }], headers });
+        return route.fulfill({ json: fakeBlocks(at, Math.floor(Date.now() / 1000)), headers });
     });
     return chain;
 }

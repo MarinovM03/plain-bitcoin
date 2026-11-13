@@ -1,0 +1,71 @@
+{
+    "source": "mempool.space",
+    "url": "https://mempool.space/api/blocks/975697",
+    "asOf": "2026-11-13",
+    "blocks": [
+        {
+            "height": 975697,
+            "id": "00000000000000000001c33f086ba1e886c500583137053f8ce211691671624a",
+            "timestamp": 1794591728,
+            "tx_count": 3660,
+            "size": 1554936,
+            "weight": 3993510
+        },
+        {
+            "height": 975696,
+            "id": "000000000000000000018a012b9564658423cd0a19a0294af40b4f234e3828b0",
+            "timestamp": 1794589633,
+            "tx_count": 3780,
+            "size": 1569571,
+            "weight": 3992950
+        },
+        {
+            "height": 975695,
+            "id": "0000000000000000000129ca12eac1a741739f44c991b2888cb9d240c1f8fecd",
+            "timestamp": 1794587939,
+            "tx_count": 3455,
+            "size": 1639220,
+            "weight": 3993899
+        },
+        {
+            "height": 975694,
+            "id": "00000000000000000001446524e8f59394608f5eeb3b8c6e26e06fe975ae5499",
+            "timestamp": 1794587143,
+            "tx_count": 3545,
+            "size": 1616914,
+            "weight": 3992749
+        },
+        {
+            "height": 975693,
+            "id": "0000000000000000000025d9703ec29b479e8c15a197944754b4f0d4e21ec5c6",
+            "timestamp": 1794585816,
+            "tx_count": 3530,
+            "size": 1590622,
+            "weight": 3993112
+        },
+        {
+            "height": 975692,
+            "id": "000000000000000000005f8ccde2acad632cdead74b4e07eee432736ec0fc32c",
+            "timestamp": 1794584099,
+            "tx_count": 3781,
+            "size": 1589789,
+            "weight": 3997673
+        },
+        {
+            "height": 975691,
+            "id": "000000000000000000015ed4dba3375ca35e97928d804f0c2b43d57506a45c92",
+            "timestamp": 1794582392,
+            "tx_count": 6143,
+            "size": 1650166,
+            "weight": 3997480
+        },
+        {
+            "height": 975690,
+            "id": "00000000000000000001657a3d48937e0edaf6bc77ea6b901a02e0f67a31d429",
+            "timestamp": 1794582077,
+            "tx_count": 5311,
+            "size": 1605473,
+            "weight": 3992714
+        }
+    ]
+}

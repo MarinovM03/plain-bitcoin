@@ -69,7 +69,7 @@ describe('fetchTip', () => {
     it('asks mempool.space first, then the block for its time', async () => {
         const chain = { height: AHEAD, down: new Set<string>(), calls: [] };
         const tip = await fetchTip(fakeFetch(chain), null);
-        expect(tip).toEqual({ height: AHEAD, time: HEIGHT_ANCHOR.time + 46 * 600, api: 'mempool.space' });
+        expect(tip).toMatchObject({ height: AHEAD, time: HEIGHT_ANCHOR.time + 46 * 600, api: 'mempool.space' });
         expect(chain.calls).toEqual([
             'https://mempool.space/api/blocks/tip/height',
             `https://mempool.space/api/blocks/${AHEAD}`,

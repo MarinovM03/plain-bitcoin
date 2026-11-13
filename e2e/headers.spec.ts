@@ -85,7 +85,7 @@ test('served with its headers, every route runs clean and the site refuses to be
             if (message.type() === 'error' || message.type() === 'warning') problems.push(message.text());
         });
         page.on('pageerror', (error) => problems.push(error.message));
-        for (const route of ['?hero=full', '#/left', '#/power', '#/convert', '#/dca', '#/address']) {
+        for (const route of ['?hero=scene', '#/left', '#/power', '#/convert', '#/dca', '#/address']) {
             await page.goto(`${origin}/${route}`);
             await expect(page.locator('h1').first()).toBeVisible();
         }
