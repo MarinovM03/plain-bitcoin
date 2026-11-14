@@ -1,6 +1,6 @@
 import type { Fiat } from '../util/format.ts';
 
-export type SceneId = 'home' | 'left' | 'power' | 'convert' | 'dca' | 'address';
+export type SceneId = 'left' | 'power' | 'convert' | 'dca' | 'address';
 
 export type CharRole = 'hrp' | 'separator' | 'version' | 'program' | 'checksum' | 'prefix' | 'body' | 'unknown';
 
@@ -13,7 +13,6 @@ export interface DcaMarks {
 }
 
 export type SceneData =
-    | { id: 'home'; height: number }
     | { id: 'left'; height: number }
     | {
           id: 'power';
@@ -34,12 +33,6 @@ export type SceneData =
           kind?: string;
       };
 
-/** One payload on the bus: what a gauge shows, stamped so only the newest one is ever drawn. */
-export interface ScenePayload {
-    readonly rev: number;
-    readonly data: SceneData;
-}
-
 export type MarkTag = 'rect' | 'line' | 'polyline' | 'text' | 'circle';
 
 export type Attrs = Record<string, string | number>;
@@ -54,7 +47,7 @@ export interface Mark {
 
 /**
  * How a gauge arrives when its structure changes: bars grow from the baseline, lines draw left to right, the sat grid
- * zooms by ten, address characters lock into place. Arriving on a route never animates: the flip carries that.
+ * zooms by ten, address characters lock into place. Arriving on a route never animates.
  */
 export type Build = 'grow' | 'draw' | 'zoom-in' | 'zoom-out' | 'lock' | 'none';
 
@@ -78,7 +71,7 @@ export interface Gauge {
 export interface Viewport {
     width: number;
     height: number;
-    /** A home tile: no labels, just the shape. */
+    /** A thumbnail: no labels, just the shape. */
     mini: boolean;
 }
 

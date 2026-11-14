@@ -1,10 +1,11 @@
 import { POWER_SERIES, powerData } from '../../data/power.ts';
+import { mountPicture } from '../../gauges/mount.ts';
 import { type PowerOutcome, type PowerResult, purchasingPower, sortedMonths, worstStart } from '../../model/power.ts';
 import { barScale, sparkline } from '../../model/scale.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type PowerText, powerText } from '../../postcard/words.ts';
-import { POWER, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
+import { PICTURE, POWER, TOOL_PAGE } from '../../ui/copy.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { POWER_DEFAULT_START, type PowerPreset } from '../../ui/power-view.ts';
@@ -12,7 +13,6 @@ import { parseAmount } from '../../util/amount-input.ts';
 import { find, link } from '../../util/dom.ts';
 import { type Fiat, formatMoney, formatWhole } from '../../util/format.ts';
 import { type Month, monthKeyLabel, monthValue, parseMonth, shiftMonth } from '../../util/month.ts';
-import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const SPARK_WIDTH = 300;
@@ -36,7 +36,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const sparkBase = find<SVGLineElement>(spark, '.spark__base');
     const sparkLine = find<SVGPolylineElement>(spark, '.spark__line');
 
-    const scene = linkScene(root);
+    const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const months = sortedMonths(POWER_SERIES.USD.prices.months);
     const firstMonth = parseMonth(months[0] ?? '');
@@ -100,7 +100,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
         panel.hidden = true;
-        scene.set({ id: 'power', cash: 0, bitcoin: 0 }, SCENE.powerEmpty);
+        picture.set({ id: 'power', cash: 0, bitcoin: 0 }, PICTURE.powerEmpty);
         share.setEnabled(false);
         settle(message);
     }
@@ -169,7 +169,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         figure.textContent = text.headline;
         big.textContent = formatMoney(result.equivalentNow, fiat);
         detail.textContent = text.bitcoin;
-        scene.set(
+        picture.set(
             {
                 id: 'power',
                 cash: result.amount,
@@ -177,7 +177,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
                 cashLabel: text.cashValue,
                 bitcoinLabel: text.bitcoinValue,
             },
-            SCENE.power(barScale([result.amount, result.btcValueNow]).log),
+            PICTURE.power(barScale([result.amount, result.btcValueNow]).log),
         );
         renderBars(result, text);
         renderPath(result, text);
@@ -202,6 +202,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     return () => {
         window.clearTimeout(settleTimer);
         share.dispose();
-        scene.dispose();
+        picture.dispose();
     };
 }

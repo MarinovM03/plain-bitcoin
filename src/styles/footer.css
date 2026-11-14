@@ -1,11 +1,12 @@
 .footer {
-    margin-bottom: max(0.625rem, env(safe-area-inset-bottom));
+    padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--edge);
 }
 
 .footer__inner {
     display: grid;
     gap: 1.25rem;
-    padding: 1.25rem var(--space-m) 1.5rem;
+    padding-block: 1.5rem;
 }
 
 .footer__brand {

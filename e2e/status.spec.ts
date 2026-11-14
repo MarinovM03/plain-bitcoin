@@ -22,7 +22,7 @@ for (const route of LIVE_ROUTES) {
     test(`#/${route} shows the live block and price with a source`, async ({ page }) => {
         await fakeHeightApi(page);
         await fakePriceApi(page);
-        await page.goto(`/?hero=plain#/${route}`);
+        await page.goto(`/?hero=still#/${route}`);
         const status = page.getByRole('group', { name: STATUS.label });
         await expect(status.locator('#status-block')).toHaveText(STATUS.block(formatWhole(FAKE_HEIGHT)));
         await expect(status.locator('#status-gbp')).toHaveText('£57,329');
@@ -39,7 +39,7 @@ for (const route of ['left', 'convert'] as const) {
         await fakeHeightApi(page);
         await fakePriceApi(page);
         const calls = apiCalls(page);
-        await page.goto(`/?hero=plain#/${route}`);
+        await page.goto(`/?hero=still#/${route}`);
         await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
         await page.waitForTimeout(4000);
         expect(tipCalls(calls)).toHaveLength(1);
@@ -76,7 +76,7 @@ test('leaving the live routes stops polling and keeps the last value with its ti
 
 test('offline, the status falls back to the labelled estimate and last close', async ({ page }) => {
     await page.route(/^https:\/\//, (route) => route.abort('internetdisconnected'));
-    await page.goto('/?hero=plain#/');
+    await page.goto('/?hero=still#/');
     await expect(page.locator('#status-block')).toHaveText(new RegExp(`${STATUS.estimated.trim()}$`));
     await expect(page.locator('#status-source')).toHaveText(/^last close /);
     await expect(page.locator('#status')).toHaveAttribute('data-state', 'estimate');
@@ -86,7 +86,7 @@ test('the status figures never wrap mid-number on a 360px phone', async ({ page 
     await fakeHeightApi(page);
     await fakePriceApi(page);
     await page.setViewportSize({ width: 360, height: 780 });
-    await page.goto('/?hero=plain#/');
+    await page.goto('/?hero=still#/');
     await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
     for (const id of ['#status-block', '#status-gbp', '#status-usd']) {
         const box = await page.locator(id).boundingBox();

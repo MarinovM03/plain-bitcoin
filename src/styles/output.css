@@ -2,8 +2,6 @@
     display: grid;
     gap: 0.25rem;
     min-width: 0;
-    padding-top: 0.625rem;
-    border-top: 1px solid var(--edge);
 }
 
 .result__figure {
@@ -31,11 +29,6 @@
 .result__sentence {
     font-size: var(--step-body);
     line-height: 1.4;
-}
-
-.tool--left .result {
-    padding-top: 0;
-    border-top: 0;
 }
 
 .result__empty {

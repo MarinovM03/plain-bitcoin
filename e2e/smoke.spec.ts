@@ -30,7 +30,7 @@ async function horizontalOverflow(page: Page): Promise<number> {
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-test('home shows the shell, the headline and every tool as a live tile, in order', async ({ page }) => {
+test('home shows the shell, the headline and every tool as a plain row, in order', async ({ page }) => {
     const problems = watchPage(page);
     await page.goto('/');
 
@@ -38,23 +38,19 @@ test('home shows the shell, the headline and every tool as a live tile, in order
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME.headline);
     const left = formatWhole(Math.floor(supplyAt(FAKE_HEIGHT).left / SATS_PER_BTC));
-    await expect(page.locator('[data-tile-figure="left"]')).toHaveText(HOME.leftFigure(`${left} BTC`));
-    await expect(page.locator('[data-tile-figure="convert"]')).toHaveText(HOME.convertFigure('£0.00057'));
-    await expect(page.locator('.tile__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
-    await expect(page.locator('[data-tile-figure="power"]')).toHaveText(/^£1,000 in 2015 → £[\d,]+ as bitcoin$/);
-    await expect(page.locator('[data-tile-figure="dca"]')).toHaveText(/^£50 a week since 2020 → £[\d,]+$/);
-    await expect(page.locator('[data-tile-figure="address"]')).toHaveText(HOME.addressFigure);
-    await expect(page.locator('.home__stage #scene-plot > svg.gauge-svg')).toHaveCount(1);
+    await expect(page.locator('[data-fact="left"]')).toHaveText(HOME.leftFact(`${left} BTC`));
+    await expect(page.locator('[data-fact="convert"]')).toHaveText(HOME.convertFact('£0.00057'));
+    await expect(page.locator('.tool-row__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
-    for (const row of await page.locator('.tile').all()) {
+    for (const row of await page.locator('.tool-row').all()) {
         const box = await row.boundingBox();
         expect(box?.height).toBeGreaterThanOrEqual(44);
     }
 
-    const intro = await page.locator('.overview').boundingBox();
+    const intro = await page.locator('.hero__intro').boundingBox();
     await page.waitForTimeout(500);
-    expect(await page.locator('.overview').boundingBox()).toEqual(intro);
+    expect(await page.locator('.hero__intro').boundingBox()).toEqual(intro);
 
     expect(await horizontalOverflow(page)).toBe(0);
     expect(realProblems(problems)).toEqual([]);
@@ -67,7 +63,7 @@ for (const id of TOOL_IDS) {
 
         await expect(page).toHaveTitle(pageTitle(TOOLS[id].name));
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
-        await expect(page.getByText(TOOLS[id].question)).toBeVisible();
+        await expect(page.locator('.tool__description')).toHaveText(TOOLS[id].description);
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
         await expect(page.locator('.share-bar button')).toHaveCount(2);
         await expect(page.locator('.share-bar [data-share-post]')).toHaveCount(1);
@@ -75,7 +71,7 @@ for (const id of TOOL_IDS) {
             if (id !== 'address') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
-        await expect(page.locator('#scene-plot')).toHaveCount(1);
+        await expect(page.locator('#picture-plot')).toHaveCount(1);
         await expect(page.locator('.result__figure')).toBeVisible();
 
         expect(await horizontalOverflow(page)).toBe(0);
@@ -87,7 +83,7 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
     const problems = watchPage(page);
     await page.goto('/');
 
-    await page.locator('.tile', { hasText: TOOLS.convert.name }).click();
+    await page.locator('.tool-row', { hasText: TOOLS.convert.name }).click();
     await expect(page).toHaveURL(/#\/convert$/);
     await expect(page).toHaveTitle(pageTitle(TOOLS.convert.name));
     const heading = page.getByRole('heading', { level: 1 });
@@ -117,7 +113,7 @@ test('an unknown route goes home with one quiet note', async ({ page }) => {
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(1);
     await expect(page.locator('#announcer')).toHaveText(ROUTE.notFound);
 
-    await page.locator('.tile').first().click();
+    await page.locator('.tool-row').first().click();
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(0);
 
     await page.goto('/#/POWER');
@@ -164,7 +160,12 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
 }) => {
     test.skip(isMobile, 'Keyboard focus is checked on desktop');
     await page.goto('/');
-    const links = await page.locator('a, button:not([disabled])').count();
+    const links = await page.evaluate(
+        () =>
+            [...document.querySelectorAll<HTMLElement>('a, button:not([disabled]), summary, [tabindex="0"]')].filter(
+                (element) => element.checkVisibility(),
+            ).length,
+    );
     for (let i = 0; i < links; i += 1) {
         await page.keyboard.press('Tab');
         const outline = await page.evaluate(() => {
@@ -172,11 +173,11 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
             const style = getComputedStyle(active);
             return { tag: active.tagName, width: style.outlineWidth, style: style.outlineStyle };
         });
-        expect(['A', 'BUTTON']).toContain(outline.tag);
+        expect(['A', 'BUTTON', 'SUMMARY', 'DIV']).toContain(outline.tag);
         expect({ width: outline.width, style: outline.style }).toEqual({ width: '2px', style: 'solid' });
     }
 
-    await page.locator('.tile').nth(1).focus();
+    await page.locator('.tool-row').nth(1).focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.power.name);
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();

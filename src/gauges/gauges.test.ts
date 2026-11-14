@@ -148,7 +148,7 @@ describe('dca gauge', () => {
         ]);
         for (const line of lines) expect(String(line.attrs.points).split(' ').length).toBeGreaterThan(50);
         expect(text(gauge, 'end')).toBe('£9,999');
-        expect(text(gauge, 'legend-value')).toBe('Buying on a schedule');
+        expect(text(gauge, 'legend-value')).toBe('A little at a time');
         expect(gauge.alt).toBe('Line chart.');
     });
 
@@ -218,7 +218,7 @@ describe('address gauge', () => {
 
 describe('loadLayout', () => {
     it('loads every gauge and turns a throw into an empty gauge, never a broken one', async () => {
-        for (const id of ['home', 'left', 'power', 'convert', 'dca', 'address'] as const) {
+        for (const id of ['left', 'power', 'convert', 'dca', 'address'] as const) {
             const layout = await loadLayout(id);
             sane(layout({ id } as SceneData, VIEW));
         }

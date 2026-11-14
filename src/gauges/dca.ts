@@ -38,7 +38,7 @@ export interface PlotBox {
     right: number;
 }
 
-/** Where the series sit inside the chart, in CSS px. The SVG axes and the 3D ridge's front view share this box. */
+/** Where the series sit inside the chart, in CSS px. */
 export function dcaPlotBox(raw: Viewport): PlotBox {
     const view = safeView(raw);
     const size = labelSize(view);

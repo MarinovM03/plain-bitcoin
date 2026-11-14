@@ -1,4 +1,4 @@
-import { SCENE_PARTS_LABEL, SHARE, TOOL_PAGE } from './copy.ts';
+import { SHARE, TOOL_PAGE } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
 export const EMPTY_FIGURE = '—';
@@ -13,24 +13,14 @@ export function resultBlock(options: { id: string; label: string; empty: string 
 </section>`;
 }
 
-/**
- * The scene: a title, the window the stage draws the tool's model into (with the SVG readout inside it for when
- * the 3D stage is off), engraved tags laid over it, a caption, a callout for the part in hand, and the same parts as
- * buttons for the keyboard. The window is the one place in a plate the stage shows through.
- */
-export function sceneWindow(options: { head: SafeHtml | ''; caption: string }): SafeHtml {
-    return html`<div class="scene">
-    ${options.head}
-    <div class="scene__window" data-scene-window>
-        <div id="scene-plot" class="scene__plot" aria-hidden="true"></div>
-        <div class="scene__tags" aria-hidden="true"></div>
+/** A tool's picture: a flat drawing of the answer on an opaque plate, a caption in words, and a callout for a band. */
+export function pictureFrame(caption: string): SafeHtml {
+    return html`<div class="picture">
+    <div id="picture-plot" class="picture__plot"></div>
+    <div class="picture__foot">
+        <p id="picture-caption" class="picture__caption">${caption}</p>
+        <p class="picture__callout" aria-live="polite" hidden></p>
     </div>
-    <div class="scene__foot">
-        <p id="scene-caption" class="scene__caption">${options.caption}</p>
-        <p class="scene__about"></p>
-        <p class="scene__callout" aria-live="polite" hidden></p>
-    </div>
-    <div class="scene__parts" role="group" aria-label="${SCENE_PARTS_LABEL}"></div>
 </div>`;
 }
 

@@ -1,10 +1,10 @@
 import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
-import { stage } from '../../hero/bus.ts';
+import { mountPicture } from '../../gauges/mount.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { leftPostcard } from '../../postcard/words.ts';
-import { LEFT_PAGE } from '../../ui/copy.ts';
+import { LEFT_PAGE, PICTURE } from '../../ui/copy.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, formatWhole } from '../../util/format.ts';
 import { tipAge, watchActive } from './counter.ts';
@@ -16,7 +16,7 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const source = find(root, '#tool-source');
     const status = find(root, '#left-status');
     const cell = (id: string) => find(panel, `#left-${id}`);
-    const plot = find(root, '#scene-plot');
+    const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const heights = heightFeed();
     const owner = {};
@@ -78,9 +78,7 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
         renderSource();
 
         if (supply.height !== shownHeight) {
-            const data = { id: 'left', height: supply.height } as const;
-            if (shownHeight < 0) stage.show(plot, data);
-            else stage.update(data);
+            picture.set({ id: 'left', height: supply.height }, PICTURE.left);
             shownHeight = supply.height;
         }
         share.setEnabled(true);
@@ -116,5 +114,6 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
         unsubscribe();
         setTicking(false);
         share.dispose();
+        picture.dispose();
     };
 }

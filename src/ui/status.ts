@@ -1,6 +1,6 @@
+import { barcodePath } from '../chain/hash.ts';
 import { estimateTip, heightFeed, type Tip } from '../data/height.ts';
 import { LAST_CLOSE, LAST_CLOSE_SOURCE, PRICE_STALE_MS, type PriceQuote, priceFeed } from '../data/price.ts';
-import { type ChainState, stage } from '../hero/bus.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
 import { formatMinutes, formatMoney, formatShortDay, formatUtcClock, formatWhole } from '../util/format.ts';
 import { STATUS } from './copy.ts';
@@ -24,14 +24,6 @@ export interface StatusView {
     source: string;
     sourceUrl: string;
     live: boolean;
-}
-
-export function chainState(tip: Pick<Tip, 'height' | 'source' | 'time'>): ChainState {
-    return {
-        height: tip.height,
-        blockTime: tip.time === null ? null : tip.time * 1000,
-        estimated: tip.source !== 'live',
-    };
 }
 
 export function blockAge(tip: Pick<Tip, 'source' | 'time'>, now: number): string {
@@ -71,12 +63,10 @@ export function renderStatus(now = Date.now()): SafeHtml {
     const view = statusView({ ...estimateTip(now), source: 'checking' }, LAST_CLOSE, true, now);
     return html`<div id="status" class="status" role="group" aria-label="${STATUS.label}" aria-live="off" data-state="estimate">
     <p class="status__line">
-        <span class="status__dot" aria-hidden="true"></span>
-        <span id="status-block" class="status__figure status__block" data-stage-origin>${view.block}</span>
-        <span class="status__price"><span class="visually-hidden">${STATUS.price}</span><span id="status-gbp" class="status__figure">${view.gbp}</span><span class="status__usd"><span class="status__sep" aria-hidden="true">·</span><span id="status-usd" class="status__figure">${view.usd}</span></span></span>
-        <span class="status__break" aria-hidden="true"></span>
-        <span id="status-age" class="status__age">${view.age}</span>
-        <a id="status-source" class="status__source" href="${view.sourceUrl}" rel="noopener noreferrer">${view.source}</a>
+        <span id="status-block" class="status__item status__figure status__block">${view.block}</span>
+        <span class="status__item status__price"><span class="visually-hidden">${STATUS.price}</span><span id="status-gbp" class="status__figure">${view.gbp}</span> <span id="status-usd" class="status__figure status__usd">${view.usd}</span></span>
+        <span id="status-age" class="status__item status__age">${view.age}</span>
+        <a id="status-source" class="status__item status__source" href="${view.sourceUrl}" rel="noopener noreferrer">${view.source}</a>
     </p>
 </div>`;
 }
@@ -85,7 +75,7 @@ export interface StatusLine {
     setRoute(route: string): void;
 }
 
-export function mountStatus(root: HTMLElement): StatusLine {
+export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): StatusLine {
     const prices = priceFeed();
     const heights = heightFeed();
     const owner = {};
@@ -99,7 +89,7 @@ export function mountStatus(root: HTMLElement): StatusLine {
     let started = false;
     let ticks = 0;
     let ticker = 0;
-    let shownAge = '';
+    let shownHash: string | null = null;
 
     function render(): void {
         const now = Date.now();
@@ -111,8 +101,11 @@ export function mountStatus(root: HTMLElement): StatusLine {
         source.textContent = view.source;
         source.href = view.sourceUrl;
         root.dataset.state = view.live ? 'live' : 'estimate';
-        if (view.age !== shownAge && shownAge !== '') stage.chain(chainState(heights.tip), false);
-        shownAge = view.age;
+        const hash = heights.tip.blocks[0]?.hash ?? null;
+        if (barcode && hash !== shownHash) {
+            barcode.setAttribute('d', barcodePath(hash));
+            shownHash = hash;
+        }
     }
 
     function tick(): void {
@@ -138,10 +131,8 @@ export function mountStatus(root: HTMLElement): StatusLine {
         render();
     });
     heights.subscribe((tip, change) => {
-        const arrived = change.blocks > 0 && tip.source === 'live';
-        if (arrived) tick();
+        if (change.blocks > 0 && tip.source === 'live') tick();
         render();
-        stage.chain(chainState(tip), arrived);
     });
     document.addEventListener('visibilitychange', sync);
     afterFirstPaint(() => {
@@ -149,7 +140,6 @@ export function mountStatus(root: HTMLElement): StatusLine {
         sync();
     });
     render();
-    stage.chain(chainState(heights.tip), false);
 
     return {
         setRoute(next) {

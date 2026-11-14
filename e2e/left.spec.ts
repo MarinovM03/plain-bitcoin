@@ -35,8 +35,8 @@ test('home shows the live amount left and the left page counts down from the liv
     await page.goto('/');
 
     const whole = formatWhole(Math.floor(SUPPLY.left / SATS_PER_BTC));
-    await expect(page.locator('[data-tile-figure="left"]')).toHaveText(HOME.leftFigure(`${whole} BTC`));
-    await page.locator('.tile', { hasText: TOOLS.left.name }).click();
+    await expect(page.locator('[data-fact="left"]')).toHaveText(HOME.leftFact(`${whole} BTC`));
+    await page.locator('.tool-row', { hasText: TOOLS.left.name }).click();
     await expect(page).toHaveURL(/#\/left$/);
 
     await expect(page.locator('#left-figure')).toHaveText(leftFigure());
@@ -46,7 +46,6 @@ test('home shows the live amount left and the left page counts down from the liv
     await expect(page.locator('#left-supply')).toHaveText(
         /^[\d,]+ of 21,000,000 BTC minedNext halving in [\d,]+ blocks$/,
     );
-    await expect(page.locator('#stage')).toHaveAttribute('data-tier', /^(full|phone|plain)$/);
     expect(external.every(isApiRequest)).toBe(true);
     expect(chain.calls[0]).toBe('https://mempool.space/api/blocks/tip/height');
     expect(realProblems(problems)).toEqual([]);
@@ -73,7 +72,7 @@ test('the numbers panel shows every figure for the live height', async ({ page }
     await expect(panel.locator('#left-max')).toHaveText('20,999,999.9769 BTC');
     await expect(page.locator('#tool-source')).toContainText('mempool.space, checked');
     await expect(page.getByText(LEFT_PAGE.honesty)).toBeVisible();
-    await expect(page.locator('#scene-caption')).toHaveText(
+    await expect(page.locator('#picture-caption')).toHaveText(
         /^Left: all 21 million, a band per halving era\. Right: the last 2 million, ten times larger\./,
     );
     expect(realProblems(problems)).toEqual([]);

@@ -1,4 +1,5 @@
 import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.ts';
+import { mountPicture } from '../../gauges/mount.ts';
 import { convert, type ParseFailure, parseToSats, pasteFits, SATS_PER_BTC, type Unit } from '../../model/convert.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
@@ -9,7 +10,7 @@ import {
     type ConvertPreset,
     CONVERT_DECIMALS as DECIMALS,
 } from '../../ui/convert-view.ts';
-import { CONVERT, SCENE, TOOL_PAGE } from '../../ui/copy.ts';
+import { CONVERT, PICTURE, TOOL_PAGE } from '../../ui/copy.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import {
@@ -21,7 +22,6 @@ import {
     isoDayMs,
 } from '../../util/format.ts';
 import { satsScale } from '../../util/sats-scale.ts';
-import { linkScene } from '../scene.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
@@ -46,7 +46,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
 
-    const scene = linkScene(root);
+    const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const prices = priceFeed();
     const owner = {};
@@ -105,7 +105,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         figure.replaceChildren(empty);
         big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
-        scene.set({ id: 'convert', sats: 0 }, SCENE.convertEmpty);
+        picture.set({ id: 'convert', sats: 0 }, PICTURE.convertEmpty);
         share.setEnabled(false);
         settle(message);
     }
@@ -138,9 +138,9 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         figure.textContent = text.headline;
         big.textContent = text.figure;
         detail.textContent = text.detail;
-        scene.set(
+        picture.set(
             { id: 'convert', sats: parsed.value },
-            SCENE.convert(formatSats(satsScale(parsed.value).perDot), formatSats(parsed.value)),
+            PICTURE.convert(formatSats(satsScale(parsed.value).perDot), formatSats(parsed.value)),
         );
         share.setEnabled(true);
         settle(`${text.headline}. ${text.detail}`);
@@ -196,6 +196,6 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         prices.setActive(owner, false);
         window.clearTimeout(settleTimer);
         share.dispose();
-        scene.dispose();
+        picture.dispose();
     };
 }

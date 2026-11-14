@@ -74,47 +74,19 @@ a {
     border: 0;
 }
 
-/*
- * Opaque plates. Every scene, answer, tile, panel and control group sits on one; the moving background shows only in
- * the gutters around them, never through them.
- */
-.tool__screen,
-.home__stage,
-.tool__below,
-.overview,
-.tile,
-.cautions,
-.footer,
-.tray__plate {
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    background: var(--plate);
-    box-shadow:
-        inset 0 1px 0 color-mix(in srgb, var(--ink) 5%, transparent),
-        0 1.25rem 2.5rem -1.5rem #000;
-}
-
-/* Engraved labels: small mono capitals, hardware restraint in type only. */
-.engraved,
-.overview__kicker,
-.tile__kicker,
+/* Small labels: quiet, sentence case, in the body face. Numbers alone use the mono face. */
 .result__label,
 .field__label,
 .more__toggle,
-.cautions__heading,
 .tray__title {
     color: var(--ink-dim);
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
+    font-size: 0.8125rem;
+    font-weight: 600;
     line-height: 1.3;
-    text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: reduce) {
     :root {
         --duration: 0ms;
-        --flip: 0ms;
     }
 }

@@ -8,7 +8,7 @@ const measure: Measure = (text, font) => text.length * Number(/(\d+)px/.exec(fon
 const CARD: Postcard = {
     tool: 'dca',
     route: 'dca',
-    kicker: 'Buying on a schedule · to 29 Oct 2026',
+    kicker: 'Buying a little at a time · to 29 Oct 2026',
     number: '£229,527',
     line: '£250 a week since Jan 2020 is worth £229,527 today. One lump sum: £812,334.',
     source: 'Bitcoin: Coin Metrics daily closes to 29 Oct 2026 · fees not included · calculated in your browser',
@@ -79,7 +79,7 @@ describe('layoutPostcard', () => {
         const layout = layoutPostcard(CARD, 'square', measure, 'plainbitcoin.org');
         expect(layout.brand.text).toBe('Plain Bitcoin');
         expect(layout.handle.text).toBe('plainbitcoin.org · @PlainBTC');
-        expect(layout.kicker.text).toBe('BUYING ON A SCHEDULE · TO 29 OCT 2026');
+        expect(layout.kicker.text).toBe('Buying a little at a time · to 29 Oct 2026');
     });
 
     it('is pure: the same card and metrics give the same layout', () => {

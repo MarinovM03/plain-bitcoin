@@ -4,10 +4,10 @@ import type { Fiat } from '../util/format.ts';
 export const SITE_NAME = 'Plain Bitcoin';
 
 export const PRODUCT =
-    'Plain Bitcoin is a living chain instrument: a handcrafted scene for every tool, and a shareable postcard for every plain Bitcoin truth.';
+    'Plain Bitcoin is five plain Bitcoin calculators around one living picture of the chain, drawn from real blocks.';
 
 export const SITE_DESCRIPTION =
-    'A handcrafted scene for every Bitcoin tool, and a shareable postcard for every plain Bitcoin truth. Everything runs in your browser.';
+    'Five plain Bitcoin tools and the chain itself, drawn from real blocks. Everything runs in your browser.';
 
 export const OG_IMAGE = {
     path: 'og.png',
@@ -15,41 +15,54 @@ export const OG_IMAGE = {
     height: 628,
     kicker: 'Plain Bitcoin',
     number: '21,000,000',
-    line: 'Bitcoin, measured live. A model for every tool, a postcard for every answer.',
+    line: 'Bitcoin, block by block. Five plain tools, and a postcard for every answer.',
     source: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    alt: 'Plain Bitcoin postcard: 21,000,000, Bitcoin measured live, with the supply bar issued in bone and still to mine in orange.',
+    alt: 'Plain Bitcoin postcard: 21,000,000, Bitcoin block by block, with the supply bar issued in bone and still to mine in orange.',
 } as const;
 
 export const HOME = {
-    kicker: 'Five tools · one chain',
-    headline: 'Bitcoin, measured live.',
-    lead: 'Each tool is a small model you can turn, built from the same numbers as its answer. Every answer makes a postcard.',
-    promise: 'A handcrafted scene for every tool, and a postcard for every plain Bitcoin truth.',
-    toolsLabel: 'The tools',
-    sceneLabel: 'The chain on the table',
-    leftFigure: (left: string) => `${left} left`,
-    convertFigure: (gbp: string) => `1 sat = ${gbp}`,
-    powerFigure: (then: string, now: string) => `${then} in 2015 → ${now} as bitcoin`,
-    dcaFigure: (worth: string) => `£50 a week since 2020 → ${worth}`,
-    addressFigure: 'Taproot · typed right',
+    headline: 'Bitcoin, block by block.',
+    lead: 'Five plain tools, and the chain itself: the last eight real blocks, in the order they were found.',
+    promise: 'Five plain Bitcoin tools, and the chain drawn from real blocks.',
+    toolsHeading: 'The tools',
+    leftFact: (left: string) => `${left} still to come`,
+    convertFact: (gbp: string) => `1 sat = ${gbp}`,
     cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
         'Never share a seed phrase or private key. No honest tool asks for one.',
     ],
-    printLabel: 'Print this reading',
-    postcardLine: (issued: string) => `Bitcoin, measured live. ${issued} of 21,000,000 BTC issued.`,
+    shareHeading: 'Share where the chain stands',
+    postcardLine: (issued: string) => `Bitcoin, block by block. ${issued} of 21,000,000 BTC issued.`,
+} as const;
+
+export const CHAIN = {
+    label: 'The last eight blocks',
+    waiting: 'Reading the latest blocks from mempool.space.',
+    forming: (age: string) => `Next block: being found now. ${age} so far.`,
+    formingUnknown: 'Next block: being found now.',
+    newest: (height: string, age: string) => `Newest: block ${height}, found ${age} ago.`,
+    newestUnknown: (height: string) => `Newest: block ${height}.`,
+    contents: (txs: string, size: string) => `${txs} transactions, ${size}.`,
+    arrived: (height: string) => `Block ${height} was just found.`,
+    lastSeen: (clock: string) => `Couldn't reach mempool.space. Showing the last blocks we saw at ${clock}.`,
+    saved: (first: string, last: string, day: string) =>
+        `Couldn't reach mempool.space. Showing blocks ${first} to ${last}, saved on ${day}.`,
+    explain:
+        "Each tablet is one real block. Its face is the block's own hash, one cell per bit; the blank band at the top is the proof of work. Bigger blocks have bigger faces, busier blocks are thicker, and the gaps are the minutes between them. The gathering dust is decoration, not a forecast.",
+    listSummary: 'Read these blocks as a list',
+    tableLabel: 'Table of the last eight blocks',
+    columns: { height: 'Block', found: 'Found', txs: 'Transactions', size: 'Size', hash: 'Hash ends in' },
+    ago: (age: string) => `${age} ago`,
+    unknown: 'not reported',
+    source: (api: string, clock: string) => `Blocks from ${api}, read at ${clock}.`,
+    megabytes: (value: string) => `${value} MB`,
 } as const;
 
 export const NAV = {
     label: 'Tools',
-    short: {
-        left: 'Left',
-        power: 'Power',
-        convert: 'Convert',
-        dca: 'DCA',
-        address: 'Address',
-    } satisfies Record<ToolId, string>,
+    menu: 'Tools',
+    home: 'Home',
 } as const;
 
 export const STATUS = {
@@ -65,40 +78,37 @@ export const STATUS = {
     unknownTime: 'block time unknown',
 } as const;
 
-export const TOOLS: Record<ToolId, { name: string; question: string; preview: string; privacy: string }> = {
+/**
+ * The five tools by the names people see. Route ids never change, so old links keep working; a route id on its own
+ * is never shown as a name.
+ */
+export const TOOLS: Record<ToolId, { name: string; description: string; privacy: string }> = {
     left: {
-        name: 'Bitcoin left to mine',
-        question: 'How much bitcoin is still to be mined?',
-        preview: '21,000,000 BTC, ever',
+        name: 'How much bitcoin is left',
+        description: 'Mined so far, still to come, and the next halving',
         privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
     },
     power: {
-        name: 'Purchasing power',
-        question: 'What is old money worth today, and as bitcoin?',
-        preview: '£1,000 in 2015 → today',
+        name: 'What old money buys today',
+        description: "Pounds or dollars from any year, in today's money and as bitcoin",
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     convert: {
-        name: 'Converter',
-        question: 'Sats, bitcoin, pounds or dollars?',
-        preview: '1 BTC = 100,000,000 sats',
+        name: 'Sats to pounds converter',
+        description: 'Sats, bitcoin, pounds and dollars, both ways',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     dca: {
-        name: 'Buying on a schedule',
-        question: 'A little at a time (DCA), or one lump sum?',
-        preview: '£50 a week since 2020',
+        name: 'Buying a little at a time',
+        description: 'If you had put in a fixed amount every week since a date',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     address: {
-        name: 'Address lookup',
-        question: 'What kind of address is this, and is it typed right?',
-        preview: 'bc1… · 1… · 3…',
+        name: 'Check a Bitcoin address',
+        description: 'What kind it is, whether it is typed right, and its public balance',
         privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
     },
 };
-
-export const SCENE_PARTS_LABEL = 'Parts of the model';
 
 export const TOOL_PAGE = {
     inputsLabel: 'Your numbers',
@@ -108,7 +118,7 @@ export const TOOL_PAGE = {
     sourcePending: 'Source and as-of date show here with each answer.',
 } as const;
 
-export const SCENE = {
+export const PICTURE = {
     left: 'Left: all 21 million, a band per halving era. Right: the last 2 million, ten times larger. White is issued, orange still to mine. Tap a band for its dates.',
     power: (log: boolean) =>
         `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
@@ -308,8 +318,8 @@ export const DCA = {
     lumpNote: 'One lump sum puts the same total in at once, on the first buy day.',
     chartLabel: 'Worth over time',
     chartAlt: (worth: string, invested: string, lump: string) =>
-        `Line chart. Buying on a schedule ends worth ${worth} for ${invested} put in; one lump sum ends worth ${lump}.`,
-    legend: { value: 'Buying on a schedule', invested: 'Put in', lump: 'One lump sum' },
+        `Line chart. Buying a little at a time ends worth ${worth} for ${invested} put in; one lump sum ends worth ${lump}.`,
+    legend: { value: 'A little at a time', invested: 'Put in', lump: 'One lump sum' },
     formula: "Each buy = amount ÷ that day's close. Worth = bitcoin held × close.",
     sourceLabel: 'Bitcoin: ',
     source: 'Coin Metrics reference price',
@@ -500,7 +510,7 @@ export const POSTCARD = {
     estimated: ' est.',
     home: { kicker: 'Plain Bitcoin · block height' },
     left: {
-        kicker: (height: string) => `Left to mine · block ${height}`,
+        kicker: (height: string) => `${TOOLS.left.name} · block ${height}`,
         line: (left: string) => `${left} BTC are still to be mined.`,
         source: (height: string, api: string, stamp: string) =>
             `Block ${height} · height via ${api} · ${stamp} · supply from the issuance schedule`,
@@ -508,17 +518,17 @@ export const POSTCARD = {
             `Block ${height} · estimated at one block every 10 minutes · supply from the issuance schedule`,
     },
     power: {
-        kicker: (month: string) => `Purchasing power · close ${month}`,
+        kicker: (month: string) => `${TOOLS.power.name} · close ${month}`,
         line: (headline: string, bitcoin: string) => `${headline} As bitcoin, ${bitcoin}.`,
         source: (cpi: string, cpiMonth: string, closeMonth: string) =>
             `CPI: ${cpi} to ${cpiMonth} · Bitcoin: Coin Metrics close, ${closeMonth} · calculated in your browser`,
     },
     convert: {
-        kicker: (amount: string) => `Converter · ${amount}`,
+        kicker: (amount: string) => `${TOOLS.convert.name} · ${amount}`,
         source: (price: string) => `Price: ${price} · 1 BTC = 100,000,000 sats`,
     },
     dca: {
-        kicker: (day: string) => `Buying on a schedule · to ${day}`,
+        kicker: (day: string) => `${TOOLS.dca.name} · to ${day}`,
         line: (amount: string, every: string, since: string, worth: string, lump: string) =>
             `${amount} ${every} since ${since} is worth ${worth} today. One lump sum: ${lump}.`,
         source: (day: string, fees: string) =>
@@ -527,7 +537,7 @@ export const POSTCARD = {
         noFees: 'fees not included',
     },
     address: {
-        kicker: (encoding: string) => `Address check · ${encoding}`,
+        kicker: (encoding: string) => `${TOOLS.address.name} · ${encoding}`,
         line: (type: string, network: string) => `This is a ${type} address, typed right. ${network}.`,
     },
 } as const;
@@ -538,7 +548,8 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    motion: 'The background motion is decoration, not live activity. Its mood comes from real block timing; orange rolls through only when a real block arrives.',
+    motion: 'The chain on the home page is drawn from real blocks. The dust gathering around the next block is decoration, not live activity.',
+    barcode: "The line under the top bar is the newest block's hash, one mark per bit.",
     toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',
     handle: '@PlainBTC',

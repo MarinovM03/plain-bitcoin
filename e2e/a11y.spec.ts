@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, NAV, SHARE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, NAV, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
@@ -17,10 +17,9 @@ const SIZES = [
 ] as const;
 
 async function open(page: Page, route: string) {
-    await page.goto(`/?hero=plain#/${route}`);
+    await page.goto(`/?hero=still#/${route}`);
     if (route === 'address') await page.locator('#address-input').fill(TAPROOT);
     if (route !== '' && route !== 'left') await expect(page.locator('[data-share="print"]')).toBeEnabled();
-    if (route === '') await expect(page.locator('.home__stage #scene-plot > svg.gauge-svg')).toHaveCount(1);
     if (route === 'left') await expect(page.locator('#left-note')).not.toBeEmpty();
     const live = route === '' || route === 'left' || route === 'convert';
     if (live) await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
@@ -66,12 +65,9 @@ test('the keyboard reaches every tool from home in reading order and lands on it
     const order: string[] = [];
     const expected = [
         SITE_NAME,
-        ...TOOL_IDS.map((id) => NAV.short[id]),
+        NAV.menu,
         `${FOOTER.handle} ↗`,
         'mempool.space',
-        SHARE.print,
-        SHARE.download,
-        `${SHARE.post} ↗`,
         ...TOOL_IDS.map((id) => TOOLS[id].name),
     ];
     for (let step = 0; step < expected.length; step++) {
@@ -79,7 +75,7 @@ test('the keyboard reaches every tool from home in reading order and lands on it
         order.push(
             await page.evaluate(() => {
                 const active = document.activeElement;
-                const text = active?.querySelector('.tile__name')?.textContent ?? active?.textContent ?? '';
+                const text = active?.querySelector('.tool-row__name')?.textContent ?? active?.textContent ?? '';
                 return text.trim().replace(/ \d\d:\d\d UTC$/, '');
             }),
         );
