@@ -28,12 +28,12 @@ main,
 
 .topbar__inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-        "brand menu"
-        "status status";
+        "brand follow menu"
+        "status status status";
     align-items: center;
-    column-gap: 1rem;
+    column-gap: 0.625rem;
 }
 
 .wordmark {
@@ -51,11 +51,12 @@ main,
 }
 
 .wordmark::before,
-.footer__name::before {
+.footer__name::before,
+.tool__title::before {
     content: "";
     flex: none;
-    width: 0.5625rem;
-    height: 0.5625rem;
+    width: 0.6875rem;
+    height: 0.6875rem;
     border-radius: 2px;
     background: var(--btc);
 }
@@ -66,7 +67,7 @@ main,
     width: 100%;
     height: 3px;
     background: var(--edge);
-    fill: color-mix(in srgb, var(--btc) 62%, var(--void));
+    fill: var(--btc);
 }
 
 .menu {
@@ -170,18 +171,33 @@ main,
     color: var(--btc);
 }
 
+/* The handle is part of the name: an orange pill beside it at every width. */
 .topbar__follow {
-    display: none;
+    grid-area: follow;
+    position: relative;
+    display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    min-height: var(--tap);
-    color: var(--ink);
+    min-height: 2.25rem;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--btc);
+    border-radius: 999px;
+    color: var(--btc);
     font-size: var(--step-small);
     font-weight: 600;
+    white-space: nowrap;
 }
 
-.topbar__follow span {
-    color: var(--btc);
+.topbar__follow::before {
+    content: "";
+    position: absolute;
+    inset: -0.25rem 0;
+}
+
+@media (max-width: 26rem) {
+    .topbar__follow span {
+        display: none;
+    }
 }
 
 @media (hover: hover) {
@@ -189,9 +205,13 @@ main,
         border-color: var(--ink-dim);
     }
 
-    .menu__link:hover .menu__name,
-    .topbar__follow:hover {
+    .menu__link:hover .menu__name {
         color: var(--btc);
+    }
+
+    .topbar__follow:hover {
+        background: var(--btc);
+        color: var(--void);
     }
 }
 
@@ -220,10 +240,6 @@ main,
 }
 
 @media (min-width: 64rem) {
-    .topbar__follow {
-        display: inline-flex;
-    }
-
     .wordmark {
         min-height: 3.5rem;
     }
@@ -236,9 +252,63 @@ main {
     padding-bottom: var(--space-xl);
 }
 
+/*
+ * The moving ground: one canvas behind every page. Everything a person reads sits on an opaque plate above it, so
+ * the squares only ever show in the gutters and the gaps between plates.
+ */
+.ground {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.hero__intro,
+.hero__stage,
+.chain-about,
+.home__share,
+.cautions,
+.tool__screen,
+.tool__below,
+.route-note {
+    padding: 0.875rem;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    background: var(--plate);
+}
+
+@media (max-width: 47.99rem) {
+    main {
+        padding-inline: max(0.625rem, env(safe-area-inset-left)) max(0.625rem, env(safe-area-inset-right));
+    }
+}
+
+@media (min-width: 64rem) {
+    .hero__intro,
+    .hero__stage,
+    .chain-about,
+    .home__share,
+    .cautions,
+    .tool__screen,
+    .tool__below {
+        padding: 1.5rem;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 32rem) {
+    .hero__intro,
+    .hero__stage,
+    .tool__screen {
+        padding-block: 0.5rem;
+    }
+}
+
 .noscript,
 .route-note {
-    margin-block: 1rem;
+    margin-block: 0 1rem;
     color: var(--ink-dim);
     font-size: var(--step-small);
 }

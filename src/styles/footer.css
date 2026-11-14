@@ -1,4 +1,7 @@
 .footer {
+    position: relative;
+    z-index: 1;
+    background: var(--void);
     padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
     border-top: 1px solid var(--edge);
 }
@@ -64,7 +67,7 @@
     min-height: 3.25rem;
     padding-inline: 1.5rem;
     border-radius: var(--radius-control);
-    background: var(--ink);
+    background: var(--btc);
     color: var(--void);
     font-weight: 700;
 }
@@ -75,7 +78,7 @@
     }
 
     .footer__follow:hover {
-        background: var(--btc);
+        background: var(--ink);
     }
 }
 

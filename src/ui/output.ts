@@ -41,6 +41,7 @@ export function shareBar(): SafeHtml {
 
 export function shareSection(extra: SafeHtml | '' = ''): SafeHtml {
     return html`<div class="share">
+    <p class="share__title">${SHARE.title} <span class="share__tag">${SHARE.titleTag}</span></p>
     ${shareBar()}
     <p class="share__note">${SHARE.madeHere}</p>
     ${extra}
