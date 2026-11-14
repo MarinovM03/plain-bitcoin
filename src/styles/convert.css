@@ -12,6 +12,13 @@
     align-items: end;
 }
 
+/* Side by side, the money switch does not fit a 360px phone once the system font runs wide. */
+@media (max-width: 24rem) {
+    .convert-fields__money {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .g-rung--yours {
     fill: var(--btc);
 }
