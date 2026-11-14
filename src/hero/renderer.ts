@@ -97,9 +97,7 @@ function linked(gl: WebGL2RenderingContext, programs: readonly Program[]): Promi
                 reject(new Error('Context lost'));
                 return;
             }
-            const done = programs.every(({ handle }) =>
-                gl.getProgramParameter(handle, parallel.COMPLETION_STATUS_KHR),
-            );
+            const done = programs.every(({ handle }) => gl.getProgramParameter(handle, parallel.COMPLETION_STATUS_KHR));
             if (!done) {
                 setTimeout(poll, POLL_MS);
                 return;

@@ -1,6 +1,6 @@
 import { hrefFor } from '../app/routes.ts';
-import { advanceChain, type ChainEffect, EMPTY_CHAIN } from '../chain/machine.ts';
 import { stripPath } from '../chain/hash.ts';
+import { advanceChain, type ChainEffect, EMPTY_CHAIN } from '../chain/machine.ts';
 import { chainStill } from '../chain/still.ts';
 import { type ChainBlock, heightFeed, type Tip } from '../data/height.ts';
 import { priceFeed } from '../data/price.ts';
