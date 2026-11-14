@@ -16,7 +16,8 @@ function fakeFetch(apis: FakeApis) {
         apis.calls.push(url);
         const host = new URL(url).hostname;
         if (apis.down.has(host)) throw new TypeError('Failed to fetch');
-        if (host === 'mempool.space') return Response.json({ time: NOW / 1000 - 30, USD: 76_777, GBP: 57_329 });
+        if (host === 'mempool.space')
+            return Response.json({ time: NOW / 1000 - 30, USD: 76_777, EUR: 66_210, GBP: 57_329 });
         return Response.json({ bitcoin: { gbp: 57_384, usd: 76_872, last_updated_at: NOW / 1000 - 60 } });
     });
 }
@@ -36,13 +37,17 @@ describe('bundled closes', () => {
 
 describe('parseQuote', () => {
     it('reads both shapes and refuses anything else', () => {
-        expect(parseQuote('mempool.space', { time: 1_793_390_411, USD: 76_777, GBP: 57_329 })).toEqual({
-            value: { gbp: 57_329, usd: 76_777 },
+        expect(parseQuote('mempool.space', { time: 1_793_390_411, USD: 76_777, EUR: 66_210, GBP: 57_329 })).toEqual({
+            value: { gbp: 57_329, usd: 76_777, eur: 66_210 },
             asOf: 1_793_390_411_000,
         });
         expect(
-            parseQuote('CoinGecko', { bitcoin: { gbp: 57_384, usd: 76_872, last_updated_at: 1_793_390_708 } }),
-        ).toEqual({ value: { gbp: 57_384, usd: 76_872 }, asOf: 1_793_390_708_000 });
+            parseQuote('CoinGecko', {
+                bitcoin: { gbp: 57_384, usd: 76_872, eur: 66_300, last_updated_at: 1_793_390_708 },
+            }),
+        ).toEqual({ value: { gbp: 57_384, usd: 76_872, eur: 66_300 }, asOf: 1_793_390_708_000 });
+        expect(parseQuote('mempool.space', { time: 1_793_390_411, USD: 76_777, GBP: 57_329 })?.value.eur).toBeNull();
+        expect(LAST_CLOSE.value.eur).toBeNull();
         expect(parseQuote('mempool.space', { time: 1, USD: 0, GBP: 1 })).toBeNull();
         expect(parseQuote('mempool.space', { time: 1, USD: '76777', GBP: 1 })).toBeNull();
         expect(parseQuote('CoinGecko', { bitcoin: null })).toBeNull();
@@ -55,7 +60,7 @@ describe('fetchQuote', () => {
         const apis = { down: new Set<string>(), calls: [] };
         const quote = await fetchQuote(fakeFetch(apis), NOW);
         expect(quote).toEqual({
-            value: { gbp: 57_329, usd: 76_777 },
+            value: { gbp: 57_329, usd: 76_777, eur: 66_210 },
             source: 'mempool.space',
             asOf: NOW - 30_000,
             stale: false,

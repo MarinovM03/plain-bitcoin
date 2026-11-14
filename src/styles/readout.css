@@ -118,7 +118,7 @@
 
 .g-dot--btc {
     fill: var(--btc);
-    stroke: var(--plate);
+    stroke: var(--void);
     stroke-width: 1.5;
 }
 

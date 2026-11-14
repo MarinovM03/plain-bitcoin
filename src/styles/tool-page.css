@@ -1,10 +1,10 @@
 .view {
-    padding-top: 0.875rem;
+    padding-top: 1.25rem;
 }
 
 .tool {
     display: grid;
-    gap: var(--space-l);
+    gap: 1.5rem;
 }
 
 /* Reading order on a phone: name, inputs, answer, picture, sharing, options. */
@@ -20,6 +20,9 @@
 }
 
 .tool__title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.25rem);
@@ -50,7 +53,7 @@
     min-width: 0;
     border: 1px solid var(--edge);
     border-radius: var(--radius);
-    background: var(--plate);
+    background: var(--void);
 }
 
 .picture__plot {
@@ -82,7 +85,7 @@
     position: absolute;
     inset: 0;
     padding: 0 0.875rem 0.625rem;
-    background: var(--plate);
+    background: var(--void);
     color: var(--ink);
     font-family: var(--font-mono);
     font-size: 0.6875rem;
@@ -106,8 +109,6 @@
 .tool__below {
     display: grid;
     gap: var(--space-l);
-    padding-top: var(--space-l);
-    border-top: 1px solid var(--edge);
 }
 
 .tool__below > * {

@@ -50,11 +50,6 @@ function compile(gl: WebGL2RenderingContext, type: number, source: string): WebG
     if (!shader) throw new Error('No shader');
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const log = gl.getShaderInfoLog(shader) ?? '';
-        gl.deleteShader(shader);
-        throw new Error(`Shader: ${log}`);
-    }
     return shader;
 }
 
@@ -70,11 +65,6 @@ function link(gl: WebGL2RenderingContext, vertex: string, fragment: string): Pro
     for (const shader of shaders) gl.attachShader(handle, shader);
     gl.linkProgram(handle);
     for (const shader of shaders) gl.deleteShader(shader);
-    if (!gl.getProgramParameter(handle, gl.LINK_STATUS)) {
-        const log = gl.getProgramInfoLog(handle) ?? '';
-        gl.deleteProgram(handle);
-        throw new Error(`Program: ${log}`);
-    }
     const locations = new Map<string, WebGLUniformLocation | null>();
     return {
         handle,
@@ -83,6 +73,44 @@ function link(gl: WebGL2RenderingContext, vertex: string, fragment: string): Pro
             return locations.get(name) ?? null;
         },
     };
+}
+
+const POLL_MS = 16;
+
+/**
+ * Asking for a program's status makes the browser finish compiling it on the main thread, which on a phone is a
+ * long freeze. Where the browser can compile in the background, wait for it to say it is done before asking.
+ */
+function linked(gl: WebGL2RenderingContext, programs: readonly Program[]): Promise<void> {
+    const parallel = gl.getExtension('KHR_parallel_shader_compile');
+    const check = () => {
+        for (const { handle } of programs) {
+            if (!gl.getProgramParameter(handle, gl.LINK_STATUS)) {
+                throw new Error(`Program: ${gl.getProgramInfoLog(handle) ?? ''}`);
+            }
+        }
+    };
+    if (!parallel) return Promise.resolve().then(check);
+    return new Promise<void>((resolve, reject) => {
+        const poll = () => {
+            if (gl.isContextLost()) {
+                reject(new Error('Context lost'));
+                return;
+            }
+            const done = programs.every(({ handle }) => gl.getProgramParameter(handle, parallel.COMPLETION_STATUS_KHR));
+            if (!done) {
+                setTimeout(poll, POLL_MS);
+                return;
+            }
+            try {
+                check();
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
+        };
+        poll();
+    });
 }
 
 /** A unit box standing on the floor: x and z from -0.5 to 0.5, y from 0 to 1, with a flat normal per face. */
@@ -151,11 +179,12 @@ function moteSeeds(): Float32Array {
     return seeds;
 }
 
-export function createRenderer(gl: WebGL2RenderingContext, ink: string): Renderer {
+export async function createRenderer(gl: WebGL2RenderingContext, ink: string): Promise<Renderer> {
     const slab = link(gl, SLAB_VERTEX, SLAB_FRAGMENT);
     const ghost = link(gl, SLAB_VERTEX, GHOST_FRAGMENT);
     const floor = link(gl, FLOOR_VERTEX, FLOOR_FRAGMENT);
     const motes = link(gl, MOTE_VERTEX, MOTE_FRAGMENT);
+    await linked(gl, [slab, ghost, floor, motes]);
     const inkDisplay = display(ink);
     const cos = Math.cos(SLAB_YAW);
     const sin = Math.sin(SLAB_YAW);

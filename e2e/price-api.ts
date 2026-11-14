@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-export const LIVE_PRICE = { gbp: 57_329, usd: 76_777 };
+export const LIVE_PRICE = { gbp: 57_329, usd: 76_777, eur: 66_210 };
 
 const PRICE_URL = /^https:\/\/(mempool\.space\/api\/v1\/prices|api\.coingecko\.com\/)/;
 
@@ -23,7 +23,10 @@ export async function fakePriceApi(page: Page, down = false): Promise<FakePrices
                 headers,
             });
         }
-        return route.fulfill({ json: { time, USD: LIVE_PRICE.usd, GBP: LIVE_PRICE.gbp }, headers });
+        return route.fulfill({
+            json: { time, USD: LIVE_PRICE.usd, EUR: LIVE_PRICE.eur, GBP: LIVE_PRICE.gbp },
+            headers,
+        });
     });
     return prices;
 }

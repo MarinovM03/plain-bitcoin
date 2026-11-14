@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_SUPPLY, SATS_PER_BTC, supplyAt } from '../model/supply.ts';
 import { addressLayout, foreignChars } from './address.ts';
-import { convertLayout, unitText } from './convert.ts';
+import { convertLayout, rungsFor, unitText } from './convert.ts';
 import { dcaFrame, dcaLayout, niceStep, yearTicks } from './dca.ts';
 import { loadLayout } from './index.ts';
 import { leftFill, leftLayout } from './left.ts';
@@ -94,30 +94,36 @@ describe('power gauge', () => {
 });
 
 describe('converter gauge', () => {
-    it('fills one cell per unit of the grid and names the unit', () => {
-        const gauge = convertLayout({ id: 'convert', sats: 2000 }, VIEW);
+    const ladder = (sats: number) => convertLayout({ id: 'convert', sats, price: 76_777, currency: 'USD' }, VIEW);
+
+    it('prices round amounts and slots the typed amount in as the one orange row', () => {
+        const gauge = ladder(2000);
         sane(gauge);
-        expect(gauge.summary).toBe('sats=2000;perDot=10;lit=200');
-        expect(text(gauge, 'unit')).toBe('1 cell = 10 sats');
-        expect(gauge.marks.filter((mark) => String(mark.attrs.class).includes('g-cell--btc'))).toHaveLength(200);
+        expect(gauge.summary).toBe('sats=2000;rungs=6;yours=2;currency=USD');
+        expect(text(gauge, 'r1-amount')).toBe('1 sat');
+        expect(text(gauge, 'r1-worth')).toBe('$0.00077');
+        expect(text(gauge, 'r100000000-worth')).toBe('$76,777.00');
+        expect(text(gauge, 'yours-amount')).toBe('Yours: 2,000 sats');
+        expect(text(gauge, 'yours-worth')).toBe('$1.54');
+        expect(gauge.marks.filter((mark) => String(mark.attrs.class).includes('g-rung--yours'))).toHaveLength(1);
     });
 
-    it('rebuilds by zoom only when the unit changes by ten', () => {
-        const a = convertLayout({ id: 'convert', sats: 2000 }, VIEW);
-        const b = convertLayout({ id: 'convert', sats: 3000 }, VIEW);
-        const c = convertLayout({ id: 'convert', sats: 30_000 }, VIEW);
-        expect(a.rebuild).toBe(b.rebuild);
-        expect(buildFor(a.rebuild, c)).toBe('zoom-out');
-        expect(buildFor(c.rebuild, a)).toBe('zoom-in');
-        expect(buildFor(null, a)).toBe('none');
+    it('lights a round rung instead of adding a row when the amount is one of them', () => {
+        const gauge = ladder(100_000);
+        expect(gauge.summary).toBe('sats=100000;rungs=5;yours=2;currency=USD');
+        expect(text(gauge, 'yours-amount')).toBe('100,000 sats');
+        expect(rungsFor(0).some((rung) => rung.yours)).toBe(false);
+        expect(buildFor(ladder(2000).rebuild, ladder(3000))).toBe('none');
     });
 
     it('names units plainly and clamps impossible amounts', () => {
         expect(unitText(1)).toBe('1 sat');
-        expect(unitText(100_000)).toBe('0.001 BTC');
+        expect(unitText(100_000)).toBe('100,000 sats');
+        expect(unitText(1_000_000)).toBe('0.01 BTC');
         expect(unitText(SATS_PER_BTC * 10)).toBe('10 BTC');
-        for (const sats of [Number.NaN, -5, Number.POSITIVE_INFINITY])
-            sane(convertLayout({ id: 'convert', sats }, VIEW));
+        expect(unitText(150_000_000)).toBe('1.5 BTC');
+        for (const sats of [Number.NaN, -5, Number.POSITIVE_INFINITY]) sane(ladder(sats));
+        sane(convertLayout({ id: 'convert', sats: 5, price: Number.NaN, currency: 'EUR' }, VIEW));
     });
 });
 

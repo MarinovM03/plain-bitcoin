@@ -2,16 +2,18 @@ export const SATS_PER_BTC = 100_000_000;
 
 export const MAX_SATS = 21_000_000 * SATS_PER_BTC;
 
-export type Unit = 'sats' | 'btc' | 'gbp' | 'usd';
+export type Unit = 'sats' | 'btc' | 'usd' | 'eur' | 'gbp';
 
 export type FiatUnit = Exclude<Unit, 'sats' | 'btc'>;
 
+/** The euro price is null when only the bundled daily close is known: that file carries dollars and pounds. */
 export interface Prices {
     gbp: number;
     usd: number;
+    eur: number | null;
 }
 
-export type ParseFailure = 'empty' | 'invalid' | 'too-small' | 'too-big';
+export type ParseFailure = 'empty' | 'invalid' | 'too-small' | 'too-big' | 'no-price';
 
 export type Parsed = { ok: true; value: number } | { ok: false; reason: ParseFailure };
 
@@ -63,7 +65,9 @@ export function parseToSats(unit: Unit, text: string, prices: Prices): Parsed {
     if (unit === 'btc') return parseBtc(text);
     const cents = parseCents(text);
     if (!cents.ok) return cents;
-    const sats = centsToSats(cents.value, prices[unit]);
+    const price = prices[unit];
+    if (price === null) return { ok: false, reason: 'no-price' };
+    const sats = centsToSats(cents.value, price);
     if (sats > MAX_SATS) return { ok: false, reason: 'too-big' };
     if (sats === 0 && cents.value > 0) return { ok: false, reason: 'too-small' };
     return { ok: true, value: sats };
@@ -96,21 +100,31 @@ export interface Conversion {
 }
 
 export function convert(sats: number, prices: Prices): Conversion {
-    const fiat = { gbp: satsToFiat(sats, prices.gbp), usd: satsToFiat(sats, prices.usd) };
+    const fiat = {
+        gbp: satsToFiat(sats, prices.gbp),
+        usd: satsToFiat(sats, prices.usd),
+        eur: prices.eur === null ? null : satsToFiat(sats, prices.eur),
+    };
     return {
         sats,
         fiat,
-        fields: { sats: satsText(sats), btc: btcText(sats), gbp: fiatText(fiat.gbp), usd: fiatText(fiat.usd) },
+        fields: {
+            sats: satsText(sats),
+            btc: btcText(sats),
+            gbp: fiatText(fiat.gbp),
+            usd: fiatText(fiat.usd),
+            eur: fiat.eur === null ? '' : fiatText(fiat.eur),
+        },
     };
 }
 
-const PASTE_UNIT = /\s*(btc|sats?|gbp|usd)$/i;
+const PASTE_UNIT = /\s*(btc|sats?|gbp|usd|eur)$/i;
 
 export function pasteFits(text: string, decimals: number): boolean {
     const stripped = text
         .trim()
         .replace(PASTE_UNIT, '')
-        .replace(/^[£$₿]\s*/, '');
+        .replace(/^[£$€₿]\s*/, '');
     const number = plainNumber(stripped);
     return number !== null && number.fraction.replace(/0+$/, '').length <= decimals;
 }

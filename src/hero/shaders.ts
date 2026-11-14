@@ -239,7 +239,9 @@ void main() {
     vec3 halfway = normalize(uKey + view);
     colour += KEY_COLOUR * pow(max(halfway.y, 0.0), 90.0) * 0.035 * pool * shadow;
 
-    float fog = fogAt(vWorld);
+    // The floor exists only where the pool lights it; past that it is the page itself, so no box shows on any screen.
+    float lit = smoothstep(0.02, 0.4, pool);
+    float fog = 1.0 - (1.0 - fogAt(vWorld)) * lit;
     float glance = pow(1.0 - max(view.y, 0.0), 2.5);
     float mirror = (0.06 + 0.7 * glance) * (0.85 + 0.15 * uneven) * (1.0 - fog);
     outColour = vec4(finish(encode(colour), fog), 1.0 - clamp(mirror, 0.0, 0.62));

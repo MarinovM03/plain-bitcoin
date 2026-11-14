@@ -1,11 +1,11 @@
 .home {
     display: grid;
-    gap: var(--space-l);
+    gap: 1.5rem;
 }
 
 .hero {
     display: grid;
-    gap: 1.25rem;
+    gap: 1.5rem;
 }
 
 .hero__intro {
@@ -23,6 +23,10 @@
     text-wrap: balance;
 }
 
+.hero__accent {
+    color: var(--btc);
+}
+
 .hero__lead {
     max-width: 34rem;
     color: var(--ink-dim);
@@ -35,6 +39,8 @@
     order: -1;
     display: grid;
     min-width: 0;
+    overflow: hidden;
+    background: var(--void);
 }
 
 /*
@@ -45,7 +51,7 @@
 .chain {
     position: relative;
     height: clamp(15rem, 40svh, 22rem);
-    margin-inline: calc(-1 * var(--gutter));
+    margin: -0.875rem -0.875rem 0;
     overflow: hidden;
     background: var(--void);
     pointer-events: none;
@@ -98,29 +104,70 @@
 }
 
 .tool-list__rows {
-    border-bottom: 1px solid var(--edge);
+    display: grid;
+    gap: 0.5rem;
 }
 
+.tool-list__source {
+    color: var(--ink-dim);
+    font-size: var(--step-tiny);
+    line-height: 1.45;
+}
+
+/*
+ * A tool as a tile: the name and one line on the left, one real number in orange on the right, and on the leading
+ * edge 32 bits of the newest block's hash. The tiles rise in one after another, the way the tablets do.
+ */
 .tool-row {
-    position: relative;
+    display: grid;
+    grid-template-columns: 0.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.75rem;
+    min-height: 4.75rem;
+    padding: 0.625rem 0.875rem 0.625rem 0.5rem;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    background: var(--well);
+    transition:
+        border-color var(--duration) var(--ease),
+        translate var(--duration) var(--ease);
+    animation: tile-rise 520ms var(--ease) backwards;
+}
+
+.tool-list__item:nth-child(2) .tool-row {
+    animation-delay: 70ms;
+}
+
+.tool-list__item:nth-child(3) .tool-row {
+    animation-delay: 140ms;
+}
+
+.tool-list__item:nth-child(4) .tool-row {
+    animation-delay: 210ms;
+}
+
+.tool-list__item:nth-child(5) .tool-row {
+    animation-delay: 280ms;
+}
+
+@keyframes tile-rise {
+    from {
+        translate: 0 1.5rem;
+    }
+}
+
+.tool-row__bits {
+    align-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-height: 3.25rem;
+    fill: var(--btc);
+}
+
+.tool-row__words {
     display: grid;
     gap: 0.125rem;
-    padding: 0.8125rem 1.75rem 0.875rem 0;
-    border-top: 1px solid var(--edge);
-}
-
-.tool-row::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 0.25rem;
-    width: 0.5rem;
-    height: 0.5rem;
-    margin-top: -0.25rem;
-    border-top: 1.5px solid var(--ink-dim);
-    border-right: 1.5px solid var(--ink-dim);
-    rotate: 45deg;
-    transition: translate var(--duration) var(--ease);
+    min-width: 0;
 }
 
 .tool-row__name {
@@ -129,34 +176,47 @@
     font-size: 1.3125rem;
     line-height: 1.2;
     letter-spacing: -0.015em;
-    transition: color var(--duration) var(--ease);
 }
 
 .tool-row__description {
     color: var(--ink-dim);
     font-size: var(--step-small);
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .tool-row__fact {
-    margin-top: 0.125rem;
-    color: var(--ink-warm);
+    display: grid;
+    justify-items: end;
+    gap: 0.0625rem;
+    max-width: 8.5rem;
+    text-align: right;
+}
+
+.tool-row__figure {
+    color: var(--btc);
     font-family: var(--font-mono);
-    font-size: var(--step-tiny);
+    font-size: 1.1875rem;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
-    line-height: 1.5;
-    min-height: 1.5em;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
+.tool-row__unit {
+    color: var(--ink-dim);
+    font-size: var(--step-tiny);
+    line-height: 1.3;
+}
+
+.tool-row:active {
+    border-color: var(--btc);
 }
 
 @media (hover: hover) {
-    .tool-row:hover .tool-row__name {
-        color: var(--btc);
-    }
-
-    .tool-row:hover::after {
+    .tool-row:hover {
         border-color: var(--btc);
-        translate: 0.1875rem 0;
+        translate: 0 -0.125rem;
     }
 }
 
@@ -267,7 +327,6 @@
     .chain {
         height: auto;
         min-height: 12rem;
-        margin-inline: 0 calc(-1 * var(--gutter));
     }
 }
 
@@ -285,6 +344,11 @@
 
     .chain {
         min-height: 28rem;
+        margin: -1.5rem -1.5rem 0;
+    }
+
+    .tool-row__figure {
+        font-size: 1.3125rem;
     }
 
     .chain__legend {
@@ -301,14 +365,26 @@
         display: none;
     }
 
+    .chain {
+        margin: -0.5rem -0.875rem 0;
+    }
+
+    .tool-list__rows {
+        gap: 0.25rem;
+    }
+
     .tool-row {
-        align-content: center;
         min-height: var(--tap);
-        padding-block: 0.25rem;
+        padding-block: 0.125rem;
+    }
+
+    .tool-row__bits {
+        min-height: 2rem;
     }
 
     .tool-row__description,
-    .tool-row__fact {
+    .tool-row__unit,
+    .tool-list__source {
         display: none;
     }
 
@@ -318,8 +394,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .tool-row::after,
-    .tool-row__name {
+    .tool-row {
         transition: none;
+        animation: none;
     }
 }

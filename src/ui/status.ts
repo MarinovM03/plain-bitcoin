@@ -18,7 +18,6 @@ const SOURCE_URLS: Record<PriceQuote['source'], string> = {
 export interface StatusView {
     block: string;
     estimated: boolean;
-    gbp: string;
     usd: string;
     age: string;
     source: string;
@@ -42,7 +41,6 @@ export function statusView(
     const common = {
         block,
         estimated: tip.source !== 'live',
-        gbp: formatMoney(quote.value.gbp, 'GBP'),
         usd: formatMoney(quote.value.usd, 'USD'),
         age: blockAge(tip, now),
         sourceUrl: SOURCE_URLS[quote.source],
@@ -64,7 +62,7 @@ export function renderStatus(now = Date.now()): SafeHtml {
     return html`<div id="status" class="status" role="group" aria-label="${STATUS.label}" aria-live="off" data-state="estimate">
     <p class="status__line">
         <span id="status-block" class="status__item status__figure status__block">${view.block}</span>
-        <span class="status__item status__price"><span class="visually-hidden">${STATUS.price}</span><span id="status-gbp" class="status__figure">${view.gbp}</span> <span id="status-usd" class="status__figure status__usd">${view.usd}</span></span>
+        <span class="status__item status__price"><span class="visually-hidden">${STATUS.price}</span><span id="status-usd" class="status__figure">${view.usd}</span></span>
         <span id="status-age" class="status__item status__age">${view.age}</span>
         <a id="status-source" class="status__item status__source" href="${view.sourceUrl}" rel="noopener noreferrer">${view.source}</a>
     </p>
@@ -75,12 +73,15 @@ export interface StatusLine {
     setRoute(route: string): void;
 }
 
-export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): StatusLine {
+export function mountStatus(
+    root: HTMLElement,
+    barcode: SVGPathElement | null,
+    onHash: (hash: string | null) => void = () => {},
+): StatusLine {
     const prices = priceFeed();
     const heights = heightFeed();
     const owner = {};
     const block = find(root, '#status-block');
-    const gbp = find(root, '#status-gbp');
     const usd = find(root, '#status-usd');
     const age = find(root, '#status-age');
     const source = find<HTMLAnchorElement>(root, '#status-source');
@@ -90,12 +91,14 @@ export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): 
     let ticks = 0;
     let ticker = 0;
     let shownHash: string | null = null;
+    /** A saved real block for the page's moving ground when no feed has answered on this visit. */
+    let savedHash: string | null = null;
+    let savedAsked = false;
 
     function render(): void {
         const now = Date.now();
         const view = statusView(heights.tip, prices.quote, now - receivedAt > PRICE_STALE_MS, now);
         block.textContent = view.block;
-        gbp.textContent = view.gbp;
         usd.textContent = view.usd;
         age.textContent = view.age;
         source.textContent = view.source;
@@ -106,6 +109,19 @@ export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): 
             barcode.setAttribute('d', barcodePath(hash));
             shownHash = hash;
         }
+        onHash(hash ?? savedHash);
+    }
+
+    function askSaved(): void {
+        if (savedAsked || heights.tip.blocks.length > 0) return;
+        if (LIVE_ROUTES.has(route) && heights.tip.source !== 'offline') return;
+        savedAsked = true;
+        import('../data/chain-snapshot.ts')
+            .then(({ SNAPSHOT }) => {
+                savedHash = SNAPSHOT.blocks[0]?.hash ?? null;
+                render();
+            })
+            .catch(() => {});
     }
 
     function tick(): void {
@@ -124,6 +140,7 @@ export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): 
         window.clearInterval(ticker);
         ticker = visible ? window.setInterval(render, AGE_TICK_MS) : 0;
         if (visible) render();
+        if (started) askSaved();
     }
 
     prices.subscribe((quote) => {
@@ -133,6 +150,7 @@ export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): 
     heights.subscribe((tip, change) => {
         if (change.blocks > 0 && tip.source === 'live') tick();
         render();
+        if (started) askSaved();
     });
     document.addEventListener('visibilitychange', sync);
     afterFirstPaint(() => {

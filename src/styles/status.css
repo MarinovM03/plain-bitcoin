@@ -51,10 +51,6 @@
     }
 }
 
-.status__usd {
-    margin-left: 0.5rem;
-}
-
 .status__source {
     position: relative;
     text-decoration: underline dotted;
@@ -75,10 +71,6 @@
 }
 
 @media (max-width: 23rem) {
-    .status__usd {
-        display: none;
-    }
-
     .status__line {
         column-gap: 0.625rem;
     }
@@ -94,6 +86,13 @@
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+}
+
+/* A short landscape screen keeps the bar on one line; the time since the block also shows under the chain. */
+@media (orientation: landscape) and (max-height: 32rem) and (max-width: 63.99rem) {
+    .status__age {
+        display: none;
     }
 }
 

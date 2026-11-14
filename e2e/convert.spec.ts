@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { CONVERT, SHARE } from '../src/ui/copy.ts';
+import { CONVERT, FIELDS, SHARE } from '../src/ui/copy.ts';
 import { realProblems } from './console.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
-const latest = JSON.parse(readFileSync('src/data/prices/latest.json', 'utf8')) as { day: string; GBP: number };
+const latest = JSON.parse(readFileSync('src/data/prices/latest.json', 'utf8')) as { day: string; USD: number };
 
 function watch(page: Page) {
     const problems: string[] = [];
@@ -27,28 +27,32 @@ test.beforeEach(async ({ page }) => {
 const fields = (page: Page) => ({
     sats: page.getByLabel(CONVERT.fields.sats, { exact: true }),
     btc: page.getByLabel(CONVERT.fields.btc, { exact: true }),
-    gbp: page.getByLabel(CONVERT.fields.gbp, { exact: true }),
-    usd: page.getByLabel(CONVERT.fields.usd, { exact: true }),
+    fiat: page.locator('#convert-fiat'),
 });
+
+const fiatLabel = (page: Page) => page.locator('label[for="convert-fiat"]');
+const pick = (page: Page, currency: string) => page.getByLabel(currency, { exact: true }).check({ force: true });
 
 test('converts 100,000 sats at the live price, asking only the price API', async ({ page }) => {
     const prices = await fakePriceApi(page);
     const { problems, external } = watch(page);
     await page.goto('/#/convert');
     const field = fields(page);
-    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
-    await expect(page.locator('#tool-result-detail')).toHaveText('Also 0.001 BTC or $76.78.');
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
+    await expect(page.locator('#tool-result-detail')).toHaveText('Also 0.001 BTC.');
     await expect(field.btc).toHaveValue('0.001');
-    await expect(field.gbp).toHaveValue('57.33');
-    await expect(field.usd).toHaveValue('76.78');
-    await expect(page.locator('#status-gbp')).toHaveText('£57,329');
+    await expect(field.fiat).toHaveValue('76.78');
+    await expect(fiatLabel(page)).toHaveText(CONVERT.fields.usd);
+    await expect(page.getByLabel(FIELDS.dollars, { exact: true })).toBeChecked();
     await expect(page.locator('#status-usd')).toHaveText('$76,777');
+    await expect(page.locator('#status')).not.toContainText('£');
+    await expect(page.locator('.picture')).toHaveAttribute('data-summary', 'sats=100000;rungs=5;yours=2;currency=USD');
     await expect(page.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
-    await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ £0.00057 · $0.00077');
+    await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ $0.00077');
     await expect(page.locator('#tool-result-label')).toHaveText(/live price, \d\d:\d\d UTC$/);
     await expect(page.locator('#tool-source')).toContainText('mempool.space, with CoinGecko');
     await expect(page.locator('[data-preset="hundredThousand"]')).toHaveAttribute('aria-pressed', 'true');
-    for (const kind of ['sats', 'btc', 'gbp', 'usd'] as const) {
+    for (const kind of ['sats', 'btc', 'fiat'] as const) {
         await expect(field[kind]).toHaveAttribute('inputmode', kind === 'sats' ? 'numeric' : 'decimal');
     }
     expect(external.filter((url) => !url.includes('/blocks/'))).toEqual(['https://mempool.space/api/v1/prices']);
@@ -60,25 +64,46 @@ test('the last-edited field drives the others, and presets fill one field', asyn
     await fakePriceApi(page);
     await page.goto('/#/convert');
     const field = fields(page);
-    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
 
     await field.btc.fill('0.1');
     await expect(field.sats).toHaveValue('10,000,000');
-    await expect(page.locator('#tool-result')).toHaveText('0.1 BTC = £5,732.90');
+    await expect(page.locator('#tool-result')).toHaveText('0.1 BTC = $7,677.70');
 
-    await field.gbp.fill('50');
-    await expect(field.sats).toHaveValue('87,216');
-    await expect(field.btc).toHaveValue('0.00087216');
-    await expect(page.locator('#tool-result')).toHaveText('£50.00 = 87,216 sats');
+    await field.fiat.fill('50');
+    await expect(field.sats).toHaveValue('65,124');
+    await expect(field.btc).toHaveValue('0.00065124');
+    await expect(page.locator('#tool-result')).toHaveText('$50.00 = 65,124 sats');
 
     await page.locator('[data-preset="sat"]').click();
-    await expect(page.locator('#tool-result')).toHaveText('1 sat = £0.00057');
-    await expect(field.gbp).toHaveValue('0.00057');
+    await expect(page.locator('#tool-result')).toHaveText('1 sat = $0.00077');
+    await expect(field.fiat).toHaveValue('0.00077');
     await page.locator('[data-preset="coin"]').click();
     await expect(field.sats).toHaveValue('100,000,000');
     await expect(page.locator('[data-preset="coin"]')).toHaveAttribute('aria-pressed', 'true');
     await page.locator('[data-preset="pizza"]').click();
-    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = £573,290,000.00');
+    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = $767,770,000.00');
+});
+
+test('the money switch offers dollars, euros and pounds and keeps the amount of bitcoin', async ({ page }) => {
+    await fakePriceApi(page);
+    await page.goto('/#/convert');
+    const field = fields(page);
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
+
+    await pick(page, FIELDS.euros);
+    await expect(fiatLabel(page)).toHaveText(CONVERT.fields.eur);
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = €66.21');
+    await expect(field.fiat).toHaveValue('66.21');
+    await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ €0.00066');
+    await expect(page.locator('.picture')).toHaveAttribute('data-summary', /currency=EUR$/);
+
+    await field.fiat.fill('50');
+    await expect(page.locator('#tool-result')).toHaveText('€50.00 = 75,517 sats');
+    await pick(page, FIELDS.pounds);
+    await expect(fiatLabel(page)).toHaveText(CONVERT.fields.gbp);
+    await expect(field.sats).toHaveValue('75,517');
+    await expect(page.locator('#tool-result')).toHaveText('75,517 sats = £43.29');
 });
 
 test('what is typed before the tool finishes loading still drives the answer', async ({ page }) => {
@@ -94,14 +119,14 @@ test('what is typed before the tool finishes loading still drives the answer', a
     await page.goto('/#/convert', { waitUntil: 'commit' });
     await fields(page).btc.fill('0.5');
     release();
-    await expect(page.locator('#tool-result')).toHaveText(/^0\.5 BTC = £[\d,]+\.\d{2}$/);
+    await expect(page.locator('#tool-result')).toHaveText(/^0\.5 BTC = \$[\d,]+\.\d{2}$/);
     await expect(fields(page).sats).toHaveValue('50,000,000');
 });
 
 test('refuses impossible amounts and pasted garbage calmly', async ({ page }) => {
     await fakePriceApi(page);
     await page.goto('/#/convert');
-    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     const field = fields(page);
     await field.btc.fill('21000001');
     await expect(page.locator('#convert-note')).toHaveText(CONVERT.tooBig);
@@ -145,8 +170,12 @@ test('offline, it converts at the bundled last close and says so', async ({ page
     await expect(page.locator('#tool-result-label')).toHaveText(`Answer · last close, ${day}`);
     await expect(page.locator('#status-source')).toHaveText(`last close ${day}`);
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics');
-    const pounds = ((100_000 * latest.GBP) / 1e8).toFixed(2);
-    await expect(page.locator('#tool-result')).toHaveText(`100,000 sats = £${pounds}`);
+    const dollars = ((100_000 * latest.USD) / 1e8).toFixed(2);
+    await expect(page.locator('#tool-result')).toHaveText(`100,000 sats = $${dollars}`);
+    await pick(page, FIELDS.euros);
+    await expect(page.locator('#convert-note')).toHaveText(CONVERT.noEuro);
+    await expect(page.locator('#tool-result')).toHaveText(`100,000 sats = $${dollars}`);
+    await expect(fields(page).fiat).toHaveValue('');
     expect(realProblems(problems).filter((text) => !text.includes('net::ERR_INTERNET_DISCONNECTED'))).toEqual([]);
 });
 
@@ -158,14 +187,19 @@ test('every field and preset is reachable by keyboard', async ({ page, isMobile 
     const order: string[] = [];
     for (let i = 0; i < 14; i += 1) {
         await page.keyboard.press('Tab');
-        order.push(await page.evaluate(() => document.activeElement?.id || document.activeElement?.textContent || ''));
+        order.push(
+            await page.evaluate(() => {
+                const active = document.activeElement;
+                return active?.id || active?.getAttribute('name') || active?.textContent || '';
+            }),
+        );
     }
-    expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-gbp', 'convert-usd']);
+    expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-fiat', 'convert-currency']);
     expect(order.slice(4, 7)).toEqual([SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
     expect(order[7]).toBe(CONVERT.presetsLabel);
     expect(order.slice(8)).toEqual(
         Object.entries(CONVERT.presets).map(([preset, label]) => label + (CONVERT.presetHints[preset] ?? '')),
     );
     await page.keyboard.press('Enter');
-    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = £573,290,000.00');
+    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = $767,770,000.00');
 });

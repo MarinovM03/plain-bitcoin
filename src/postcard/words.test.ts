@@ -107,7 +107,7 @@ describe('leftPostcard', () => {
         });
         expect(card.number).toBe('894,203.1019 BTC');
         expect(card.line).toBe('894,203 BTC are still to be mined.');
-        expect(card.kicker).toBe('How much bitcoin is left · block 973,854');
+        expect(card.kicker).toBe('Bitcoin left · block 973,854');
         expect(card.source).toBe(
             'Block 973,854 · height via mempool.space · 30 Oct 2026, 18:06 UTC · supply from the issuance schedule',
         );
@@ -115,7 +115,7 @@ describe('leftPostcard', () => {
 
     it('says est. on an estimated height, and never claims a source it did not use', () => {
         const card = leftPostcard({ supply: supplyAt(973_854), api: null, checkedAt: 0 });
-        expect(card.kicker).toBe('How much bitcoin is left · block 973,854 est.');
+        expect(card.kicker).toBe('Bitcoin left · block 973,854 est.');
         expect(card.source).toMatch(/^Block 973,854 est\. · estimated at one block every 10 minutes/);
         expect(card.source).not.toContain('mempool');
     });
@@ -144,35 +144,41 @@ describe('composeText', () => {
 });
 
 const LIVE: PriceQuote = {
-    value: { gbp: 57_329, usd: 76_777 },
+    value: { gbp: 57_329, usd: 76_777, eur: 66_210 },
     source: 'mempool.space',
     asOf: Date.UTC(2026, 9, 30, 19, 20),
     stale: false,
 };
 
 describe('convertText', () => {
-    it('states 100,000 sats in pounds with the price source and time on the card', () => {
-        const text = convertText('sats', convert(100_000, LIVE.value), LIVE);
-        expect(text.headline).toBe('100,000 sats = £57.33');
-        expect(text.detail).toBe('Also 0.001 BTC or $76.78.');
-        expect(text.postcard.number).toBe('£57.33');
-        expect(text.postcard.line).toBe('100,000 sats = £57.33.');
+    it('states 100,000 sats in dollars with the price source and time on the card', () => {
+        const text = convertText('sats', convert(100_000, LIVE.value), LIVE, 'usd');
+        expect(text.headline).toBe('100,000 sats = $76.78');
+        expect(text.detail).toBe('Also 0.001 BTC.');
+        expect(text.postcard.number).toBe('$76.78');
+        expect(text.postcard.line).toBe('100,000 sats = $76.78.');
         expect(text.postcard.source).toBe('Price: mempool.space, 30 Oct 2026, 19:20 UTC · 1 BTC = 100,000,000 sats');
         expect(text.postcard.signature).toEqual({ kind: 'cells', sats: 100_000 });
     });
 
     it('keeps tiny amounts visible and answers money in sats', () => {
-        expect(convertText('sats', convert(1, LIVE.value), LIVE).headline).toBe('1 sat = £0.00057');
-        expect(convertText('btc', convert(1_000_000, LIVE.value), LIVE).headline).toBe('0.01 BTC = £573.29');
-        const pounds = convertText('gbp', convert(87_216, LIVE.value), LIVE);
+        expect(convertText('sats', convert(1, LIVE.value), LIVE, 'gbp').headline).toBe('1 sat = £0.00057');
+        expect(convertText('btc', convert(1_000_000, LIVE.value), LIVE, 'gbp').headline).toBe('0.01 BTC = £573.29');
+        expect(convertText('btc', convert(1_000_000, LIVE.value), LIVE, 'gbp').detail).toBe('Also 1,000,000 sats.');
+        const pounds = convertText('gbp', convert(87_216, LIVE.value), LIVE, 'gbp');
         expect(pounds.headline).toBe('£50.00 = 87,216 sats');
-        expect(pounds.detail).toBe('Also 0.00087216 BTC or $66.96.');
-        expect(convertText('usd', convert(87_216, LIVE.value), LIVE).detail).toBe('Also 0.00087216 BTC or £50.00.');
+        expect(pounds.detail).toBe('Also 0.00087216 BTC.');
+    });
+
+    it('answers in euros when a euro price is known, and in dollars when it is not', () => {
+        expect(convertText('sats', convert(100_000, LIVE.value), LIVE, 'eur').headline).toBe('100,000 sats = €66.21');
+        const offline = convert(100_000, LAST_CLOSE.value);
+        expect(convertText('sats', offline, LAST_CLOSE, 'eur').headline).toMatch(/^100,000 sats = \$[\d,.]+$/);
     });
 
     it('labels the offline price as the last close, and an old live price as not updating', () => {
         expect(priceLabel(LAST_CLOSE)).toMatch(/^last close, \d{1,2} \w{3,4} \d{4}$/);
-        expect(convertText('sats', convert(100_000, LAST_CLOSE.value), LAST_CLOSE).postcard.source).toBe(
+        expect(convertText('sats', convert(100_000, LAST_CLOSE.value), LAST_CLOSE, 'usd').postcard.source).toBe(
             `Price: ${priceLabel(LAST_CLOSE)} · 1 BTC = 100,000,000 sats`,
         );
         expect(priceLabel({ ...LIVE, stale: true })).toBe('mempool.space, 30 Oct 2026, 19:20 UTC, not updating');

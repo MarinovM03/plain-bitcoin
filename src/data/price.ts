@@ -5,7 +5,7 @@ export const PRICE_APIS = [
     { name: 'mempool.space', url: 'https://mempool.space/api/v1/prices' },
     {
         name: 'CoinGecko',
-        url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,usd&include_last_updated_at=true',
+        url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,usd,eur&include_last_updated_at=true',
     },
 ] as const;
 
@@ -25,7 +25,7 @@ export interface PriceQuote {
 }
 
 export const LAST_CLOSE: PriceQuote = {
-    value: { gbp: latest.GBP, usd: latest.USD },
+    value: { gbp: latest.GBP, usd: latest.USD, eur: null },
     source: 'last close',
     asOf: Date.parse(`${latest.day}T00:00:00Z`),
     stale: true,
@@ -44,9 +44,9 @@ function record(json: unknown): Record<string, unknown> | null {
 }
 
 function quoteFields(api: PriceApi, body: Record<string, unknown>) {
-    if (api === 'mempool.space') return { gbp: body.GBP, usd: body.USD, time: body.time };
+    if (api === 'mempool.space') return { gbp: body.GBP, usd: body.USD, eur: body.EUR, time: body.time };
     const coin = record(body.bitcoin);
-    return { gbp: coin?.gbp, usd: coin?.usd, time: coin?.last_updated_at };
+    return { gbp: coin?.gbp, usd: coin?.usd, eur: coin?.eur, time: coin?.last_updated_at };
 }
 
 export function parseQuote(api: PriceApi, json: unknown): { value: Prices; asOf: number } | null {
@@ -54,7 +54,8 @@ export function parseQuote(api: PriceApi, json: unknown): { value: Prices; asOf:
     if (!body) return null;
     const fields = quoteFields(api, body);
     if (!positive(fields.gbp) || !positive(fields.usd) || !positive(fields.time)) return null;
-    return { value: { gbp: fields.gbp, usd: fields.usd }, asOf: fields.time * 1000 };
+    const eur = positive(fields.eur) ? fields.eur : null;
+    return { value: { gbp: fields.gbp, usd: fields.usd, eur }, asOf: fields.time * 1000 };
 }
 
 async function getJson(fetchImpl: Fetch, url: string, timeoutMs: number): Promise<unknown> {
