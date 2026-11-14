@@ -5,6 +5,7 @@ import { OG_IMAGE, SHARE, SITE_DESCRIPTION, SITE_NAME } from './src/ui/copy.ts';
 import { renderHome } from './src/ui/home.ts';
 import { escapeHtml } from './src/ui/html.ts';
 import { renderAnnouncer, renderFooter, renderHeader, renderNoscript } from './src/ui/shell.ts';
+import { renderWorld } from './src/ui/world.ts';
 
 const DEFAULT_SITE_URL = 'https://plainbitcoin.org';
 
@@ -116,6 +117,7 @@ function shell(siteUrl: string): Plugin {
         meta('name', 'twitter:image:alt', OG_IMAGE.alt),
     ].join('\n');
     const body = [
+        renderWorld(),
         renderHeader(),
         `<main id="main">${renderHome()}${renderNoscript()}</main>`,
         renderFooter(),
@@ -146,7 +148,7 @@ export default defineConfig(({ mode }) => {
                         const tool = /[\\/]tools[\\/](\w+)[\\/]index\.ts$/.exec(id)?.[1];
                         if (tool) return `assets/tool-${tool}-[hash].js`;
                         if (/[\\/]hero[\\/]stage\.ts$/.test(id)) return 'assets/hero-[hash].js';
-                        if (/[\\/]hero[\\/]field\.ts$/.test(id)) return 'assets/field-[hash].js';
+                        if (/[\\/]hero[\\/]scene\.ts$/.test(id)) return 'assets/hero-scene-[hash].js';
                         if (/[\\/]gauges[\\/]/.test(id)) return 'assets/picture-[name]-[hash].js';
                         if (/[\\/]postcard[\\/](tray|render)\.ts$/.test(id)) return 'assets/postcard-[name]-[hash].js';
                         return 'assets/[name]-[hash].js';
