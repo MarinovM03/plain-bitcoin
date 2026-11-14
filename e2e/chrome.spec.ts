@@ -72,14 +72,14 @@ test('the footer offers a follow link, every tool by name and the privacy line',
     await expect(footer.getByText(FOOTER.privacy)).toBeVisible();
 });
 
-test('nothing but the moving ground is pinned to the screen, so a short screen never traps the page', async ({
+test('nothing but the world behind the page is pinned to the screen, so a short screen never traps the page', async ({
     page,
 }) => {
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).not.toHaveText('');
     const pinned = await page.evaluate(() =>
         [...document.querySelectorAll('body *')]
-            .filter((element) => element.id !== 'ground')
+            .filter((element) => element.id !== 'chain')
             .filter((element) => ['sticky', 'fixed'].includes(getComputedStyle(element).position))
             .map((element) => element.className),
     );

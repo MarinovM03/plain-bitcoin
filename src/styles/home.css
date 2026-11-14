@@ -3,23 +3,46 @@
     gap: 1.5rem;
 }
 
+/*
+ * The first screen, sized from fixed lengths so nothing moves when the bar above it is measured: the headline at the top, the tools at the bottom, and between them nothing at all, so the
+ * chain behind the page shows through.
+ */
 .hero {
     display: grid;
-    gap: 1.5rem;
+    grid-template-rows: auto minmax(5.5rem, 1fr) auto;
+    min-height: calc(100svh - 7rem);
 }
 
 .hero__intro {
+    position: relative;
     display: grid;
-    gap: 0.875rem;
+    gap: 0.625rem;
     min-width: 0;
+    padding-top: 0.75rem;
+}
+
+/* A veil the colour of the dark behind the words, fading out before it reaches the chain: no box, no edge. */
+.hero__intro::before {
+    content: "";
+    position: absolute;
+    inset: -6rem 0 -3.5rem;
+    z-index: -1;
+    background: radial-gradient(
+        ellipse 130% 66% at 30% 42%,
+        color-mix(in srgb, var(--void) 96%, transparent) 0,
+        color-mix(in srgb, var(--void) 86%, transparent) 55%,
+        transparent 100%
+    );
+    pointer-events: none;
 }
 
 .hero__heading {
+    max-width: 11ch;
     font-family: var(--font-display);
     font-weight: 600;
     font-size: var(--step-display);
-    line-height: 1.02;
-    letter-spacing: -0.035em;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
     text-wrap: balance;
 }
 
@@ -28,60 +51,27 @@
 }
 
 .hero__lead {
-    max-width: 34rem;
-    color: var(--ink-dim);
-    font-size: 1.0625rem;
+    max-width: 30rem;
+    color: var(--ink-warm);
+    font-size: 1rem;
     line-height: 1.5;
 }
 
-/* The chain comes first on a phone; the words and the tools follow it. */
-.hero__stage {
-    order: -1;
+.hero__tools {
+    grid-row: 3;
     display: grid;
+    gap: 0.5rem;
     min-width: 0;
-    overflow: hidden;
-    background: var(--void);
-}
-
-/*
- * The chain's frame. The drawn still sits in it from the first paint; the lit scene's canvas covers the still once
- * it runs. Both end in the page colour at every edge, so the frame has no visible border. Nothing in it takes a
- * pointer: every tool opens from a link in the list.
- */
-.chain {
-    position: relative;
-    height: clamp(15rem, 40svh, 22rem);
-    margin: -0.875rem -0.875rem 0;
-    overflow: hidden;
-    background: var(--void);
-    pointer-events: none;
-}
-
-.chain__still,
-.hero__canvas {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
-.chain__still svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
-.chain[data-hero="scene"] .chain__still {
-    visibility: hidden;
 }
 
 .chain__legend {
     display: grid;
     gap: 0.125rem;
-    align-content: start;
-    min-height: 5.25rem;
-    padding-top: 0.25rem;
+    align-content: center;
+    justify-self: start;
+    max-width: 100%;
+    min-height: 5rem;
+    padding: 0.5rem 0.875rem;
 }
 
 #chain-source {
@@ -89,113 +79,78 @@
 }
 
 .chain__forming {
+    font-size: var(--step-small);
     font-weight: 600;
     line-height: 1.35;
 }
 
 .chain__newest {
     color: var(--ink-dim);
-    font-size: var(--step-small);
+    font-size: var(--step-tiny);
     line-height: 1.4;
-}
-
-.tool-list {
-    margin-top: 0.375rem;
 }
 
 .tool-list__rows {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.375rem;
 }
 
 .tool-list__source {
     color: var(--ink-dim);
     font-size: var(--step-tiny);
     line-height: 1.45;
+    text-shadow:
+        0 0 0.5rem var(--void),
+        0 0 0.25rem var(--void);
 }
 
-/*
- * A tool as a tile: the name and one line on the left, one real number in orange on the right, and on the leading
- * edge 32 bits of the newest block's hash. The tiles rise in one after another, the way the tablets do.
- */
+/* A tool as a chip of glass: the name and one line on the left, one real number in orange on the right. */
 .tool-row {
     display: grid;
-    grid-template-columns: 0.5rem minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     column-gap: 0.75rem;
-    min-height: 4.75rem;
-    padding: 0.625rem 0.875rem 0.625rem 0.5rem;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    background: var(--well);
+    min-height: 3.25rem;
+    padding: 0.375rem 1rem;
+    border-radius: 1rem;
     transition:
         border-color var(--duration) var(--ease),
         translate var(--duration) var(--ease);
-    animation: tile-rise 520ms var(--ease) backwards;
-}
-
-.tool-list__item:nth-child(2) .tool-row {
-    animation-delay: 70ms;
-}
-
-.tool-list__item:nth-child(3) .tool-row {
-    animation-delay: 140ms;
-}
-
-.tool-list__item:nth-child(4) .tool-row {
-    animation-delay: 210ms;
-}
-
-.tool-list__item:nth-child(5) .tool-row {
-    animation-delay: 280ms;
-}
-
-@keyframes tile-rise {
-    from {
-        translate: 0 1.5rem;
-    }
-}
-
-.tool-row__bits {
-    align-self: stretch;
-    width: 100%;
-    height: 100%;
-    min-height: 3.25rem;
-    fill: var(--btc);
 }
 
 .tool-row__words {
     display: grid;
-    gap: 0.125rem;
     min-width: 0;
 }
 
 .tool-row__name {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 1.3125rem;
+    font-size: 1.125rem;
     line-height: 1.2;
     letter-spacing: -0.015em;
 }
 
 .tool-row__description {
+    overflow: hidden;
     color: var(--ink-dim);
-    font-size: var(--step-small);
+    font-size: var(--step-tiny);
     line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tool-row__fact {
     display: grid;
     justify-items: end;
-    gap: 0.0625rem;
-    max-width: 8.5rem;
+    max-width: 9rem;
     text-align: right;
 }
 
 .tool-row__figure {
     color: var(--btc);
     font-family: var(--font-mono);
-    font-size: 1.1875rem;
+    font-size: 1.0625rem;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
@@ -205,7 +160,7 @@
 
 .tool-row__unit {
     color: var(--ink-dim);
-    font-size: var(--step-tiny);
+    font-size: 0.6875rem;
     line-height: 1.3;
 }
 
@@ -216,7 +171,7 @@
 @media (hover: hover) {
     .tool-row:hover {
         border-color: var(--btc);
-        translate: 0 -0.125rem;
+        translate: 0 -0.1875rem;
     }
 }
 
@@ -279,6 +234,7 @@
 .home__share {
     display: grid;
     gap: 0.625rem;
+    max-width: var(--measure);
 }
 
 .home__share-heading,
@@ -307,95 +263,140 @@
     border-left: 2px solid var(--edge);
 }
 
+/* A row of five once there is room across: short landscape phones and desktops. */
 @media (orientation: landscape) and (max-height: 32rem), (min-width: 64rem) {
-    .hero {
-        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-        gap: 2rem;
-        align-items: stretch;
-    }
-
-    .hero__intro {
-        align-content: center;
-        padding-block: 1rem;
-    }
-
-    .hero__stage {
-        order: 0;
-        grid-template-rows: minmax(0, 1fr) auto;
-    }
-
-    .chain {
-        height: auto;
-        min-height: 12rem;
+    .tool-list__rows {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 }
 
 @media (min-width: 64rem) {
+    .home {
+        gap: 2rem;
+    }
+
     .hero {
-        grid-template-columns: minmax(0, 27rem) minmax(0, 1fr);
-        gap: 3rem;
-        min-height: calc(100svh - var(--chrome, 4rem) - 2rem);
+        min-height: calc(100svh - 5.75rem);
     }
 
     .hero__intro {
         gap: 1.125rem;
-        padding-block: 2rem;
+        padding-top: 2.5rem;
     }
 
-    .chain {
-        min-height: 28rem;
-        margin: -1.5rem -1.5rem 0;
+    .hero__intro::before {
+        background: radial-gradient(
+            ellipse 62% 64% at 20% 45%,
+            color-mix(in srgb, var(--void) 96%, transparent) 0,
+            color-mix(in srgb, var(--void) 84%, transparent) 55%,
+            transparent 100%
+        );
     }
 
-    .tool-row__figure {
-        font-size: 1.3125rem;
+    .hero__lead {
+        font-size: 1.1875rem;
+    }
+
+    .hero__tools {
+        gap: 0.75rem;
     }
 
     .chain__legend {
-        min-height: 3.75rem;
+        min-height: 3.5rem;
+    }
+
+    .tool-list__rows {
+        gap: 0.75rem;
+    }
+
+    .tool-row {
+        grid-template-columns: minmax(0, 1fr);
+        align-content: space-between;
+        row-gap: 1rem;
+        min-height: 9rem;
+        padding: 1rem 1.125rem;
     }
 
     .tool-row__name {
-        font-size: 1.4375rem;
+        font-size: 1.375rem;
+    }
+
+    .tool-row__description {
+        font-size: var(--step-small);
+        white-space: normal;
+    }
+
+    .tool-row__fact {
+        justify-items: start;
+        max-width: none;
+        text-align: left;
+    }
+
+    .tool-row__figure {
+        font-size: 1.625rem;
+    }
+
+    .tool-row__unit {
+        font-size: var(--step-tiny);
     }
 }
 
 @media (orientation: landscape) and (max-height: 32rem) {
-    .hero__lead {
-        display: none;
+    .hero {
+        grid-template-rows: auto minmax(2rem, 1fr) auto;
+        min-height: calc(100svh - 3.75rem);
     }
 
-    .chain {
-        margin: -0.5rem -0.875rem 0;
+    .hero__intro {
+        padding-top: 0.25rem;
     }
 
-    .tool-list__rows {
-        gap: 0.25rem;
+    .hero__heading {
+        max-width: none;
+        font-size: 1.75rem;
     }
 
-    .tool-row {
-        min-height: var(--tap);
-        padding-block: 0.125rem;
-    }
-
-    .tool-row__bits {
-        min-height: 2rem;
-    }
-
+    .hero__lead,
     .tool-row__description,
-    .tool-row__unit,
     .tool-list__source {
         display: none;
     }
 
+    .chain__legend {
+        min-height: 0;
+        padding-block: 0.25rem;
+    }
+
+    .chain__newest {
+        display: none;
+    }
+
+    .tool-row {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 3.25rem;
+        padding: 0.375rem 0.625rem;
+    }
+
     .tool-row__name {
-        font-size: 1.0625rem;
+        font-size: 0.9375rem;
+    }
+
+    .tool-row__fact {
+        justify-items: start;
+        text-align: left;
+    }
+
+    .tool-row__figure {
+        font-size: 0.875rem;
+    }
+
+    .tool-row__unit {
+        display: none;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .tool-row {
         transition: none;
-        animation: none;
     }
 }

@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { TONES } from '../chain/material.ts';
 import { contrast } from './contrast.ts';
 import { TOKENS } from './tokens.ts';
 
@@ -31,6 +32,23 @@ describe('design tokens', () => {
 
     it('keeps the big answer at AAA on every surface', () => {
         for (const surface of SURFACES) expect(contrast(TOKENS.btc, surface)).toBeGreaterThanOrEqual(7);
+    });
+
+    it('keeps every ink at AA on glass, even with the palest stone pressed against the back of it', () => {
+        const [, red = '', green = '', blue = '', alpha = ''] =
+            /^rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)$/.exec(TOKENS.glass) ?? [];
+        const tint = [red, green, blue].map(Number);
+        const palest = TONES.bone.body;
+        const behind = [1, 3, 5].map((start) => Number.parseInt(palest.slice(start, start + 2), 16));
+        const seen = `#${tint
+            .map((channel, index) =>
+                Math.round(channel * Number(alpha) + (behind[index] ?? 0) * (1 - Number(alpha)))
+                    .toString(16)
+                    .padStart(2, '0'),
+            )
+            .join('')}`;
+        expect(Number(alpha)).toBeGreaterThanOrEqual(0.8);
+        for (const text of TEXT) expect(contrast(text, seen), `${text} on glass`).toBeGreaterThanOrEqual(4.5);
     });
 
     it('lifts a plate edge off the page and off the plate', () => {

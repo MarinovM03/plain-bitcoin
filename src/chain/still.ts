@@ -2,7 +2,16 @@ import type { ChainBlock } from '../data/height.ts';
 import { FACE_CELLS, facePath } from './hash.ts';
 import { hashMaterial, shade } from './material.ts';
 import { chainOffsets, slabShape } from './shape.ts';
-import { cameraFor, FORMING, project, slabBase, slabPoint, type Vec3, viewProjection } from './view.ts';
+import {
+    FORMING,
+    project,
+    type Station,
+    slabBase,
+    slabPoint,
+    stationCamera,
+    type Vec3,
+    viewProjection,
+} from './view.ts';
 
 export interface StillOptions {
     width: number;
@@ -13,6 +22,8 @@ export interface StillOptions {
     forming: boolean;
     /** The page colour the far tablets fade into, #rrggbb. */
     ink: string;
+    /** Where the camera stands; the wide home shot when left out. */
+    station?: Station;
 }
 
 const FACE_MARGIN = 0.085;
@@ -44,12 +55,16 @@ function points(list: readonly Point[]): string {
 export function chainStill(blocks: readonly ChainBlock[], options: StillOptions): string {
     const width = Math.max(1, Math.round(options.width));
     const height = Math.max(1, Math.round(options.height));
-    const matrix = viewProjection(cameraFor(width / height));
+    const offsets = chainOffsets(blocks, options.nowSeconds);
+    const camera = stationCamera(options.station ?? 'home', width / height, {
+        first: offsets[0] ?? 1.2,
+        last: offsets[offsets.length - 1] ?? 9,
+    });
+    const matrix = viewProjection(camera);
     const toScreen = (point: Vec3): Point => {
         const { x, y } = project(matrix, point);
-        return [((x + 1) / 2) * width, ((1 - y) / 2) * height];
+        return [((x + camera.shift.x + 1) / 2) * width, ((1 - y - camera.shift.y) / 2) * height];
     };
-    const offsets = chainOffsets(blocks, options.nowSeconds);
     const parts: string[] = [];
 
     const box = (offset: number, side: number, thick: number) => {

@@ -1,6 +1,5 @@
 import './styles/main.css';
 import { startRouter } from './app/router.ts';
-import { mountField } from './hero/bus.ts';
 import { mountCounter } from './tools/left/counter.ts';
 import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
 import { bindFields } from './ui/field-behaviour.ts';
@@ -9,7 +8,8 @@ import { html } from './ui/html.ts';
 import { bindMenu, markCurrent, trackChrome } from './ui/shell.ts';
 import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
-import { afterFirstPaint, byId, find } from './util/dom.ts';
+import { mountWorld } from './ui/world.ts';
+import { byId, find } from './util/dom.ts';
 
 const SITE = import.meta.env.VITE_SITE_URL;
 
@@ -17,12 +17,11 @@ const main = byId('main');
 const announcer = byId('announcer');
 trackChrome(find(document, '.topbar'));
 bindMenu(byId<HTMLDetailsElement>('menu'));
-const FIELD_LEVEL = { home: 1, tool: 0.6 } as const;
-const field = mountField(afterFirstPaint);
-const status = mountStatus(byId('status'), document.querySelector<SVGPathElement>('#barcode path'), field.setHash);
+const status = mountStatus(byId('status'), document.querySelector<SVGPathElement>('#barcode path'));
 const announce = (message: string) => {
     announcer.textContent = message;
 };
+const world = mountWorld(byId('chain'), announce);
 let cleanups: (() => void)[] = [];
 let viewCount = 0;
 
@@ -45,10 +44,10 @@ startRouter(({ route, initial, notFound }) => {
     document.documentElement.dataset.route = route;
     markCurrent(route);
     status.setRoute(route);
-    field.setLevel(route === 'home' ? FIELD_LEVEL.home : FIELD_LEVEL.tool);
+    world.setRoute(route);
     bindFields(main);
 
-    if (route === 'home') cleanups.push(mountHome(main, SITE, announce));
+    if (route === 'home') cleanups.push(mountHome(main, SITE, world));
     if (route === 'left') {
         cleanups.push(mountCounter(main, announce));
         import('./tools/left/index.ts').then(({ mountLeft }) => {

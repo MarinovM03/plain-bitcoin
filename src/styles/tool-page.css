@@ -166,6 +166,11 @@
         padding-top: 2rem;
     }
 
+    /* Narrower than the page, so the chain stands in the open to the right of the panel. */
+    .tool {
+        max-width: 64rem;
+    }
+
     .tool__screen {
         grid-template-columns: minmax(0, 27rem) minmax(0, 1fr);
         column-gap: 3rem;

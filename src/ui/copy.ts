@@ -22,7 +22,7 @@ export const OG_IMAGE = {
 
 export const HOME = {
     headline: 'Bitcoin, block by block.',
-    lead: 'Five plain tools, and the chain itself: the last eight real blocks, in the order they were found.',
+    lead: 'Five plain tools inside the chain itself: the last eight real blocks, in the order they were found.',
     promise: 'Five plain Bitcoin tools, and the chain drawn from real blocks.',
     headlineAccent: 'block by block.',
     toolsHeading: 'The tools',
@@ -566,7 +566,7 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    motion: "The chain on the home page is drawn from real blocks. The dust around the next block is decoration, not live activity. The squares drifting behind every page are the 256 bits of the newest block's hash: set bits are orange. They are decoration too.",
+    motion: "The tablets behind every page are real blocks: the last eight from mempool.space, or a saved set on a page that fetches nothing. The dust around the next block is decoration, not live activity. The squares in the air are the 256 bits of the newest block's hash: set bits are orange. They are decoration too.",
     barcode: "The line under the top bar is the newest block's hash, one mark per bit.",
     toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',

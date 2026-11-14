@@ -50,7 +50,7 @@ test('home draws the chain from the real blocks and says the same in words', asy
     expect(realProblems(problems)).toEqual([]);
 });
 
-test('nothing in the picture is a link: clicks on it never change the route, and every tool opens by keyboard', async ({
+test('nothing in the world is a link: it takes no pointer, and every tool opens by keyboard', async ({
     page,
     isMobile,
 }) => {
@@ -58,18 +58,15 @@ test('nothing in the picture is a link: clicks on it never change the route, and
     await page.goto('/');
     await expect(chain(page)).toHaveAttribute('data-tip', String(FAKE_HEIGHT));
     await expect(chain(page).locator('a, button, [tabindex], [role]')).toHaveCount(0);
-    const box = await chain(page).boundingBox();
-    if (!box) throw new Error('no chain');
-    for (const [fx, fy] of [
-        [0.15, 0.6],
-        [0.3, 0.5],
-        [0.5, 0.5],
-        [0.7, 0.4],
-        [0.85, 0.3],
-        [0.5, 0.85],
-    ] as const) {
-        await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
-        if (isMobile) await page.touchscreen.tap(box.x + box.width * fx, box.y + box.height * fy);
+    await expect(chain(page)).toHaveCSS('pointer-events', 'none');
+    const size = page.viewportSize();
+    if (!size) throw new Error('no viewport');
+    // The open band between the headline and the tools: a press there lands on nothing.
+    for (const fx of [0.2, 0.5, 0.8]) {
+        const x = size.width * fx;
+        const y = size.height * (isMobile ? 0.44 : 0.52);
+        if (isMobile) await page.touchscreen.tap(x, y);
+        else await page.mouse.click(x, y);
         expect(new URL(page.url()).hash.replace(/^#\/?$/, '')).toBe('');
     }
 
@@ -152,24 +149,28 @@ test('without the lit scene the drawn still stands in, on purpose, and loads no 
     await page.goto('/?hero=still');
     await expect(chain(page)).toHaveAttribute('data-hero', 'still');
     await expect(chain(page)).toHaveAttribute('data-tip', String(FAKE_HEIGHT));
-    await expect(page.locator('canvas.hero__canvas')).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(0);
     await expect(page.locator('#chain-still svg')).toBeVisible();
     const box = await page.locator('#chain-still svg').boundingBox();
     expect(box?.height ?? 0).toBeGreaterThan(150);
 });
 
-test('the lit scene uses one canvas for the whole visit, draws no frames under reduced motion, and loads on home only', async ({
+test('the lit scene is fetched only where it can run, uses one canvas on every page, and draws no frames under reduced motion', async ({
     page,
     browserName,
 }) => {
     test.skip(browserName !== 'chromium', 'The forced scene is checked in Chromium');
+    // The test browser has no GPU, so the forced scene is drawn in software: a small window keeps it responsive.
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 640, height: 480 });
     await fakeHeightApi(page);
-    const hero = await requested(page, /\/assets\/hero-/);
+    const library = await requested(page, /\/assets\/hero-scene-/);
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).not.toHaveText('');
+    await expect(page.locator('html')).toHaveAttribute('data-world', 'still');
     await page.waitForTimeout(600);
-    expect(hero).toEqual([]);
-    expect(await page.locator('canvas.hero__canvas').count()).toBe(0);
+    expect(library).toEqual([]);
+    expect(await page.locator('canvas').count()).toBe(0);
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/?hero=scene#/');
@@ -179,7 +180,7 @@ test('the lit scene uses one canvas for the whole visit, draws no frames under r
     const before = await chain(page).getAttribute('data-frames');
     await page.waitForTimeout(2000);
     expect(await chain(page).getAttribute('data-frames')).toBe(before);
-    expect(hero).toHaveLength(1);
+    expect(library).toHaveLength(1);
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await expect
@@ -189,9 +190,12 @@ test('the lit scene uses one canvas for the whole visit, draws no frames under r
     for (const id of ['left', 'dca'] as const) {
         await page.locator('.menu__toggle').click();
         await page.locator(`.menu__link[data-nav="${id}"]`).click();
-        await expect(page.locator('canvas.hero__canvas')).toHaveCount(0);
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
+        await expect(page.locator('canvas.world__canvas')).toHaveCount(1);
+        const drawn = Number(await chain(page).getAttribute('data-frames'));
+        await expect.poll(async () => Number(await chain(page).getAttribute('data-frames'))).toBeGreaterThan(drawn);
         await page.getByRole('link', { name: 'Plain Bitcoin' }).first().click();
-        await expect(page.locator('canvas.hero__canvas')).toHaveCount(1);
+        await expect(page.locator('canvas.world__canvas')).toHaveCount(1);
     }
-    expect(hero).toHaveLength(1);
+    expect(library).toHaveLength(1);
 });

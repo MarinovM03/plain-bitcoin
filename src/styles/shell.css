@@ -253,21 +253,55 @@ main {
 }
 
 /*
- * The moving ground: one canvas behind every page. Everything a person reads sits on an opaque plate above it, so
- * the squares only ever show in the gutters and the gaps between plates.
+ * The world: one fixed layer behind every page, as tall as the screen ever gets so it never resizes while a phone's
+ * address bar slides away. Nothing in it takes a pointer; every tool opens from a link in the page above it.
  */
-.ground {
+.world {
     position: fixed;
-    inset: 0;
+    inset: 0 0 auto;
     z-index: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
+    height: 100lvh;
+    overflow: hidden;
+    background: var(--void);
     pointer-events: none;
 }
 
-.hero__intro,
-.hero__stage,
+.world__still,
+.world__canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.world__still svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.world[data-hero="scene"] .world__still {
+    visibility: hidden;
+}
+
+/*
+ * Panels. Everything a person reads sits on one: an opaque plate until the lit scene is running, then frosted
+ * glass with a tint dark enough that every ink keeps its contrast whatever passes behind.
+ */
+.chain__legend,
+.tool-row,
+.chain-about,
+.home__share,
+.cautions,
+.tool__screen,
+.tool__below,
+.route-note {
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    background: var(--plate);
+}
+
 .chain-about,
 .home__share,
 .cautions,
@@ -275,9 +309,27 @@ main {
 .tool__below,
 .route-note {
     padding: 0.875rem;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    background: var(--plate);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    :root[data-world="scene"]
+        :is(
+            .topbar,
+            .footer,
+            .chain__legend,
+            .tool-row,
+            .chain-about,
+            .home__share,
+            .cautions,
+            .tool__screen,
+            .tool__below,
+            .route-note
+        ) {
+        border-color: color-mix(in srgb, var(--ink) 16%, transparent);
+        background: var(--glass);
+        -webkit-backdrop-filter: blur(18px) saturate(1.35);
+        backdrop-filter: blur(18px) saturate(1.35);
+    }
 }
 
 @media (max-width: 47.99rem) {
@@ -287,8 +339,6 @@ main {
 }
 
 @media (min-width: 64rem) {
-    .hero__intro,
-    .hero__stage,
     .chain-about,
     .home__share,
     .cautions,
@@ -299,8 +349,6 @@ main {
 }
 
 @media (orientation: landscape) and (max-height: 32rem) {
-    .hero__intro,
-    .hero__stage,
     .tool__screen {
         padding-block: 0.5rem;
     }
