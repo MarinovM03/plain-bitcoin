@@ -18,7 +18,21 @@ const RUSH_SECONDS = 0.45;
 interface Surface {
     canvas: HTMLCanvasElement;
     gl: WebGL2RenderingContext;
-    renderer: Renderer;
+    /** Null while the shaders compile in the background, and again after a lost context until they are rebuilt. */
+    renderer: Renderer | null;
+    ready: Promise<boolean>;
+}
+
+function build(target: Surface): Promise<boolean> {
+    target.renderer = null;
+    target.ready = createRenderer(target.gl, TOKENS.void).then(
+        (renderer) => {
+            target.renderer = renderer;
+            return true;
+        },
+        () => false,
+    );
+    return target.ready;
 }
 
 // One canvas and one context for the whole visit: leaving home parks it, coming back reuses it.
@@ -43,11 +57,8 @@ function openSurface(): Surface | null {
         unusable = true;
         return null;
     }
-    try {
-        surface = { canvas, gl, renderer: createRenderer(gl, TOKENS.void) };
-    } catch {
-        unusable = true;
-    }
+    surface = { canvas, gl, renderer: null, ready: Promise.resolve(false) };
+    build(surface);
     return surface;
 }
 
@@ -63,6 +74,7 @@ export function runHero(host: HTMLElement): Hero {
     let onScreen = false;
     let lost = false;
     let gaveUp = live === null;
+    let disposed = false;
     let scaleIndex = 0;
     let slowTotal = 0;
     let slowCount = 0;
@@ -76,15 +88,16 @@ export function runHero(host: HTMLElement): Hero {
     let sinceSnap = Number.POSITIVE_INFINITY;
     const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
 
-    host.dataset.hero = gaveUp ? 'still' : 'scene';
-    if (live) host.append(live.canvas);
+    // The drawn still stands until the scene can draw its first frame.
+    host.dataset.hero = 'still';
 
     const nowSeconds = () => Date.now() / 1000;
-    const drawing = () => live !== null && !gaveUp && !lost && frame !== null && frame.blocks.length > 0;
+    const drawing = () =>
+        live !== null && live.renderer !== null && !gaveUp && !lost && frame !== null && frame.blocks.length > 0;
     const animating = () => drawing() && onScreen && !document.hidden && !motion.matches;
 
     function size(): void {
-        if (!live) return;
+        if (!live?.renderer) return;
         rect = host.getBoundingClientRect();
         width = rect.width;
         height = rect.height;
@@ -107,7 +120,7 @@ export function runHero(host: HTMLElement): Hero {
     }
 
     function draw(): void {
-        if (!live || !drawing() || width < 2 || height < 2) return;
+        if (!live?.renderer || !drawing() || width < 2 || height < 2) return;
         live.renderer.draw({
             camera: cameraFor(width / height, pointer),
             slabs: cast.actors.map((actor) => ({ actor, pose: poseOf(actor) })),
@@ -219,18 +232,26 @@ export function runHero(host: HTMLElement): Hero {
         raf = 0;
         host.dataset.hero = 'still';
     };
-    const onRestored = () => {
-        if (!live || gaveUp) return;
-        try {
-            live.renderer = createRenderer(live.gl, TOKENS.void);
-        } catch {
+    /** The scene takes over from the still once its shaders are built, and plays its entrance from the start. */
+    function begin(built: boolean): void {
+        if (disposed || gaveUp || !live) return;
+        if (!built) {
+            unusable = true;
+            surface = null;
             giveUp();
             return;
         }
         lost = false;
+        host.append(live.canvas);
         host.dataset.hero = 'scene';
         size();
         wake();
+        if (!motion.matches && raf === 0) still();
+    }
+
+    const onRestored = () => {
+        if (!live || gaveUp) return;
+        build(live).then(begin);
     };
 
     document.addEventListener('visibilitychange', wake);
@@ -240,7 +261,7 @@ export function runHero(host: HTMLElement): Hero {
         window.addEventListener('scroll', onScroll, { passive: true });
         live.canvas.addEventListener('webglcontextlost', onLost);
         live.canvas.addEventListener('webglcontextrestored', onRestored);
-        size();
+        live.ready.then(begin);
     }
 
     return {
@@ -255,9 +276,10 @@ export function runHero(host: HTMLElement): Hero {
             }
             if (effect === 'snap') sinceSnap = 0;
             wake();
-            if (!motion.matches && raf === 0) still();
+            if (!motion.matches && raf === 0 && drawing()) still();
         },
         dispose() {
+            disposed = true;
             cancelAnimationFrame(raf);
             raf = 0;
             resizes.disconnect();
