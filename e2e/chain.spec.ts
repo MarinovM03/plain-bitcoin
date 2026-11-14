@@ -152,7 +152,7 @@ test('without the lit scene the drawn still stands in, on purpose, and loads no 
     await page.goto('/?hero=still');
     await expect(chain(page)).toHaveAttribute('data-hero', 'still');
     await expect(chain(page)).toHaveAttribute('data-tip', String(FAKE_HEIGHT));
-    await expect(page.locator('canvas')).toHaveCount(0);
+    await expect(page.locator('canvas.hero__canvas')).toHaveCount(0);
     await expect(page.locator('#chain-still svg')).toBeVisible();
     const box = await page.locator('#chain-still svg').boundingBox();
     expect(box?.height ?? 0).toBeGreaterThan(150);
@@ -169,7 +169,7 @@ test('the lit scene uses one canvas for the whole visit, draws no frames under r
     await expect(page.locator('#tool-result')).not.toHaveText('');
     await page.waitForTimeout(600);
     expect(hero).toEqual([]);
-    expect(await page.locator('canvas').count()).toBe(0);
+    expect(await page.locator('canvas.hero__canvas').count()).toBe(0);
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/?hero=scene#/');
@@ -189,7 +189,7 @@ test('the lit scene uses one canvas for the whole visit, draws no frames under r
     for (const id of ['left', 'dca'] as const) {
         await page.locator('.menu__toggle').click();
         await page.locator(`.menu__link[data-nav="${id}"]`).click();
-        await expect(page.locator('canvas')).toHaveCount(0);
+        await expect(page.locator('canvas.hero__canvas')).toHaveCount(0);
         await page.getByRole('link', { name: 'Plain Bitcoin' }).first().click();
         await expect(page.locator('canvas.hero__canvas')).toHaveCount(1);
     }

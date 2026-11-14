@@ -146,6 +146,7 @@ export default defineConfig(({ mode }) => {
                         const tool = /[\\/]tools[\\/](\w+)[\\/]index\.ts$/.exec(id)?.[1];
                         if (tool) return `assets/tool-${tool}-[hash].js`;
                         if (/[\\/]hero[\\/]stage\.ts$/.test(id)) return 'assets/hero-[hash].js';
+                        if (/[\\/]hero[\\/]field\.ts$/.test(id)) return 'assets/field-[hash].js';
                         if (/[\\/]gauges[\\/]/.test(id)) return 'assets/picture-[name]-[hash].js';
                         if (/[\\/]postcard[\\/](tray|render)\.ts$/.test(id)) return 'assets/postcard-[name]-[hash].js';
                         return 'assets/[name]-[hash].js';

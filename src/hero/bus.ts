@@ -14,6 +14,41 @@ export interface Hero {
     dispose(): void;
 }
 
+export interface Field {
+    /** The newest block's hash, or null while none is known: the squares then stay blank outlines. */
+    setHash(hash: string | null): void;
+    /** How strongly the field shows, 0 to 1: full on home, quieter behind a tool's plates. */
+    setLevel(level: number): void;
+}
+
+/** The moving ground behind every page, loaded after first paint like the scene and handed one real hash. */
+export function mountField(after: (task: () => void) => void): Field {
+    let hash: string | null = null;
+    let level = 1;
+    let running: Field | null = null;
+
+    after(() => {
+        import('./field.ts')
+            .then(({ runField }) => {
+                running = runField();
+                running.setLevel(level);
+                running.setHash(hash);
+            })
+            .catch(() => {});
+    });
+
+    return {
+        setHash(value) {
+            hash = value;
+            running?.setHash(value);
+        },
+        setLevel(value) {
+            level = value;
+            running?.setLevel(value);
+        },
+    };
+}
+
 /**
  * The one door between the page and the lit scene. The page hands over real blocks; the scene is loaded after
  * first paint, draws only what it is handed, and is never asked anything back.

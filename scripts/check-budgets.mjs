@@ -24,6 +24,7 @@ const styles = [...html.matchAll(/<link rel="stylesheet"[^>]*href="\/([^"]+\.css
 const assets = readdirSync(new URL('assets/', dist));
 const fonts = readdirSync(new URL('fonts/', dist)).filter((name) => name.endsWith('.woff2'));
 const hero = assets.filter((name) => /^hero-.+\.js$/.test(name));
+const field = assets.filter((name) => /^field-.+\.js$/.test(name));
 const pictures = assets.filter((name) => /^picture-.+\.js$/.test(name));
 const tools = assets.filter((name) => /^tool-.+\.js$/.test(name));
 const postcard = assets.filter((name) => /^postcard-.+\.js$/.test(name));
@@ -38,13 +39,19 @@ const rows = [
         fonts.reduce((total, name) => total + statSync(new URL(`fonts/${name}`, dist)).size, 0),
         BUDGETS.fonts,
     ],
-    ['Hero: the chain scene, loaded on home after first paint (gzip)', sum(inAssets(hero)), BUDGETS.hero],
+    [
+        'Hero: the chain scene and the moving ground, loaded after first paint (gzip)',
+        sum(inAssets([...hero, ...field])),
+        BUDGETS.hero,
+    ],
     ['Postcard printer, loaded on first share intent (gzip)', sum(inAssets(postcard)), BUDGETS.postcard],
 ];
 
-let failed = initial.length === 0 || styles.length === 0 || hero.length !== 1 || postcard.length === 0;
+let failed =
+    initial.length === 0 || styles.length === 0 || hero.length !== 1 || field.length !== 1 || postcard.length === 0;
 for (const [kind, pattern] of [
     ['hero scene', /hero-/],
+    ['moving ground', /field-/],
     ['postcard printer', /postcard-/],
 ]) {
     if (!initial.some((path) => pattern.test(path))) continue;
@@ -56,7 +63,7 @@ for (const [label, size, limit] of rows) {
     failed ||= !ok;
     console.log(`${ok ? 'ok  ' : 'OVER'} ${label}: ${(size / KB).toFixed(2)} kB of ${limit / KB} kB`);
 }
-for (const name of [...hero, ...postcard, ...tools, ...pictures]) {
+for (const name of [...hero, ...field, ...postcard, ...tools, ...pictures]) {
     console.log(`     ${name.replace(/-[\w-]{8}\.js$/, '')}: ${(gzipSize(`assets/${name}`) / KB).toFixed(2)} kB`);
 }
 if (failed) {
