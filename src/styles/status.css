@@ -89,6 +89,13 @@
     }
 }
 
+/* A short landscape screen keeps the bar on one line; the time since the block also shows under the chain. */
+@media (orientation: landscape) and (max-height: 32rem) and (max-width: 63.99rem) {
+    .status__age {
+        display: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .status__block.is-tick {
         animation: none;
