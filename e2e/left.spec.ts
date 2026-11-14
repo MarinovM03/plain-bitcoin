@@ -99,7 +99,6 @@ test('a new block is picked up on the next poll and announced once', async ({ pa
         browserName === 'webkit',
         'Under the fake clock the counter never renders in WebKit; polling is unit tested',
     );
-    // The fake clock replays every frame of the moving ground for the 92 seconds this test fast-forwards.
     test.setTimeout(90_000);
     const chain = await fakeHeightApi(page);
     await page.clock.install();

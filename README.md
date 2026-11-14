@@ -26,9 +26,11 @@ The picture on the home page is the chain itself: the last eight real blocks fro
 - **The stone is the hash too.** The last bytes of the hash pick one of five minerals and its shade. The same hash always gives the same stone.
 - **The next block.** In front of the chain, dust gathers on the outline of the block being found. It is decoration, not a forecast: it stops at 85% however long the wait and only a real new block completes it. When one arrives, the outline turns solid with that block's real face and the chain steps back one place.
 
-Nothing in the picture is a link or a button, and nothing in it is invented: no fake transactions, fees or activity. The same facts are written under it in plain text and as a table. The thin line under the top bar on every page is the newest block's hash as 256 marks.
+Nothing in the picture is a link or a button, and nothing in it is invented: no fake transactions, fees or activity. The same facts are written on the home page in plain text and as a table. The thin line under the top bar on every page is the newest block's hash as 256 marks.
 
-The picture draws only while the tab is visible and the picture is on screen. With reduced motion turned on it is one still frame that changes only when a real block arrives. Without WebGL2, on Save-Data or on slow hardware it is a flat drawing made from the same blocks. If mempool.space cannot be reached it shows the last blocks it saw with the time, or a saved set with its date. The other pages load no 3D code at all.
+The chain is not a picture on the page; it stands behind every page. The home page is the wide shot, and scrolling it walks the camera down the chain. Each tool has its own place along the chain and the camera glides there when the tool opens. A page that fetches nothing stands in front of a saved set of real blocks. The small squares in the air are the 256 bits of the newest block's hash, set bits in orange; they are decoration. Text sits on panels: opaque plates at first, frosted glass once the lit scene is running, with a tint dark enough to keep every text colour at AA contrast. Inputs and graphs stay opaque.
+
+The scene draws only while the tab is visible, and at half the frame rate behind a tool. With reduced motion turned on it is one still frame per page that changes only when a real block arrives. Without WebGL2, on Save-Data or without a real GPU it is a flat drawing made from the same blocks, and the 3D library is never downloaded. On slow hardware it first draws fewer pixels, then drops the glow and the shadows, then gives way to the flat drawing. If mempool.space cannot be reached it shows the last blocks it saw with the time, or a saved set with its date.
 
 ## Postcards
 
@@ -94,7 +96,7 @@ npm run dev
 
 `VITE_SITE_URL` sets the canonical URL, the Open Graph and Twitter tags and the address on the postcards at build time (default `https://plainbitcoin.org/`).
 
-Size budgets (gzip): first-load JS under 35 kB, CSS under 15 kB, fonts under 80 kB, the chain scene under 170 kB, loaded only on the home page after first paint, and the postcard renderer under 20 kB, loaded only on the first sign of sharing.
+Size budgets (gzip): first-load JS under 35 kB, CSS under 15 kB, fonts under 80 kB, the chain scene with its 3D library (three.js, the only runtime dependency) under 260 kB, loaded after first paint and only where it can run, and the postcard renderer under 20 kB, loaded only on the first sign of sharing.
 
 CI (GitHub Actions) runs lint, typecheck, unit tests, build, the budget check and the Chromium end-to-end tests on every push and pull request.
 
@@ -147,7 +149,7 @@ Run these on real phones before each launch. The automated tests cover the same 
 ```
 src/app      hash router
 src/chain    pure rules that turn a block into a tablet: size, stone, face, gaps, the new-block steps, the flat drawing
-src/hero     the lit chain scene on the home page (the only code that may use WebGL)
+src/hero     the lit chain scene behind every page (the only code that may use WebGL or three.js)
 src/gauges   each tool's flat SVG picture, drawn from the same numbers as its answer
 src/postcard postcard words, layout, canvas renderer, share tray and share bar
 src/tools    one folder per tool
