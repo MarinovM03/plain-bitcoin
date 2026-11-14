@@ -26,7 +26,7 @@ const CASES: Case[] = [
         tool: 'convert',
         route: 'convert',
         figure: text('#tool-result-figure'),
-        prepare: (page) => expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33'),
+        prepare: (page) => expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78'),
     },
     { tool: 'dca', route: 'dca', figure: text('#tool-result-figure') },
     {
@@ -116,7 +116,7 @@ test('the postcard renderer loads only on a first sign of sharing, never with th
         if (/\/assets\/postcard-/.test(request.url())) chunks.push(request.url());
     });
     await page.goto('/?hero=still#/convert');
-    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = £57.33');
+    await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     await page.waitForTimeout(1_500);
     expect(chunks).toEqual([]);
     await page.locator('.share-bar').hover();

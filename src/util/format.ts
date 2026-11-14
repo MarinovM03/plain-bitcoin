@@ -1,8 +1,10 @@
 export type Fiat = 'GBP' | 'USD';
 
+export type Currency = Fiat | 'EUR';
+
 const SATS_PER_BTC = 100_000_000;
 
-const FIAT_LOCALE: Record<Fiat, string> = { GBP: 'en-GB', USD: 'en-US' };
+const FIAT_LOCALE: Record<Currency, string> = { GBP: 'en-GB', USD: 'en-US', EUR: 'en-IE' };
 
 const whole = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
 
@@ -24,7 +26,7 @@ export function formatBtc(sats: number): string {
     return `${sign}${coins}.${fraction} BTC`;
 }
 
-export function formatFiat(amount: number, currency: Fiat): string {
+export function formatFiat(amount: number, currency: Currency): string {
     if (!Number.isFinite(amount)) throw new RangeError(`Amount must be finite, got ${amount}`);
     return new Intl.NumberFormat(FIAT_LOCALE[currency], {
         style: 'currency',
@@ -40,11 +42,11 @@ const LARGE = [
     { at: 1e6, word: 'million' },
 ] as const;
 
-function fiatFormat(currency: Fiat, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+function fiatFormat(currency: Currency, options: Intl.NumberFormatOptions): Intl.NumberFormat {
     return new Intl.NumberFormat(FIAT_LOCALE[currency], { style: 'currency', currency, ...options });
 }
 
-export function formatMoney(amount: number, currency: Fiat): string {
+export function formatMoney(amount: number, currency: Currency): string {
     if (!Number.isFinite(amount)) throw new RangeError(`Amount must be finite, got ${amount}`);
     const abs = Math.abs(amount);
     const large = LARGE.find(({ at }) => abs >= at);
@@ -54,7 +56,7 @@ export function formatMoney(amount: number, currency: Fiat): string {
     return formatFiat(amount, currency);
 }
 
-export function formatFiatPrecise(amount: number, currency: Fiat): string {
+export function formatFiatPrecise(amount: number, currency: Currency): string {
     if (amount > 0 && amount < 0.01) return fiatFormat(currency, { maximumSignificantDigits: 2 }).format(amount);
     return formatFiat(amount, currency);
 }

@@ -46,6 +46,20 @@ export function barcodePath(hash: string | null): string {
     return path;
 }
 
+/**
+ * A slice of the hash as a narrow strip: `columns` x `rows` cells read like text from bit `from`, one inset square
+ * per set bit. No hash: no cells.
+ */
+export function stripPath(hash: string | null, from: number, columns: number, rows: number): string {
+    const bits = hashBits(hash);
+    let path = '';
+    for (let index = 0; index < columns * rows; index += 1) {
+        if (bits[(from + index) % HASH_BITS] !== 1) continue;
+        path += `M${(index % columns) + 0.15} ${Math.floor(index / columns) + 0.15}h0.7v0.7h-0.7z`;
+    }
+    return path;
+}
+
 /** The face as a path in a 16 x 16 box: one inset square per set bit, row 0 at the top. */
 export function facePath(hash: string | null, inset = 0.14): string {
     const bits = hashBits(hash);

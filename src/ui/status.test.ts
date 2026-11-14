@@ -4,7 +4,7 @@ import { blockAge, statusView } from './status.ts';
 
 const NOW = Date.UTC(2026, 9, 30, 19, 26);
 const LIVE: PriceQuote = {
-    value: { gbp: 57_329, usd: 76_777 },
+    value: { gbp: 57_329, usd: 76_777, eur: 66_210 },
     source: 'mempool.space',
     asOf: Date.UTC(2026, 9, 30, 19, 20),
     stale: false,
@@ -16,7 +16,6 @@ describe('statusView', () => {
         expect(statusView({ height: 921_034, source: 'live', time: TIME }, LIVE, false, NOW)).toEqual({
             block: 'Block 921,034',
             estimated: false,
-            gbp: '£57,329',
             usd: '$76,777',
             age: '6 min since last block',
             source: 'mempool.space 19:20 UTC',

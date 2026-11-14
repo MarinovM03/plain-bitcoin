@@ -1,7 +1,7 @@
 import type { PriceQuote } from '../data/price.ts';
 import type { DcaMarks } from '../gauges/types.ts';
 import type { Address } from '../model/address.ts';
-import { btcText, type Conversion, type Unit } from '../model/convert.ts';
+import { btcText, type Conversion, type FiatUnit, type Unit } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
 import type { PowerResult } from '../model/power.ts';
 import { MAX_SUPPLY, SATS_PER_BTC, type Supply } from '../model/supply.ts';
@@ -137,23 +137,25 @@ export interface ConvertText {
     postcard: Postcard;
 }
 
-export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuote): ConvertText {
+/** The answer in words. `currency` is the money picked on the page; without a euro price it falls back to dollars. */
+export function convertText(unit: Unit, conversion: Conversion, quote: PriceQuote, currency: FiatUnit): ConvertText {
     const { sats, fiat } = conversion;
+    const money: FiatUnit = currency === 'eur' && fiat.eur === null ? 'usd' : currency;
     const words: Record<Unit, string> = {
         sats: formatSats(sats),
         btc: `${btcText(sats)} BTC`,
         gbp: formatFiatPrecise(fiat.gbp, 'GBP'),
         usd: formatFiatPrecise(fiat.usd, 'USD'),
+        eur: fiat.eur === null ? '' : formatFiatPrecise(fiat.eur, 'EUR'),
     };
-    const target: Unit = unit === 'gbp' || unit === 'usd' ? 'sats' : 'gbp';
-    const [first = '', second = ''] = (['sats', 'btc', 'gbp', 'usd'] as const)
-        .filter((other) => other !== unit && other !== target)
-        .map((other) => words[other]);
+    const typedMoney = unit !== 'sats' && unit !== 'btc';
+    const target: Unit = typedMoney ? 'sats' : money;
+    const other: Unit = typedMoney ? 'btc' : unit === 'sats' ? 'btc' : 'sats';
     const headline = CONVERT.headline(words[unit], words[target]);
     return {
         headline,
         figure: words[target],
-        detail: CONVERT.detail(first, second),
+        detail: CONVERT.detail(words[other]),
         postcard: card({
             tool: 'convert',
             route: 'convert',

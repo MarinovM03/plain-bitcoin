@@ -18,10 +18,13 @@ describe('html', () => {
 });
 
 describe('plain names', () => {
-    it('gives every route a plain name and a one-line description, never a bare short label', () => {
+    it('gives every route a short name of two or three words and a one-line subtitle, never a bare label', () => {
         for (const id of TOOL_IDS) {
-            expect(TOOLS[id].name.split(' ').length).toBeGreaterThanOrEqual(4);
+            const words = TOOLS[id].name.split(' ').length;
+            expect(words).toBeGreaterThanOrEqual(2);
+            expect(words).toBeLessThanOrEqual(3);
             expect(TOOLS[id].description.length).toBeGreaterThan(20);
+            expect(TOOLS[id].description.length).toBeLessThanOrEqual(45);
             expect(BARE_LABELS).not.toContain(TOOLS[id].name);
         }
         expect(new Set(TOOL_IDS.map((id) => TOOLS[id].name)).size).toBe(TOOL_IDS.length);
@@ -46,13 +49,16 @@ describe('renderHome', () => {
         for (const id of TOOL_IDS) {
             expect(markup).toContain(escapeHtml(TOOLS[id].name));
             expect(markup).toContain(escapeHtml(TOOLS[id].description));
+            expect(markup).toContain(`data-fact="${id}"`);
         }
+        expect(markup.match(/class="tool-row__unit">[^<]+</g)).toHaveLength(TOOL_IDS.length);
     });
 
     it('opens with one headline, and hides the chain picture from assistive tech with words beside it', () => {
         const markup = renderHome().value;
         expect(markup.match(/<h1/g)).toHaveLength(1);
-        expect(markup).toContain(HOME.headline);
+        expect(markup.replace(/<[^>]+>/g, '')).toContain(HOME.headline);
+        expect(HOME.headline.endsWith(HOME.headlineAccent)).toBe(true);
         expect(markup).toContain('id="chain" class="chain" data-hero="still" aria-hidden="true"');
         expect(markup).toContain('id="chain-forming"');
         expect(markup).toContain('id="chain-rows"');

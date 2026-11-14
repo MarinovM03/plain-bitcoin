@@ -38,8 +38,12 @@ test('home shows the shell, the headline and every tool as a plain row, in order
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME.headline);
     const left = formatWhole(Math.floor(supplyAt(FAKE_HEIGHT).left / SATS_PER_BTC));
-    await expect(page.locator('[data-fact="left"]')).toHaveText(HOME.leftFact(`${left} BTC`));
-    await expect(page.locator('[data-fact="convert"]')).toHaveText(HOME.convertFact('£0.00057'));
+    await expect(page.locator('[data-fact="left"]')).toHaveText(left);
+    await expect(page.locator('[data-fact="convert"]')).toHaveText(HOME.sats('1,302'));
+    await expect(page.locator('[data-fact="dca"]')).toHaveText(HOME.sats('65,124'));
+    await expect(page.locator('[data-fact="power"]')).toHaveText(/^\$1,\d{3}$/);
+    await expect(page.locator('[data-fact="address"]')).toHaveText(HOME.facts.address.figure);
+    await expect(page.locator('.tool-row__unit')).toHaveCount(TOOL_IDS.length);
     await expect(page.locator('.tool-row__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 

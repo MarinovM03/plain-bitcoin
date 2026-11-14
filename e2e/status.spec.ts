@@ -25,7 +25,7 @@ for (const route of LIVE_ROUTES) {
         await page.goto(`/?hero=still#/${route}`);
         const status = page.getByRole('group', { name: STATUS.label });
         await expect(status.locator('#status-block')).toHaveText(STATUS.block(formatWhole(FAKE_HEIGHT)));
-        await expect(status.locator('#status-gbp')).toHaveText('£57,329');
+        await expect(status.locator('#status-usd')).toHaveText('$76,777');
         await expect(status.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
         await expect(status).toHaveAttribute('data-state', 'live');
         await expect(status).toHaveAttribute('aria-live', 'off');
@@ -70,7 +70,7 @@ test('leaving the live routes stops polling and keeps the last value with its ti
     const before = calls.length;
     await page.waitForTimeout(3000);
     expect(calls).toHaveLength(before);
-    await expect(page.locator('#status-gbp')).toHaveText('£57,329');
+    await expect(page.locator('#status-usd')).toHaveText('$76,777');
     await expect(page.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
 });
 
@@ -88,7 +88,7 @@ test('the status figures never wrap mid-number on a 360px phone', async ({ page 
     await page.setViewportSize({ width: 360, height: 780 });
     await page.goto('/?hero=still#/');
     await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
-    for (const id of ['#status-block', '#status-gbp', '#status-usd']) {
+    for (const id of ['#status-block', '#status-usd']) {
         const box = await page.locator(id).boundingBox();
         expect(box?.height ?? 0, id).toBeLessThan(24);
     }

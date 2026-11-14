@@ -14,7 +14,7 @@ import {
     satsToFiat,
 } from './convert.ts';
 
-const PRICES = { gbp: 57_329, usd: 76_777 };
+const PRICES = { gbp: 57_329, usd: 76_777, eur: 66_210 };
 
 function sats(text: string, parse = parseBtc): number {
     const parsed = parse(text);
@@ -90,7 +90,9 @@ describe('conversion', () => {
             btc: '1',
             gbp: '57,329.00',
             usd: '76,777.00',
+            eur: '66,210.00',
         });
+        expect(convert(100_000, { ...PRICES, eur: null }).fields.eur).toBe('');
         expect(convert(100_000, PRICES).fields.gbp).toBe('57.33');
     });
 
@@ -104,6 +106,8 @@ describe('conversion', () => {
         expect(parseToSats('sats', '100,000', PRICES)).toEqual({ ok: true, value: 100_000 });
         expect(parseToSats('btc', '0.001', PRICES)).toEqual({ ok: true, value: 100_000 });
         expect(parseToSats('usd', '76.78', PRICES)).toEqual({ ok: true, value: 100_004 });
+        expect(parseToSats('eur', '66.21', PRICES)).toEqual({ ok: true, value: 100_000 });
+        expect(parseToSats('eur', '66.21', { ...PRICES, eur: null })).toEqual({ ok: false, reason: 'no-price' });
         expect(parseToSats('gbp', '', PRICES)).toEqual({ ok: false, reason: 'empty' });
         expect(parseToSats('gbp', '9,999,999,999,999', PRICES)).toEqual({ ok: false, reason: 'too-big' });
     });

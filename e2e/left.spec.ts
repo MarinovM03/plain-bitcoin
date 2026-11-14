@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
-import { HOME, LEFT_PAGE, TOOLS } from '../src/ui/copy.ts';
+import { LEFT_PAGE, TOOLS } from '../src/ui/copy.ts';
 import { formatBtc, formatPpm, formatWhole } from '../src/util/format.ts';
 import { realProblems } from './console.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest, leftFigure } from './height-api.ts';
@@ -35,7 +35,7 @@ test('home shows the live amount left and the left page counts down from the liv
     await page.goto('/');
 
     const whole = formatWhole(Math.floor(SUPPLY.left / SATS_PER_BTC));
-    await expect(page.locator('[data-fact="left"]')).toHaveText(HOME.leftFact(`${whole} BTC`));
+    await expect(page.locator('[data-fact="left"]')).toHaveText(whole);
     await page.locator('.tool-row', { hasText: TOOLS.left.name }).click();
     await expect(page).toHaveURL(/#\/left$/);
 
@@ -99,6 +99,8 @@ test('a new block is picked up on the next poll and announced once', async ({ pa
         browserName === 'webkit',
         'Under the fake clock the counter never renders in WebKit; polling is unit tested',
     );
+    // The fake clock replays every frame of the moving ground for the 92 seconds this test fast-forwards.
+    test.setTimeout(90_000);
     const chain = await fakeHeightApi(page);
     await page.clock.install();
     await page.goto('/#/left');
@@ -123,7 +125,7 @@ test('no route loads three.js, and only the converter asks for price and height'
     const prices = await fakePriceApi(page);
     const { scripts, external, problems } = watch(page);
     await page.goto('/#/convert');
-    await expect(page.locator('#tool-result')).toHaveText(/^100,000 sats = £57\.33$/);
+    await expect(page.locator('#tool-result')).toHaveText(/^100,000 sats = \$76\.78$/);
     await page.waitForTimeout(2500);
     const converter = [...external];
     await page.goto('/#/dca');

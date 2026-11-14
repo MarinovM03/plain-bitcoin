@@ -1,4 +1,4 @@
-import type { Fiat } from '../util/format.ts';
+import type { Currency, Fiat } from '../util/format.ts';
 
 export type SceneId = 'left' | 'power' | 'convert' | 'dca' | 'address';
 
@@ -21,7 +21,7 @@ export type SceneData =
           cashLabel?: string;
           bitcoinLabel?: string;
       }
-    | { id: 'convert'; sats: number }
+    | { id: 'convert'; sats: number; price: number; currency: Currency }
     | ({ id: 'dca'; fiat: Fiat; worth: string; alt: string } & DcaMarks)
     | {
           id: 'address';

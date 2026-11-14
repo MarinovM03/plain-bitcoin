@@ -24,9 +24,24 @@ export const HOME = {
     headline: 'Bitcoin, block by block.',
     lead: 'Five plain tools, and the chain itself: the last eight real blocks, in the order they were found.',
     promise: 'Five plain Bitcoin tools, and the chain drawn from real blocks.',
+    headlineAccent: 'block by block.',
     toolsHeading: 'The tools',
-    leftFact: (left: string) => `${left} still to come`,
-    convertFact: (gbp: string) => `1 sat = ${gbp}`,
+    factsSource:
+        'Height and price: mempool.space, as shown in the top bar. Then vs now: US CPI, Bureau of Labor Statistics.',
+    open: 'Open',
+    facts: {
+        left: { unit: 'BTC still to mine' },
+        power: {
+            amount: 1000,
+            year: 2015,
+            unit: (amount: string, year: string) => `buys what ${amount} bought in ${year}`,
+        },
+        convert: { unit: 'for one dollar' },
+        dca: { amount: 50, unit: (amount: string) => `for ${amount} this week` },
+        address: { figure: '0 bytes', unit: 'sent until you tap Look up' },
+    },
+    sats: (count: string) => `${count} sats`,
+    pending: '…',
     cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
@@ -79,33 +94,33 @@ export const STATUS = {
 } as const;
 
 /**
- * The five tools by the names people see. Route ids never change, so old links keep working; a route id on its own
- * is never shown as a name.
+ * The five tools by the names people see: a short name that a stranger understands with the one line under it.
+ * Route ids never change, so old links keep working; a route id on its own is never shown as a name.
  */
 export const TOOLS: Record<ToolId, { name: string; description: string; privacy: string }> = {
     left: {
-        name: 'How much bitcoin is left',
-        description: 'Mined so far, still to come, and the next halving',
+        name: 'Bitcoin left',
+        description: 'How much is still to be mined',
         privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
     },
     power: {
-        name: 'What old money buys today',
-        description: "Pounds or dollars from any year, in today's money and as bitcoin",
+        name: 'Then vs now',
+        description: 'What old money buys today',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     convert: {
-        name: 'Sats to pounds converter',
-        description: 'Sats, bitcoin, pounds and dollars, both ways',
+        name: 'Sats converter',
+        description: 'Sats to dollars, euros or pounds',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     dca: {
-        name: 'Buying a little at a time',
-        description: 'If you had put in a fixed amount every week since a date',
+        name: 'Stack weekly',
+        description: 'If you had bought a little every week',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     address: {
-        name: 'Check a Bitcoin address',
-        description: 'What kind it is, whether it is typed right, and its public balance',
+        name: 'Address check',
+        description: 'Is this Bitcoin address typed right?',
         privacy: 'Checked in your browser. Nothing is sent unless you tap Look up. Never asks for keys or seeds.',
     },
 };
@@ -123,9 +138,8 @@ export const PICTURE = {
     power: (log: boolean) =>
         `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
-    convert: (perCell: string, shown: string) =>
-        `Each cell is ${perCell}; the grid zooms by ten as the amount does. The orange cells are ${shown}.`,
-    convertEmpty: 'Each cell is a number of sats. Type an amount to fill them.',
+    convert: (price: string) => `Round amounts of bitcoin at ${price}. The orange row is yours.`,
+    convertEmpty: 'Round amounts of bitcoin at the price now. Type an amount to add your own row.',
     dca: 'Orange: worth at each buy, ending today. White: money put in. Dashed steel: one lump sum on day one.',
     dcaEmpty: 'The chart draws once there is an answer.',
     address: 'Each cell is one character, coloured by its part once the checksum proves the type.',
@@ -149,8 +163,7 @@ export const GAUGE = {
         log: 'Log scale · ×10 a line',
     },
     convert: {
-        perCell: (unit: string) => `1 cell = ${unit}`,
-        blocks: (blocks: number, total: string) => `${blocks} blocks of 100 = ${total}`,
+        yours: 'Yours',
     },
     dca: {
         short: { value: 'Worth', invested: 'Put in', lump: 'Lump sum' },
@@ -166,6 +179,8 @@ export const SHARE = {
     print: 'Share postcard',
     download: 'Download',
     post: 'Post on X',
+    title: 'Every answer is a postcard.',
+    titleTag: 'Post it and tag @PlainBTC.',
     copyImage: 'Copy image',
     share: 'Share…',
     wide: 'Wide',
@@ -191,6 +206,7 @@ export const FIELDS = {
     currency: 'Currency',
     pounds: '£ GBP',
     dollars: '$ USD',
+    euros: '€ EUR',
     when: 'When',
     eachBuy: 'Each buy',
     howOften: 'How often',
@@ -249,7 +265,9 @@ export const POWER = {
 } as const;
 
 export const CONVERT = {
-    fields: { sats: 'Sats', btc: 'Bitcoin (BTC)', gbp: 'Pounds (GBP)', usd: 'Dollars (USD)' },
+    fields: { sats: 'Sats', btc: 'Bitcoin (BTC)', usd: 'Dollars (USD)', eur: 'Euros (EUR)', gbp: 'Pounds (GBP)' },
+    currencyLabel: 'Money',
+    noEuro: 'There is no euro price offline. It shows once a live price answers.',
     presetsLabel: 'Quick amounts',
     presets: {
         sat: '1 sat',
@@ -261,14 +279,14 @@ export const CONVERT = {
     },
     presetHints: { sat: 'Smallest', pizza: 'Pizza Day' } as Partial<Record<string, string>>,
     unitsLine: '1 BTC = 100,000,000 sats',
-    perSat: (gbp: string, usd: string) => `1 sat ≈ ${gbp} · ${usd}`,
+    perSat: (fiat: string) => `1 sat ≈ ${fiat}`,
     labelLive: (clock: string) => `live price, ${clock}`,
     empty: 'Type an amount in any field.',
     tooBig: 'That is more than 21,000,000 BTC, the most there will ever be.',
     tooSmall: 'That is less than 1 sat, the smallest amount bitcoin can send.',
     invalid: 'Only plain numbers, like 100,000 or 0.01.',
     headline: (from: string, to: string) => `${from} = ${to}`,
-    detail: (first: string, second: string) => `Also ${first} or ${second}.`,
+    detail: (other: string) => `Also ${other}.`,
     live: (api: string, stamp: string) => `${api}, ${stamp}`,
     notUpdating: (api: string, stamp: string) => `${api}, ${stamp}, not updating`,
     lastClose: (day: string) => `last close, ${day}`,
@@ -548,7 +566,7 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    motion: 'The chain on the home page is drawn from real blocks. The dust gathering around the next block is decoration, not live activity.',
+    motion: "The chain on the home page is drawn from real blocks. The dust around the next block is decoration, not live activity. The squares drifting behind every page are the 256 bits of the newest block's hash: set bits are orange. They are decoration too.",
     barcode: "The line under the top bar is the newest block's hash, one mark per bit.",
     toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',

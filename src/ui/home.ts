@@ -1,5 +1,6 @@
 import { hrefFor } from '../app/routes.ts';
 import { advanceChain, type ChainEffect, EMPTY_CHAIN } from '../chain/machine.ts';
+import { stripPath } from '../chain/hash.ts';
 import { chainStill } from '../chain/still.ts';
 import { type ChainBlock, heightFeed, type Tip } from '../data/height.ts';
 import { priceFeed } from '../data/price.ts';
@@ -12,29 +13,49 @@ import { TOKENS } from '../styles/tokens.ts';
 import { TOOL_IDS, type ToolId } from '../tools/index.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
 import {
-    formatFiatPrecise,
+    formatAmount,
     formatMinutes,
+    formatMoney,
     formatShortDay,
     formatUtcClock,
     formatWhole,
     isoDayMs,
 } from '../util/format.ts';
-import { CHAIN, HOME, TOOLS } from './copy.ts';
+import { CHAIN, HOME, SHARE, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 import { shareBar } from './output.ts';
 
 const LEGEND_TICK_MS = 15_000;
 
-/** The two tools with a live fact; their rows hold its line from the first paint so nothing shifts when it arrives. */
-const LIVE_FACTS: ReadonlySet<ToolId> = new Set<ToolId>(['left', 'convert']);
+const STRIP = { columns: 2, rows: 16 } as const;
+/** Each tile shows its own 32 bits from the tail of the hash; the head is the blank proof-of-work run. */
+const STRIP_FROM = 96;
+const FACT_START = '2015-01';
 
+const FACT_UNITS: Record<ToolId, string> = {
+    left: HOME.facts.left.unit,
+    power: HOME.facts.power.unit(formatAmount(HOME.facts.power.amount, 'USD'), String(HOME.facts.power.year)),
+    convert: HOME.facts.convert.unit,
+    dca: HOME.facts.dca.unit(formatAmount(HOME.facts.dca.amount, 'USD')),
+    address: HOME.facts.address.unit,
+};
+
+/**
+ * A tool as a tile: its short name, one line that explains it, and one real number. The number's place is held
+ * from the first paint, so nothing shifts when it arrives. The strip on the edge is 32 bits of the newest block.
+ */
 function renderRow(id: ToolId): SafeHtml {
-    const fact = LIVE_FACTS.has(id) ? html`<span class="tool-row__fact" data-fact="${id}"></span>` : '';
     return html`<li class="tool-list__item">
         <a class="tool-row" href="${hrefFor(id)}" data-tool="${id}">
-            <span class="tool-row__name">${TOOLS[id].name}</span>
-            <span class="tool-row__description">${TOOLS[id].description}</span>
-            ${fact}
+            <svg class="tool-row__bits" viewBox="0 0 ${STRIP.columns} ${STRIP.rows}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d=""/></svg>
+            <span class="tool-row__words">
+                <span class="tool-row__name">${TOOLS[id].name}</span>
+                <span class="tool-row__description">${TOOLS[id].description}</span>
+            </span>
+            <span class="tool-row__fact">
+                <span class="tool-row__figure" data-fact="${id}">${id === 'address' ? HOME.facts.address.figure : HOME.pending}</span>
+                <span class="tool-row__unit">${FACT_UNITS[id]}</span>
+            </span>
         </a>
     </li>`;
 }
@@ -56,11 +77,12 @@ export function renderHome(): SafeHtml {
     return html`<div class="home">
     <section class="hero" aria-labelledby="home-heading">
         <div class="hero__intro">
-            <h1 id="home-heading" class="hero__heading" tabindex="-1">${HOME.headline}</h1>
+            <h1 id="home-heading" class="hero__heading" tabindex="-1">${HOME.headline.slice(0, -HOME.headlineAccent.length)}<span class="hero__accent">${HOME.headlineAccent}</span></h1>
             <p class="hero__lead">${HOME.lead}</p>
             <nav class="tool-list" aria-label="${HOME.toolsHeading}">
                 <ul class="tool-list__rows">${TOOL_IDS.map(renderRow)}</ul>
             </nav>
+            <p class="tool-list__source">${HOME.factsSource}</p>
         </div>
         <div class="hero__stage">
             <div id="chain" class="chain" data-hero="still" aria-hidden="true">
@@ -87,6 +109,7 @@ export function renderHome(): SafeHtml {
     </section>
     <section class="home__share" aria-labelledby="share-heading">
         <h2 id="share-heading" class="home__share-heading">${HOME.shareHeading}</h2>
+        <p class="share__title">${SHARE.title} <span class="share__tag">${SHARE.titleTag}</span></p>
         ${shareBar()}
         <p id="home-status" class="visually-hidden" aria-live="polite"></p>
     </section>
@@ -135,6 +158,8 @@ export function mountHome(root: HTMLElement, siteUrl: string, announce: (message
     const source = find(root, '#chain-source');
     const status = find(root, '#home-status');
     const fact = (id: ToolId) => root.querySelector<HTMLElement>(`[data-fact="${id}"]`);
+    const strips = [...root.querySelectorAll<SVGPathElement>('.tool-row__bits path')];
+    let stripHash: string | null = null;
     const hero = mountHero(host, afterFirstPaint);
     let chain = EMPTY_CHAIN;
     /** Where the shown blocks came from when no API vouches for them right now: a saved day, or nothing. */
@@ -255,16 +280,40 @@ export function mountHome(root: HTMLElement, siteUrl: string, announce: (message
         }
         renderLegend();
         const left = Math.floor(supplyAt(tip.height).left / SATS_PER_BTC);
-        const target = fact('left');
-        if (target) target.textContent = HOME.leftFact(`${formatWhole(left)} BTC`);
+        setFact('left', formatWhole(left));
+        const hash = chain.blocks[0]?.hash ?? null;
+        if (hash !== stripHash) {
+            stripHash = hash;
+            strips.forEach((path, index) => {
+                path.setAttribute(
+                    'd',
+                    stripPath(hash, STRIP_FROM + index * STRIP.columns * STRIP.rows, STRIP.columns, STRIP.rows),
+                );
+            });
+        }
         share.refresh();
     }
 
-    function renderPrice(): void {
-        const target = fact('convert');
-        if (target)
-            target.textContent = HOME.convertFact(formatFiatPrecise(prices.quote.value.gbp / SATS_PER_BTC, 'GBP'));
+    function setFact(id: ToolId, text: string): void {
+        const target = fact(id);
+        if (target) target.textContent = text;
     }
+
+    function renderPrice(): void {
+        const satsFor = (dollars: number) => Math.round((dollars * SATS_PER_BTC) / prices.quote.value.usd);
+        setFact('convert', HOME.sats(formatWhole(satsFor(1))));
+        setFact('dca', HOME.sats(formatWhole(satsFor(HOME.facts.dca.amount))));
+    }
+
+    afterFirstPaint(() => {
+        Promise.all([import('../data/power.ts'), import('../model/power.ts')])
+            .then(([{ powerData }, { purchasingPower }]) => {
+                if (disposed) return;
+                const outcome = purchasingPower(HOME.facts.power.amount, FACT_START, powerData('USD'));
+                if (outcome.ok) setFact('power', formatMoney(outcome.result.equivalentNow, 'USD'));
+            })
+            .catch(() => {});
+    });
 
     const resizes = new ResizeObserver(renderStill);
     resizes.observe(host);

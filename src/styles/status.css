@@ -51,10 +51,6 @@
     }
 }
 
-.status__usd {
-    margin-left: 0.5rem;
-}
-
 .status__source {
     position: relative;
     text-decoration: underline dotted;
@@ -75,10 +71,6 @@
 }
 
 @media (max-width: 23rem) {
-    .status__usd {
-        display: none;
-    }
-
     .status__line {
         column-gap: 0.625rem;
     }
