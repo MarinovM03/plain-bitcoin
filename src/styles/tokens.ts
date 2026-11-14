@@ -1,6 +1,7 @@
 /**
  * One dark room. `void` is the page and the dark the chain fades into; `plate` and `well` are the opaque surfaces
- * text, inputs and graphs sit on; the inks are solid. Orange is the answer and the one accent.
+ * text, inputs and graphs sit on; `glass` is the plate's tint over the lit world; the inks are solid. Orange is
+ * the answer and the one accent.
  */
 export const TOKENS = {
     void: '#0a0b0d',
@@ -12,6 +13,7 @@ export const TOKENS = {
     inkCool: '#8fbde6',
     inkWarm: '#e4dccb',
     btc: '#f7931a',
+    glass: 'rgb(17 19 23 / 0.84)',
 
     fontBody: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
     fontDisplay: '"Fraunces", Georgia, "Times New Roman", serif',
@@ -23,7 +25,7 @@ export const TOKENS = {
     stepLead: '1.125rem',
     stepTitle: 'clamp(1.375rem, 1.15rem + 1vw, 1.75rem)',
     stepHeading: 'clamp(1.5rem, 1.3rem + 1vw, 2rem)',
-    stepDisplay: 'clamp(2.125rem, 1.35rem + 3.4vw, 3.75rem)',
+    stepDisplay: 'clamp(2.5rem, 1.4rem + 5.2vw, 5.5rem)',
     stepAnswer: 'clamp(2.125rem, 1.45rem + 3.4vw, 3.75rem)',
 
     gutter: '1rem',

@@ -5,6 +5,7 @@ import { renderHome } from './home.ts';
 import { escapeHtml, html } from './html.ts';
 import { renderHeader } from './shell.ts';
 import { renderToolPage } from './tool-page.ts';
+import { renderWorld } from './world.ts';
 
 const BARE_LABELS = ['Left', 'Power', 'Convert', 'DCA', 'Address'];
 
@@ -54,12 +55,14 @@ describe('renderHome', () => {
         expect(markup.match(/class="tool-row__unit">[^<]+</g)).toHaveLength(TOOL_IDS.length);
     });
 
-    it('opens with one headline, and hides the chain picture from assistive tech with words beside it', () => {
+    it('opens with one headline, and keeps the world behind the page hidden from assistive tech with words beside it', () => {
         const markup = renderHome().value;
         expect(markup.match(/<h1/g)).toHaveLength(1);
         expect(markup.replace(/<[^>]+>/g, '')).toContain(HOME.headline);
         expect(HOME.headline.endsWith(HOME.headlineAccent)).toBe(true);
-        expect(markup).toContain('id="chain" class="chain" data-hero="still" aria-hidden="true"');
+        expect(markup).not.toContain('id="chain"');
+        expect(renderWorld().value).toContain('id="chain" class="world" data-hero="still" aria-hidden="true"');
+        expect(renderWorld().value).not.toMatch(/<a |<button|tabindex/);
         expect(markup).toContain('id="chain-forming"');
         expect(markup).toContain('id="chain-rows"');
         expect(markup).toContain('data-share="print"');
