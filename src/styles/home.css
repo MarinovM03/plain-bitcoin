@@ -21,18 +21,28 @@
     padding-top: 0.75rem;
 }
 
-/* A veil the colour of the dark behind the words, fading out before it reaches the chain: no box, no edge. */
+/*
+ * A veil the colour of the dark behind the words. It is one flat tint cut by a mask that reaches nothing at every
+ * side of its box, so it has no edge anywhere: it only thins out.
+ */
 .hero__intro::before {
+    --veil-fall: linear-gradient(
+        to bottom,
+        transparent,
+        rgb(0 0 0 / 0.55) 2.25rem,
+        #000 5rem,
+        #000 calc(100% - 8rem),
+        rgb(0 0 0 / 0.6) calc(100% - 4.75rem),
+        rgb(0 0 0 / 0.2) calc(100% - 2rem),
+        transparent
+    );
     content: "";
     position: absolute;
-    inset: -6rem 0 -3.5rem;
+    inset: -5rem -0.625rem -6rem;
     z-index: -1;
-    background: radial-gradient(
-        ellipse 130% 66% at 30% 42%,
-        color-mix(in srgb, var(--void) 96%, transparent) 0,
-        color-mix(in srgb, var(--void) 86%, transparent) 55%,
-        transparent 100%
-    );
+    background: color-mix(in srgb, var(--void) 90%, transparent);
+    -webkit-mask-image: var(--veil-fall);
+    mask-image: var(--veil-fall);
     pointer-events: none;
 }
 
@@ -270,6 +280,12 @@
     }
 }
 
+@media (min-width: 48rem) {
+    .hero__intro::before {
+        inset-inline: calc(var(--gutter) * -1);
+    }
+}
+
 @media (min-width: 64rem) {
     .home {
         gap: 2rem;
@@ -285,12 +301,21 @@
     }
 
     .hero__intro::before {
-        background: radial-gradient(
-            ellipse 62% 64% at 20% 45%,
-            color-mix(in srgb, var(--void) 96%, transparent) 0,
-            color-mix(in srgb, var(--void) 84%, transparent) 55%,
-            transparent 100%
+        --veil-run: linear-gradient(
+            to right,
+            transparent,
+            rgb(0 0 0 / 0.5) 5rem,
+            #000 10rem,
+            #000 40%,
+            rgb(0 0 0 / 0.6) 55%,
+            rgb(0 0 0 / 0.2) 70%,
+            transparent 84%
         );
+        inset-inline: -12rem 0;
+        -webkit-mask-image: var(--veil-fall), var(--veil-run);
+        mask-image: var(--veil-fall), var(--veil-run);
+        -webkit-mask-composite: source-in;
+        mask-composite: intersect;
     }
 
     .hero__lead {
