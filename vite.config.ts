@@ -141,6 +141,8 @@ export default defineConfig(({ mode }) => {
         plugins: [contentSecurityPolicy(), cloudflareHeaders(), shell(siteUrl)],
         build: {
             target: 'es2022',
+            // The 3D library is one lazy chunk of about 520 kB before gzip; scripts/check-budgets.mjs holds its limit.
+            chunkSizeWarningLimit: 600,
             rolldownOptions: {
                 output: {
                     chunkFileNames: (chunk) => {
@@ -148,7 +150,13 @@ export default defineConfig(({ mode }) => {
                         const tool = /[\\/]tools[\\/](\w+)[\\/]index\.ts$/.exec(id)?.[1];
                         if (tool) return `assets/tool-${tool}-[hash].js`;
                         if (/[\\/]hero[\\/]stage\.ts$/.test(id)) return 'assets/hero-[hash].js';
-                        if (/[\\/]hero[\\/]scene\.ts$/.test(id)) return 'assets/hero-scene-[hash].js';
+                        if (/[\\/]hero[\\/]core\.ts$/.test(id)) return 'assets/hero-world-[hash].js';
+                        const scene = /[\\/]hero[\\/]scenes[\\/](\w+)\.ts$/.exec(id)?.[1];
+                        if (scene) return `assets/hero-scene-${scene}-[hash].js`;
+                        if (chunk.moduleIds.some((module) => /[\\/]hero[\\/]/.test(module))) {
+                            return 'assets/hero-shared-[name]-[hash].js';
+                        }
+                        if (/[\\/]backdrop[\\/]/.test(id)) return 'assets/backdrop-[name]-[hash].js';
                         if (/[\\/]gauges[\\/]/.test(id)) return 'assets/picture-[name]-[hash].js';
                         if (/[\\/]postcard[\\/](tray|render)\.ts$/.test(id)) return 'assets/postcard-[name]-[hash].js';
                         return 'assets/[name]-[hash].js';

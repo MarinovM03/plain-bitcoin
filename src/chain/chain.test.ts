@@ -8,16 +8,7 @@ import { advanceChain, EMPTY_CHAIN } from './machine.ts';
 import { BLANK, hashMaterial, MIN_INLAY_CONTRAST, SHADE_RANGE, shade, TONE_ORDER, TONES, toneFor } from './material.ts';
 import { chainOffsets, GAP, gapFor, SHAPE, slabShape } from './shape.ts';
 import { chainStill } from './still.ts';
-import {
-    arrivalCamera,
-    mixCamera,
-    PARALLAX,
-    project,
-    type Station,
-    stationCamera,
-    viewProjection,
-    withPointer,
-} from './view.ts';
+import { arrivalCamera, DRIFT, homeCamera, mixCamera, project, viewProjection, withDrift } from './view.ts';
 
 const HASH_A = '00000000000000000001c33f086ba1e886c500583137053f8ce211691671624a';
 const HASH_B = `${'0'.repeat(20)}${'b'.repeat(42)}ff`;
@@ -256,12 +247,11 @@ describe('advanceChain', () => {
 });
 
 describe('view and still', () => {
-    const STATIONS: readonly Station[] = ['home', 'left', 'power', 'convert', 'dca', 'address'];
     const SHAPES = [390 / 844, 360 / 780, 844 / 390, 1440 / 900];
 
     it('keeps the forming block in the home frame at phone and desktop shapes', () => {
         for (const aspect of SHAPES) {
-            const camera = stationCamera('home', aspect);
+            const camera = homeCamera(aspect);
             const origin = project(viewProjection(camera), [0, 0.4, 0]);
             expect(Math.abs(origin.x + camera.shift.x)).toBeLessThan(1);
             expect(Math.abs(origin.y + camera.shift.y)).toBeLessThan(1);
@@ -269,40 +259,19 @@ describe('view and still', () => {
         }
     });
 
-    it('gives every page its own place, looking at the chain from above the floor', () => {
-        for (const aspect of SHAPES) {
-            const eyes = STATIONS.map((station) => stationCamera(station, aspect, { first: 1.1, last: 10 }));
-            for (const camera of eyes) {
-                expect(camera.eye[1]).toBeGreaterThan(0.2);
-                expect(project(viewProjection(camera), camera.target).w).toBeGreaterThan(1);
-                expect([...camera.eye, ...camera.target].every(Number.isFinite)).toBe(true);
-            }
-            expect(new Set(eyes.map((camera) => camera.eye.map((value) => value.toFixed(2)).join())).size).toBe(6);
+    it('stands in one place above the floor and survives a bad screen shape', () => {
+        for (const aspect of [...SHAPES, Number.NaN, 0, -1]) {
+            const camera = homeCamera(aspect);
+            expect(camera.eye[1]).toBeGreaterThan(0.2);
+            expect([...camera.eye, ...camera.target].every(Number.isFinite)).toBe(true);
         }
+        expect(homeCamera(1440 / 900).shift.x).toBeGreaterThan(0.2);
+        expect(homeCamera(390 / 844).shift.x).toBe(0);
     });
 
-    it('slides the picture clear of the panel on a wide screen only', () => {
-        expect(stationCamera('convert', 1440 / 900).shift.x).toBeGreaterThan(0.3);
-        expect(stationCamera('convert', 390 / 844).shift).toEqual({ x: 0, y: 0 });
-    });
-
-    it('walks the home camera down the chain as the page scrolls, and nowhere else', () => {
-        const reach = { first: 1.1, last: 10 };
-        const top = stationCamera('home', 1.6, reach, 0);
-        const bottom = stationCamera('home', 1.6, reach, 1);
-        expect(bottom.target[0]).toBeGreaterThan(top.target[0] + 3);
-        expect(stationCamera('home', 1.6, reach, 99)).toEqual(bottom);
-        expect(stationCamera('dca', 1.6, reach, 1)).toEqual(stationCamera('dca', 1.6, reach, 0));
-        expect(
-            stationCamera('home', Number.NaN, { first: Number.NaN, last: Number.NaN }, Number.NaN).eye.every(
-                Number.isFinite,
-            ),
-        ).toBe(true);
-    });
-
-    it('travels between two cameras without overshooting either', () => {
+    it('travels from the arrival shot to the home shot without overshooting either', () => {
         const from = arrivalCamera(1.6);
-        const to = stationCamera('home', 1.6);
+        const to = homeCamera(1.6);
         expect(mixCamera(from, to, 0).eye).toEqual(from.eye);
         expect(mixCamera(from, to, 7).eye).toEqual(to.eye);
         const half = mixCamera(from, to, 0.5);
@@ -310,27 +279,19 @@ describe('view and still', () => {
         expect(half.shift.x).toBeCloseTo((from.shift.x + to.shift.x) / 2, 9);
     });
 
-    it('moves the eye by no more than the parallax range and survives bad input', () => {
-        const still = stationCamera('home', 1.3);
-        const pushed = withPointer(still, { x: 99, y: -99 });
-        expect(pushed.eye[0] - still.eye[0]).toBeGreaterThan(PARALLAX.x * 0.99);
-        expect(pushed.eye[0] - still.eye[0]).toBeLessThanOrEqual(PARALLAX.x * 1.5);
-        expect(pushed.eye[1] - still.eye[1]).toBeLessThan(0);
-        expect(pushed.eye[1] - still.eye[1]).toBeGreaterThanOrEqual(-PARALLAX.y * 1.5);
-        const close = stationCamera('convert', 1.6);
-        expect(withPointer(close, { x: 1, y: 0 }).eye[0] - close.eye[0]).toBeLessThan(PARALLAX.x);
-        expect(pushed.target).toEqual(still.target);
-        expect(withPointer(still, { x: Number.NaN, y: 0 }).eye).toEqual(still.eye);
-    });
-
-    it('draws the still from the place that belongs to the page', () => {
-        const blocks = list(98, 8);
-        const options = { width: 1440, height: 900, nowSeconds: null, ink: TOKENS.void, forming: false };
-        const home = chainStill(blocks, options);
-        expect(chainStill(blocks, { ...options, station: 'home' })).toBe(home);
-        const dca = chainStill(blocks, { ...options, station: 'dca' });
-        expect(dca).not.toBe(home);
-        expect(dca).not.toContain('NaN');
+    it('lets the idle camera sway a little, never what it looks at, and never far', () => {
+        const still = homeCamera(1.3);
+        const moved = new Set<string>();
+        for (let seconds = 0; seconds < 120; seconds += 1.7) {
+            const drifted = withDrift(still, seconds);
+            expect(Math.abs(drifted.eye[0] - still.eye[0])).toBeLessThanOrEqual(DRIFT.x);
+            expect(Math.abs(drifted.eye[1] - still.eye[1])).toBeLessThanOrEqual(DRIFT.y);
+            expect(drifted.eye[2]).toBe(still.eye[2]);
+            expect(drifted.target).toEqual(still.target);
+            moved.add(drifted.eye[0].toFixed(3));
+        }
+        expect(moved.size).toBeGreaterThan(20);
+        expect(withDrift(still, Number.NaN).eye.every(Number.isFinite)).toBe(true);
     });
 
     it('draws every block from the same data, with the forming outline only when asked', () => {

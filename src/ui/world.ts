@@ -1,9 +1,12 @@
 import type { RouteId } from '../app/routes.ts';
+import { knownPlan, loadPlan } from '../backdrop/index.ts';
+import { planStill } from '../backdrop/still.ts';
+import type { BackdropData } from '../backdrop/types.ts';
 import { hashBits } from '../chain/hash.ts';
 import { advanceChain, type ChainEffect, EMPTY_CHAIN } from '../chain/machine.ts';
 import { chainStill } from '../chain/still.ts';
 import { type ChainBlock, heightFeed, type Tip } from '../data/height.ts';
-import { mountHero } from '../hero/bus.ts';
+import { mountHero, onBackdrop } from '../hero/bus.ts';
 import { TOKENS } from '../styles/tokens.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
 import { formatWhole } from '../util/format.ts';
@@ -27,6 +30,14 @@ export interface World {
     subscribe(listener: (view: ChainView) => void): () => void;
 }
 
+const STILL_COLOURS = {
+    btc: TOKENS.btc,
+    warm: TOKENS.inkWarm,
+    cool: TOKENS.inkCool,
+    good: TOKENS.good,
+    dim: TOKENS.inkDim,
+} as const;
+
 /**
  * The world's place in the page: fixed behind everything, hidden from assistive tech and from every pointer. The
  * drawn still sits in it from the first paint; the lit scene's canvas covers the still once it runs.
@@ -36,8 +47,9 @@ export function renderWorld(): SafeHtml {
 }
 
 /**
- * Runs the chain behind every page. Live blocks come from the shared height feed on the pages that poll it; a page
- * that fetches nothing stands in front of a saved set of real blocks instead.
+ * Runs the world behind every page: the chain on home, and each tool's own picture, drawn from the numbers the
+ * tool hands over. Live blocks come from the shared height feed on the pages that poll it; a page that fetches
+ * nothing uses a saved set of real blocks instead.
  */
 export function mountWorld(host: HTMLElement, announce: (message: string) => void): World {
     const heights = heightFeed();
@@ -49,6 +61,7 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
     let savedAsked = false;
     let started = false;
     let route: RouteId = 'home';
+    let numbers: BackdropData | null = null;
 
     function formingSince(tip: Tip): number | null {
         const first = chain.blocks[0];
@@ -65,7 +78,19 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
 
     function renderStill(): void {
         const { clientWidth: width, clientHeight: height } = host;
-        if (width < 2 || height < 2 || chain.blocks.length === 0) return;
+        if (width < 2 || height < 2) return;
+        if (route !== 'home') {
+            const id = route;
+            const plan = knownPlan(id);
+            if (!plan) {
+                stillLayer.replaceChildren();
+                loadPlan(id).then(renderStill, () => {});
+                return;
+            }
+            stillLayer.innerHTML = planStill(id, plan(numbers, width / height), { width, height }, STILL_COLOURS);
+            return;
+        }
+        if (chain.blocks.length === 0) return;
         const since = formingSince(heights.tip);
         stillLayer.innerHTML = chainStill(chain.blocks, {
             width,
@@ -73,7 +98,6 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
             nowSeconds: since === null ? null : Date.now() / 1000,
             forming: since !== null,
             ink: TOKENS.void,
-            station: route,
         });
     }
 
@@ -123,13 +147,13 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
         publish();
     }
 
-    function onScroll(): void {
-        const room = document.documentElement.scrollHeight - window.innerHeight;
-        hero.scroll(route === 'home' && room > 0 ? window.scrollY / room : 0);
-    }
-
     new ResizeObserver(renderStill).observe(host);
-    window.addEventListener('scroll', onScroll, { passive: true });
+    onBackdrop((data) => {
+        if (data.id !== route) return;
+        numbers = data;
+        hero.backdrop(data);
+        renderStill();
+    });
     heights.subscribe(onTip);
     onTip(heights.tip);
     afterFirstPaint(() => {
@@ -139,9 +163,12 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
 
     return {
         setRoute(next) {
+            if (next !== route) {
+                numbers = null;
+                hero.backdrop(null);
+            }
             route = next;
-            hero.travel(next);
-            onScroll();
+            hero.open(next);
             renderStill();
             askSaved();
         },
