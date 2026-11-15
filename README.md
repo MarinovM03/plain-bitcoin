@@ -28,9 +28,9 @@ The picture on the home page is the chain itself: the last eight real blocks fro
 
 Nothing in the picture is a link or a button, and nothing in it is invented: no fake transactions, fees or activity. The same facts are written on the home page in plain text and as a table. The thin line under the top bar on every page is the newest block's hash as 256 marks.
 
-The chain is not a picture on the page; it stands behind every page. The home page is the wide shot, and scrolling it walks the camera down the chain. Each tool has its own place along the chain and the camera glides there when the tool opens. A page that fetches nothing stands in front of a saved set of real blocks. The small squares in the air are the 256 bits of the newest block's hash, set bits in orange; they are decoration. Text sits on panels: opaque plates at first, frosted glass once the lit scene is running, with a tint dark enough to keep every text colour at AA contrast. Inputs and graphs stay opaque.
+The chain is not a picture on the page; it stands behind the home page, seen from one fixed place that only sways a little. Each tool stands in front of a moving picture of its own, drawn from that tool's own numbers and explained in one line on its page: 2,100 dots for the 21 million coins, a row of notes per year that shrink with what the money buys, the amount as a disc of points, one coin per buy, one square per character of an address. Opening a tool fades one scene into the next on the same canvas; the camera never flies. The small squares in the air are the 256 bits of the newest block's hash, set bits in orange; they are decoration. Text sits on panels: opaque plates at first, frosted glass once the lit scene is running, with a tint dark enough to keep every text colour at AA contrast. Inputs and graphs stay opaque.
 
-The scene draws only while the tab is visible, and at half the frame rate behind a tool. With reduced motion turned on it is one still frame per page that changes only when a real block arrives. Without WebGL2, on Save-Data or without a real GPU it is a flat drawing made from the same blocks, and the 3D library is never downloaded. On slow hardware it first draws fewer pixels, then drops the glow and the shadows, then gives way to the flat drawing. If mempool.space cannot be reached it shows the last blocks it saw with the time, or a saved set with its date.
+The scene draws only while the tab is visible, and at half the frame rate behind a tool. With reduced motion turned on it is one still frame per page that changes only when a real block arrives. Without WebGL2, on Save-Data or without a real GPU it is a flat drawing made from the same blocks or the same numbers, and the 3D library is never downloaded. On slow hardware it first draws fewer pixels, then drops the glow and the shadows, then gives way to the flat drawing. If mempool.space cannot be reached it shows the last blocks it saw with the time, or a saved set with its date.
 
 ## Postcards
 
@@ -149,7 +149,8 @@ Run these on real phones before each launch. The automated tests cover the same 
 ```
 src/app      hash router
 src/chain    pure rules that turn a block into a tablet: size, stone, face, gaps, the new-block steps, the flat drawing
-src/hero     the lit chain scene behind every page (the only code that may use WebGL or three.js)
+src/backdrop pure plans for each tool's background picture, shared by the lit scene and the flat drawing
+src/hero     the lit world behind every page: one renderer, one scene per page (the only code that may use WebGL or three.js)
 src/gauges   each tool's flat SVG picture, drawn from the same numbers as its answer
 src/postcard postcard words, layout, canvas renderer, share tray and share bar
 src/tools    one folder per tool

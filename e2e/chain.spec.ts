@@ -155,16 +155,16 @@ test('without the lit scene the drawn still stands in, on purpose, and loads no 
     expect(box?.height ?? 0).toBeGreaterThan(150);
 });
 
-test('the lit scene is fetched only where it can run, uses one canvas on every page, and draws no frames under reduced motion', async ({
+test('the lit scene is fetched only where it can run, swaps scenes on one canvas, and draws no frames under reduced motion', async ({
     page,
     browserName,
 }) => {
     test.skip(browserName !== 'chromium', 'The forced scene is checked in Chromium');
     // The test browser has no GPU, so the forced scene is drawn in software: a small window keeps it responsive.
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 640, height: 480 });
     await fakeHeightApi(page);
-    const library = await requested(page, /\/assets\/hero-scene-/);
+    const library = await requested(page, /\/assets\/hero-world-/);
     await page.goto('/#/convert');
     await expect(page.locator('#tool-result')).not.toHaveText('');
     await expect(page.locator('html')).toHaveAttribute('data-world', 'still');
@@ -192,10 +192,12 @@ test('the lit scene is fetched only where it can run, uses one canvas on every p
         await page.locator(`.menu__link[data-nav="${id}"]`).click();
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
         await expect(page.locator('canvas.world__canvas')).toHaveCount(1);
+        await expect(chain(page)).toHaveAttribute('data-scene', id, { timeout: 30_000 });
         const drawn = Number(await chain(page).getAttribute('data-frames'));
         await expect.poll(async () => Number(await chain(page).getAttribute('data-frames'))).toBeGreaterThan(drawn);
         await page.getByRole('link', { name: 'Plain Bitcoin' }).first().click();
         await expect(page.locator('canvas.world__canvas')).toHaveCount(1);
+        await expect(chain(page)).toHaveAttribute('data-scene', 'home', { timeout: 30_000 });
     }
     expect(library).toHaveLength(1);
 });

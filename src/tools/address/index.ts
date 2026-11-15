@@ -1,6 +1,7 @@
 import { type ChainStats, explorerUrl, fetchChainStats } from '../../data/address.ts';
 import { mountPicture } from '../../gauges/mount.ts';
 import type { CharRole } from '../../gauges/types.ts';
+import { backdrop } from '../../hero/bus.ts';
 import {
     type Address,
     type AddressPart,
@@ -307,6 +308,13 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
 
     function render(analysis: Analysis): void {
         showGuard(null);
+        const typed = analysis.kind === 'address' || analysis.kind === 'invalid' ? analysis : null;
+        backdrop({
+            id: 'address',
+            length: typed?.text.length ?? 0,
+            verdict: typed === null ? 'none' : typed.kind === 'address' ? 'good' : 'bad',
+            suspect: typed?.kind === 'invalid' ? typed.suspect : null,
+        });
         renderScene(analysis);
         if (analysis.kind === 'secret') {
             input.value = '';

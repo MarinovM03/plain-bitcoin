@@ -2,7 +2,7 @@ import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
 import { renderConvertDetail, renderConvertInputs, renderConvertMore } from './convert-view.ts';
-import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, PICTURE, POWER, TOOL_PAGE, TOOLS } from './copy.ts';
+import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, PICTURE, POWER, TOOL_PAGE, TOOLS, WORLD } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { moreOptions, noteLine, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
@@ -57,6 +57,14 @@ function calculator(id: CalculatorId): Calculator {
     }
 }
 
+const WORLD_LINES: Record<ToolId, string> = {
+    left: WORLD.left,
+    power: WORLD.power,
+    convert: WORLD.convertEmpty,
+    dca: WORLD.dcaEmpty,
+    address: WORLD.address,
+};
+
 function head(id: ToolId): SafeHtml {
     return html`<header class="tool__head">
     <h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>
@@ -71,7 +79,7 @@ function head(id: ToolId): SafeHtml {
 function page(id: ToolId, screen: SafeHtml, below: SafeHtml): SafeHtml {
     return html`<article class="tool tool--${id}">
     <div class="tool__screen">${head(id)}${screen}</div>
-    <div class="tool__below">${below}</div>
+    <div class="tool__below"><p id="world-line" class="world-line">${WORLD_LINES[id]}</p>${below}</div>
 </article>`;
 }
 

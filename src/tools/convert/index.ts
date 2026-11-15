@@ -1,5 +1,6 @@
 import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.ts';
 import { mountPicture } from '../../gauges/mount.ts';
+import { backdrop } from '../../hero/bus.ts';
 import {
     convert,
     type FiatUnit,
@@ -22,17 +23,19 @@ import {
     CURRENCY_CODE,
     CONVERT_DECIMALS as DECIMALS,
 } from '../../ui/convert-view.ts';
-import { CONVERT, PICTURE, TOOL_PAGE } from '../../ui/copy.ts';
+import { CONVERT, PICTURE, TOOL_PAGE, WORLD } from '../../ui/copy.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import {
     formatFiatPrecise,
     formatMoney,
+    formatSats,
     formatShortDay,
     formatUtcClock,
     formatUtcStamp,
     isoDayMs,
 } from '../../util/format.ts';
+import { satsScale } from '../../util/sats-scale.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
@@ -59,6 +62,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const detail = find(root, '#tool-result-detail');
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
+    const worldLine = find(root, '#world-line');
 
     const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
@@ -73,6 +77,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const unitOf = (current: ConvertSlot): Unit => (current === 'fiat' ? currency : current);
     let text: ConvertText | null = null;
     let settleTimer = 0;
+    let drawnSats = -1;
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -87,6 +92,13 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         settleTimer = window.setTimeout(() => {
             status.textContent = message;
         }, SETTLE_MS);
+    }
+
+    function showWorld(sats: number): void {
+        if (sats === drawnSats) return;
+        drawnSats = sats;
+        backdrop({ id: 'convert', sats });
+        worldLine.textContent = sats > 0 ? WORLD.convert(formatSats(satsScale(sats).perDot)) : WORLD.convertEmpty;
     }
 
     function showNote(message: string | null): void {
@@ -123,6 +135,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         big.textContent = EMPTY_FIGURE;
         detail.textContent = '';
         picture.set(pictureData(0), PICTURE.convertEmpty);
+        showWorld(0);
         share.setEnabled(false);
         settle(message);
     }
@@ -169,6 +182,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         big.textContent = text.figure;
         detail.textContent = text.detail;
         const drawn = pictureData(parsed.value);
+        showWorld(parsed.value);
         picture.set(drawn, PICTURE.convert(`1 BTC = ${formatMoney(drawn.price, drawn.currency)}`));
         share.setEnabled(true);
         settle(`${text.headline}. ${text.detail}`);

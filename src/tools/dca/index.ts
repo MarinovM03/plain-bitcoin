@@ -1,11 +1,13 @@
+import { coinScale } from '../../backdrop/dca.ts';
 import { mountPicture } from '../../gauges/mount.ts';
 import type { DcaMarks } from '../../gauges/types.ts';
+import { backdrop } from '../../hero/bus.ts';
 import { MAX_SATS } from '../../model/convert.ts';
 import { type DailyCloses, type DcaOutcome, dca, FREQUENCIES, type Frequency } from '../../model/dca.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type DcaText, dcaText } from '../../postcard/words.ts';
-import { DCA, PICTURE, TOOL_PAGE } from '../../ui/copy.ts';
+import { DCA, PICTURE, TOOL_PAGE, WORLD } from '../../ui/copy.ts';
 import { DCA_DEFAULT_START, DCA_ROWS, type DcaPreset } from '../../ui/dca-view.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
@@ -50,12 +52,14 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     const source = find(root, '#tool-source');
     const panel = find(root, '#dca-detail');
     const notes = find(root, '#dca-notes');
+    const worldLine = find(root, '#world-line');
 
     const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const loaded = new Map<Fiat, DailySeries>();
     let text: DcaText | null = null;
     let settleTimer = 0;
+    let drawnBuys = -1;
     let request = 0;
     let disposed = false;
     const share = bindShareBar(root, {
@@ -100,8 +104,16 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         }, SETTLE_MS);
     }
 
+    function showWorld(buys: number): void {
+        if (buys === drawnBuys) return;
+        drawnBuys = buys;
+        backdrop({ id: 'dca', buys });
+        worldLine.textContent = buys > 0 ? WORLD.dca(coinScale(buys).perCoin) : WORLD.dcaEmpty;
+    }
+
     function showMessage(message: string): void {
         text = null;
+        showWorld(0);
         label.textContent = TOOL_PAGE.resultLabel;
         const empty = document.createElement('span');
         empty.className = 'result__empty';
@@ -174,6 +186,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             return;
         }
         const marks = dcaMarks(outcome.result);
+        showWorld(outcome.result.buys);
         text = dcaText(outcome.result, fiat, marks);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
