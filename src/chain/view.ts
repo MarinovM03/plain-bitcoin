@@ -38,111 +38,52 @@ const FOV_Y = (32 * Math.PI) / 180;
 const EYE_DIRECTION: Vec3 = normalize([-0.52, 0.24, 1]);
 const DISTANCE = 6.3;
 const WIDE_ASPECT = 1.3;
-/** The pointer moves the eye by at most this many scene units on the home shot, and never the target. */
-export const PARALLAX = { x: 0.55, y: 0.22 } as const;
+/** The idle camera sways by at most this many scene units each way, and never moves what it looks at. */
+export const DRIFT = { x: 0.2, y: 0.07 } as const;
 
-/** The same camera with the eye nudged by the pointer (-1 to 1 each way), scaled to how far back it stands. */
-export function withPointer(camera: Camera, pointer: { x: number; y: number }): Camera {
-    const px = Number.isFinite(pointer.x) ? Math.min(1, Math.max(-1, pointer.x)) : 0;
-    const py = Number.isFinite(pointer.y) ? Math.min(1, Math.max(-1, pointer.y)) : 0;
-    const { eye, target } = camera;
-    const scale = Math.min(1.5, Math.hypot(eye[0] - target[0], eye[1] - target[1], eye[2] - target[2]) / DISTANCE);
-    return { ...camera, eye: [eye[0] + px * PARALLAX.x * scale, eye[1] + py * PARALLAX.y * scale, eye[2]] };
+/** The same camera a breath later: the eye sways slowly so the picture is never frozen. */
+export function withDrift(camera: Camera, seconds: number): Camera {
+    const t = Number.isFinite(seconds) ? seconds : 0;
+    const { eye } = camera;
+    return {
+        ...camera,
+        eye: [eye[0] + Math.sin(t * 0.13) * DRIFT.x, eye[1] + Math.sin(t * 0.09 + 1.1) * DRIFT.y, eye[2]],
+    };
 }
 
-/** Where the camera can stand: the wide shot on home, and one place along the chain for each tool. */
-export type Station = 'home' | 'left' | 'power' | 'convert' | 'dca' | 'address';
-
-/** How far back the newest and the oldest tablets stand right now. */
-export interface Reach {
-    first: number;
-    last: number;
-}
-
-export const NOMINAL_REACH: Reach = { first: 1.2, last: 9 };
-
-/** Across the chain, on the side the tablets face. */
-const ACROSS: Vec3 = [-CHAIN_DIRECTION[2], 0, CHAIN_DIRECTION[0]];
-/** Straight out of a tablet's face. */
-const FACE_OUT: Vec3 = [Math.sin(SLAB_YAW), 0, Math.cos(SLAB_YAW)];
 const WIDE_SCREEN = 1.25;
 const HOME_FOCUS = 2.6;
-/** The home shot stands at least this much further back than a close-up, so the whole chain clears the tools. */
+/** The home shot stands at least this far back, so the whole chain clears the tools. */
 const HOME_STEP_BACK = 1.45;
 
 function clamp(value: number, low: number, high: number): number {
     return Math.min(high, Math.max(low, value));
 }
 
-function along(offset: number, height: number): Vec3 {
-    return [CHAIN_DIRECTION[0] * offset, height, CHAIN_DIRECTION[2] * offset];
-}
-
-function reachOut(from: Vec3, direction: Vec3, distance: number, lift = 0): Vec3 {
-    return [
-        from[0] + direction[0] * distance,
-        from[1] + direction[1] * distance + lift,
-        from[2] + direction[2] * distance,
-    ];
+function reachOut(from: Vec3, direction: Vec3, distance: number): Vec3 {
+    return [from[0] + direction[0] * distance, from[1] + direction[1] * distance, from[2] + direction[2] * distance];
 }
 
 /**
- * The camera for a station on a screen of this shape. Wide screens slide the picture to the right, clear of the
- * panel on the left; narrow screens step back so the same run of tablets stays in frame. On home, `scroll` (0 to 1)
- * walks the camera down the chain.
+ * The one place the camera stands: the wide shot of the chain. Wide screens slide the picture to the right, clear
+ * of the headline; narrow screens step back so the same run of tablets stays in frame.
  */
-export function stationCamera(station: Station, aspect: number, reach: Reach = NOMINAL_REACH, scroll = 0): Camera {
+export function homeCamera(aspect: number): Camera {
     const safe = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
-    const wide = safe >= WIDE_SCREEN;
     const far = clamp(WIDE_ASPECT / safe, 1, 2.4);
-    const near = clamp(0.95 / safe, 1, 1.9);
-    const length = clamp(Number.isFinite(reach.last) ? reach.last : NOMINAL_REACH.last, 4, 16);
-    const first = clamp(Number.isFinite(reach.first) ? reach.first : NOMINAL_REACH.first, 0.6, 3);
-    const walked = clamp(Number.isFinite(scroll) ? scroll : 0, 0, 1);
-    const beside = wide ? { x: 0.52, y: 0 } : { x: 0, y: 0 };
-    const frame = (eye: Vec3, target: Vec3, shift: { x: number; y: number }): Camera => ({
-        eye,
+    const target: Vec3 = [CHAIN_DIRECTION[0] * HOME_FOCUS, 0.3, CHAIN_DIRECTION[2] * HOME_FOCUS];
+    return {
+        eye: reachOut(target, EYE_DIRECTION, DISTANCE * Math.max(far, HOME_STEP_BACK)),
         target,
         fovY: FOV_Y,
         aspect: safe,
-        shift,
-    });
-    switch (station) {
-        case 'home': {
-            const target = along(HOME_FOCUS + (length * 0.8 - HOME_FOCUS) * walked, 0.3);
-            const stay = 1 - walked;
-            return frame(
-                reachOut(target, EYE_DIRECTION, DISTANCE * Math.max(far, HOME_STEP_BACK) * (1 - 0.32 * walked)),
-                target,
-                wide ? { x: 0.3 * stay, y: 0.12 * stay } : { x: 0, y: 0.22 * stay },
-            );
-        }
-        case 'left': {
-            const target: Vec3 = [0, 0.42, 0];
-            return frame(reachOut(target, normalize([-0.7, 0.2, 1]), 3.6 * near), target, beside);
-        }
-        case 'power': {
-            const target = along(length * 0.45, 0.35);
-            return frame(reachOut(along(length + 1.6, 1.15), FACE_OUT, 4.2 * far), target, beside);
-        }
-        case 'convert': {
-            const target = along(first, 0.42);
-            return frame(reachOut(reachOut(target, FACE_OUT, 2.7 * near, 0.12), CHAIN_DIRECTION, -0.5), target, beside);
-        }
-        case 'dca': {
-            const target = along(length * 0.5, 0.3);
-            return frame(reachOut(target, ACROSS, (length * 0.55 + 3.5) * far, 0.9), target, beside);
-        }
-        case 'address': {
-            const target = along(length * 0.42, 0);
-            return frame(reachOut(target, normalize([-0.25, 1, 0.5]), (length * 0.6 + 4) * far), target, beside);
-        }
-    }
+        shift: safe >= WIDE_SCREEN ? { x: 0.3, y: 0.12 } : { x: 0, y: 0.22 },
+    };
 }
 
 /** Where the camera starts on a first visit: low and close to the block being found, before it pulls back. */
 export function arrivalCamera(aspect: number): Camera {
-    const home = stationCamera('home', aspect);
+    const home = homeCamera(aspect);
     const target: Vec3 = [0.4, 0.35, -0.3];
     const near = clamp(0.95 / home.aspect, 1, 1.9);
     return { ...home, eye: reachOut(target, normalize([-0.9, 0.12, 1]), 3 * near), target };

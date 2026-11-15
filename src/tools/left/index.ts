@@ -1,5 +1,6 @@
 import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
 import { mountPicture } from '../../gauges/mount.ts';
+import { backdrop } from '../../hero/bus.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
@@ -79,6 +80,7 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
 
         if (supply.height !== shownHeight) {
             picture.set({ id: 'left', height: supply.height }, PICTURE.left);
+            backdrop({ id: 'left', mined: supply.issued / MAX_SUPPLY });
             shownHeight = supply.height;
         }
         share.setEnabled(true);

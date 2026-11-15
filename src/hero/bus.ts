@@ -1,6 +1,9 @@
+import type { BackdropData, BackdropId } from '../backdrop/types.ts';
 import type { ChainEffect } from '../chain/machine.ts';
-import type { Station } from '../chain/view.ts';
 import type { ChainBlock } from '../data/height.ts';
+
+/** One scene per page: the chain on home, and each tool's own picture. */
+export type SceneId = 'home' | BackdropId;
 
 export interface HeroFrame {
     /** Newest first. */
@@ -12,28 +15,40 @@ export interface HeroFrame {
 
 export interface Hero {
     show(frame: HeroFrame): void;
-    /** Sends the camera to the place that belongs to a page. */
-    travel(station: Station): void;
-    /** How far down the home page the reader is, 0 to 1: the camera walks the chain with them. */
-    scroll(progress: number): void;
+    /** Swaps to the scene that belongs to a page. */
+    open(scene: SceneId): void;
+    /** The open tool's own numbers, for its scene to draw. */
+    backdrop(data: BackdropData | null): void;
+}
+
+let listener: ((data: BackdropData) => void) | null = null;
+
+/** A tool hands the world the numbers its picture is made from. */
+export function backdrop(data: BackdropData): void {
+    listener?.(data);
+}
+
+export function onBackdrop(next: (data: BackdropData) => void): void {
+    listener = next;
 }
 
 /**
- * The one door between the page and the lit world behind it. The page hands over real blocks and says which page
- * is open; the world is loaded after first paint, draws only what it is handed, and is never asked anything back.
+ * The one door between the page and the lit world behind it. The page hands over real blocks, says which page is
+ * open and passes on that page's numbers; the world is loaded after first paint, draws only what it is handed, and
+ * is never asked anything back.
  */
 export function mountHero(host: HTMLElement, after: (task: () => void) => void): Hero {
     let latest: HeroFrame | null = null;
-    let station: Station = 'home';
-    let progress = 0;
+    let scene: SceneId = 'home';
+    let data: BackdropData | null = null;
     let running: Hero | null = null;
 
     after(() => {
         import('./stage.ts')
             .then(({ runHero }) => {
                 running = runHero(host);
-                running.travel(station);
-                running.scroll(progress);
+                running.open(scene);
+                running.backdrop(data);
                 if (latest) running.show({ ...latest, effect: 'replay' });
             })
             .catch(() => {
@@ -46,13 +61,13 @@ export function mountHero(host: HTMLElement, after: (task: () => void) => void):
             latest = frame;
             running?.show(frame);
         },
-        travel(next) {
-            station = next;
-            running?.travel(next);
+        open(next) {
+            scene = next;
+            running?.open(next);
         },
-        scroll(next) {
-            progress = next;
-            running?.scroll(next);
+        backdrop(next) {
+            data = next;
+            running?.backdrop(next);
         },
     };
 }

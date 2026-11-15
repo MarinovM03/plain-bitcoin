@@ -1,19 +1,11 @@
+import type { BackdropData } from '../backdrop/types.ts';
 import { formingFill } from '../chain/forming.ts';
 import { chainOffsets } from '../chain/shape.ts';
-import {
-    arrivalCamera,
-    type Camera,
-    mixCamera,
-    NOMINAL_REACH,
-    type Reach,
-    type Station,
-    stationCamera,
-    withPointer,
-} from '../chain/view.ts';
+import { arrivalCamera, type Camera, homeCamera, mixCamera, withDrift } from '../chain/view.ts';
 import { createCast, poseOf, TIMING } from './actors.ts';
-import type { Hero, HeroFrame } from './bus.ts';
-import { pointerToScene } from './pointer.ts';
-import type { DrawList, World } from './scene.ts';
+import type { Hero, HeroFrame, SceneId } from './bus.ts';
+import type { Core } from './core.ts';
+import type { ChainDraw, Layer, Tick } from './kit.ts';
 import { detectMode, forcedMode, isSoftwareRenderer } from './tier.ts';
 
 /**
@@ -30,10 +22,15 @@ const STEPS = [
 const SLOW_FRAME_SECONDS = 1 / 26;
 const SAMPLE_FRAMES = 75;
 const RUSH_SECONDS = 0.45;
-const TRAVEL_SECONDS = 1.1;
+/** One scene gives way to the next in this long; the camera never flies between them. */
+const FADE_SECONDS = 0.45;
 /** After the last tablet lands the camera takes this long to finish pulling back. */
 const SETTLE_SECONDS = 1.2;
-const LEVEL = { home: 1, tool: 0.55 } as const;
+
+interface Shown {
+    id: SceneId;
+    layer: Layer;
+}
 
 function easeInOut(t: number): number {
     const x = Math.min(1, Math.max(0, t));
@@ -56,11 +53,12 @@ function openCanvas(): { canvas: HTMLCanvasElement; gl: WebGL2RenderingContext }
     return { canvas, gl };
 }
 
-const INERT: Hero = { show() {}, travel() {}, scroll() {} };
+const INERT: Hero = { show() {}, open() {}, backdrop() {} };
 
 /**
- * The world behind every page: one canvas and one context for the whole visit. It is checked for a real GPU before
- * the 3D library is fetched, so a phone that will only ever show the still never pays for it.
+ * The world behind every page: one canvas, one context and one renderer for the whole visit, with one scene per
+ * page that fades in over the last. It is checked for a real GPU before the 3D library is fetched, so a phone that
+ * will only ever show the still never pays for it.
  */
 export function runHero(host: HTMLElement): Hero {
     const root = document.documentElement;
@@ -77,14 +75,17 @@ export function runHero(host: HTMLElement): Hero {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const phone = window.matchMedia('(pointer: coarse)').matches;
     const dprCap = phone ? 1.5 : 2;
-    let world: World | null = null;
+    let core: Core | null = null;
     let frame: HeroFrame | null = null;
-    let station: Station = 'home';
+    let data: BackdropData | null = null;
+    let scene: SceneId = 'home';
+    let front: Shown | null = null;
+    let back: Shown | null = null;
+    let fade = 1;
+    let request = 0;
+    let loading: SceneId | null = null;
+    let introPlayed = false;
     let travel: { from: Camera; t: number; seconds: number } | null = null;
-    let shownCamera: Camera | null = null;
-    let scrollTarget = 0;
-    let scrollShown = 0;
-    let level: number = LEVEL.home;
     let raf = 0;
     let last = 0;
     let lastTick = 0;
@@ -93,7 +94,6 @@ export function runHero(host: HTMLElement): Hero {
     let frames = 0;
     let lost = false;
     let gaveUp = false;
-    let warmed = false;
     let step = phone ? 1 : 0;
     let slowTotal = 0;
     let slowCount = 0;
@@ -104,28 +104,21 @@ export function runHero(host: HTMLElement): Hero {
     let sinceIntro = 0;
     let introSeconds = 0;
     let sinceSnap = Number.POSITIVE_INFINITY;
-    const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
 
     const nowSeconds = () => Date.now() / 1000;
-    const drawing = () =>
-        world !== null && warmed && !gaveUp && !lost && frame !== null && frame.blocks.length > 0 && width > 1;
+    const hasBlocks = () => frame !== null && frame.blocks.length > 0;
+    const drawing = () => core !== null && front !== null && !gaveUp && !lost && width > 1;
     const animating = () => drawing() && !document.hidden && !motion.matches;
 
     function size(): void {
-        if (!world) return;
+        if (!core) return;
         const rect = host.getBoundingClientRect();
         width = rect.width;
         height = rect.height;
         if (width < 2 || height < 2) return;
         const quality = STEPS[step] ?? STEPS[0];
-        world.resize(width, height, Math.min(window.devicePixelRatio || 1, dprCap) * quality.scale);
-        world.quality(quality);
-    }
-
-    function reach(): Reach {
-        const standing = cast.actors.filter((actor) => actor.leaving === null).map((actor) => actor.target);
-        if (standing.length === 0) return NOMINAL_REACH;
-        return { first: Math.min(...standing), last: Math.max(...standing) };
+        core.resize(width, height, Math.min(window.devicePixelRatio || 1, dprCap) * quality.scale);
+        core.quality(quality);
     }
 
     function targets(): { fill: number; ghost: number } {
@@ -136,25 +129,44 @@ export function runHero(host: HTMLElement): Hero {
         return { fill, ghost: 1 };
     }
 
-    function list(): DrawList {
-        const goal = stationCamera(station, width / height, reach(), scrollShown);
-        shownCamera = travel ? mixCamera(travel.from, goal, easeInOut(travel.t)) : goal;
+    function chain(): ChainDraw {
+        const home = homeCamera(width / height);
+        const steady = motion.matches ? home : withDrift(home, seconds);
         return {
-            camera: withPointer(shownCamera, pointer),
+            camera: travel ? mixCamera(travel.from, steady, easeInOut(travel.t)) : steady,
             slabs: cast.actors.map((actor) => ({ actor, pose: poseOf(actor) })),
             ghost: shownGhost,
             fill: shownFill,
-            seconds,
-            hash: frame?.blocks[0]?.hash ?? null,
-            level,
         };
     }
 
+    function tickFor(id: SceneId): Tick {
+        return {
+            seconds,
+            width,
+            height,
+            pixels: core?.pixels() ?? 1,
+            still: motion.matches,
+            hash: frame?.blocks[0]?.hash ?? null,
+            chain: id === 'home' ? chain() : null,
+            data: id === 'home' ? null : data,
+        };
+    }
+
+    function retire(): void {
+        back?.layer.dispose();
+        back = null;
+        fade = 1;
+    }
+
     function draw(): void {
-        if (!world || !drawing()) return;
-        world.draw(list());
+        if (!core || !front || !drawing()) return;
+        front.layer.update(tickFor(front.id));
+        back?.layer.update(tickFor(back.id));
+        core.draw(front.layer, back?.layer ?? null, easeInOut(fade));
         frames += 1;
         host.dataset.frames = String(frames);
+        host.dataset.scene = front.id;
         if (frames === 1) mark(STEPS[step]?.glass ? 'scene' : 'lite');
     }
 
@@ -162,6 +174,9 @@ export function runHero(host: HTMLElement): Hero {
         gaveUp = true;
         cancelAnimationFrame(raf);
         raf = 0;
+        retire();
+        front?.layer.dispose();
+        front = null;
         canvas.remove();
         mark('still');
     }
@@ -191,9 +206,9 @@ export function runHero(host: HTMLElement): Hero {
         measure(Math.max(0, (now - lastTick) / 1000));
         lastTick = now;
         raf = requestAnimationFrame(tick);
-        // Behind a tool the world is scenery: every other frame is enough unless the camera is on the move.
-        const busy = travel !== null || sinceSnap < 2 || sinceIntro < introSeconds + SETTLE_SECONDS;
-        if (station !== 'home' && !busy && !skipped) {
+        // Behind a tool the world is scenery: every other frame is enough unless something is changing hands.
+        const busy = back !== null || sinceSnap < 2 || sinceIntro < introSeconds + SETTLE_SECONDS;
+        if (front?.id !== 'home' && !busy && !skipped) {
             skipped = true;
             return;
         }
@@ -203,11 +218,10 @@ export function runHero(host: HTMLElement): Hero {
         seconds += delta;
         sinceIntro += delta;
         sinceSnap += delta;
-        const follow = 1 - Math.exp(-delta * 3);
-        pointer.x += (pointer.targetX - pointer.x) * follow;
-        pointer.y += (pointer.targetY - pointer.y) * follow;
-        scrollShown += (scrollTarget - scrollShown) * (1 - Math.exp(-delta * 5));
-        level += ((station === 'home' ? LEVEL.home : LEVEL.tool) - level) * follow;
+        if (back) {
+            fade += delta / FADE_SECONDS;
+            if (fade >= 1) retire();
+        }
         if (travel) {
             travel.t += delta / travel.seconds;
             if (travel.t >= 1) travel = null;
@@ -224,13 +238,10 @@ export function runHero(host: HTMLElement): Hero {
     function still(): void {
         cast.settle();
         travel = null;
-        scrollShown = scrollTarget;
-        level = station === 'home' ? LEVEL.home : LEVEL.tool;
+        retire();
         const target = targets();
         shownFill = Math.min(1, target.fill);
         shownGhost = target.ghost;
-        pointer.x = 0;
-        pointer.y = 0;
         draw();
     }
 
@@ -251,40 +262,74 @@ export function runHero(host: HTMLElement): Hero {
         }
     }
 
-    /** The scene takes over from the still once its programs are built, and plays its entrance from the start. */
-    function begin(): void {
-        if (!world || warmed || gaveUp || !frame || frame.blocks.length === 0) return;
+    /** The first time the chain is seen on a visit it plays its entrance from the start, wherever the visit began. */
+    function playIntro(): void {
+        if (introPlayed || !frame) return;
+        introPlayed = true;
+        cast.sync(
+            frame.blocks,
+            chainOffsets(frame.blocks, frame.formingSince === null ? null : nowSeconds()),
+            'replay',
+        );
+        sinceIntro = 0;
+        introSeconds = Math.max(0, frame.blocks.length - 1) * TIMING.dropStagger + TIMING.dropSeconds;
+        if (!motion.matches) {
+            travel = { from: arrivalCamera(width / height), t: 0, seconds: introSeconds + SETTLE_SECONDS };
+        }
+    }
+
+    function arrive(next: Shown): void {
+        retire();
+        back = front;
+        front = next;
+        fade = back && !motion.matches ? 0 : 1;
+        if (fade >= 1) retire();
+        if (next.id === 'home') playIntro();
+        if (!canvas.isConnected) host.append(canvas);
+        wake();
+        if (raf === 0 && drawing()) still();
+    }
+
+    /** Fetches and builds the open page's scene. The one on show keeps running until the next is ready to draw. */
+    function want(): void {
+        if (!core || gaveUp || lost) return;
+        if (front?.id === scene) {
+            request += 1;
+            loading = null;
+            return;
+        }
+        if (loading === scene || (scene === 'home' && !hasBlocks())) return;
         size();
         if (width < 2 || height < 2) return;
-        const ready = () => {
-            if (gaveUp) return;
-            warmed = true;
-            host.append(canvas);
-            sinceIntro = 0;
-            if (station === 'home' && !motion.matches) {
-                travel = { from: arrivalCamera(width / height), t: 0, seconds: introSeconds + SETTLE_SECONDS };
-            }
-            wake();
-        };
-        world.warm(list()).then(ready, ready);
+        const running = core;
+        const id = scene;
+        const token = ++request;
+        loading = id;
+        running
+            .load(id)
+            .then(async (layer) => {
+                layer.update(tickFor(id));
+                await running.warm(layer).catch(() => {});
+                if (token !== request || gaveUp) {
+                    layer.dispose();
+                    return;
+                }
+                loading = null;
+                arrive({ id, layer });
+            })
+            .catch(() => {
+                if (token !== request) return;
+                loading = null;
+                if (!front) giveUp();
+            });
     }
 
     new ResizeObserver(() => {
         size();
-        if (!warmed) begin();
-        else if (motion.matches) still();
+        want();
+        if (motion.matches && drawing()) still();
     }).observe(host);
 
-    window.addEventListener(
-        'pointermove',
-        (event) => {
-            const rect = { left: 0, top: 0, width, height };
-            const point = pointerToScene(event, rect, rect, 1, 1);
-            pointer.targetX = point.inside ? point.ndcX : 0;
-            pointer.targetY = point.inside ? point.ndcY : 0;
-        },
-        { passive: true },
-    );
     canvas.addEventListener('webglcontextlost', (event) => {
         event.preventDefault();
         lost = true;
@@ -302,39 +347,34 @@ export function runHero(host: HTMLElement): Hero {
     document.addEventListener('visibilitychange', wake);
     motion.addEventListener('change', wake);
 
-    import('./scene.ts')
-        .then(({ createScene }) => {
-            world = createScene(canvas, surface.gl);
-            begin();
+    import('./core.ts')
+        .then(({ createCore }) => {
+            core = createCore(canvas, surface.gl);
+            want();
         })
         .catch(giveUp);
 
     return {
         show(next) {
-            const first = frame === null || frame.blocks.length === 0;
+            const first = !hasBlocks();
             frame = next;
             const effect = first ? 'replay' : next.effect;
             cast.sync(next.blocks, chainOffsets(next.blocks, next.formingSince === null ? null : nowSeconds()), effect);
-            if (effect === 'replay') {
+            if (effect === 'replay' && front?.id === 'home') {
                 sinceIntro = 0;
                 introSeconds = Math.max(0, next.blocks.length - 1) * TIMING.dropStagger + TIMING.dropSeconds;
             }
             if (effect === 'snap') sinceSnap = 0;
-            if (!warmed) begin();
+            want();
             wake();
             if (!motion.matches && raf === 0 && drawing()) still();
         },
-        travel(next) {
-            if (next === station) return;
-            station = next;
-            if (shownCamera && !motion.matches) travel = { from: shownCamera, t: 0, seconds: TRAVEL_SECONDS };
-            if (next !== 'home') scrollTarget = 0;
-            wake();
-            if (raf === 0 && drawing()) still();
+        open(next) {
+            scene = next;
+            want();
         },
-        scroll(progress) {
-            if (motion.matches) return;
-            scrollTarget = station === 'home' ? Math.min(1, Math.max(0, progress)) : 0;
+        backdrop(next) {
+            data = next;
             if (raf === 0 && drawing()) still();
         },
     };

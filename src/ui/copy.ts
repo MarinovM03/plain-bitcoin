@@ -148,6 +148,21 @@ export const PICTURE = {
     addressEmpty: 'Each character will stand in its own cell once you paste an address.',
 } as const;
 
+/** One plain line per tool, saying what the moving picture behind its page is made of. */
+export const WORLD = {
+    left: 'Behind this page: 2,100 dots, one for every 10,000 BTC. Lit dots are mined; orange rings are still to come.',
+    power: 'Behind this page: a row of notes for each year, the start year on top. They shrink as the same money buys less.',
+    convert: (perPoint: string) => `Behind this page: your amount as points. Each point is ${perPoint}.`,
+    convertEmpty: 'Behind this page: your amount as points, once you type one.',
+    dca: (perCoin: number) =>
+        perCoin === 1
+            ? 'Behind this page: one coin for every buy, dropped in the order they were made.'
+            : `Behind this page: one coin for every ${perCoin} buys, dropped in the order they were made.`,
+    dcaEmpty: 'Behind this page: one coin for every buy, once there is an answer.',
+    address:
+        'Behind this page: one square for each character. The light reads across them; green means the checksum adds up.',
+} as const;
+
 export const GAUGE = {
     left: {
         max: '21M',
@@ -566,7 +581,7 @@ export const ROUTE = {
 
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    motion: "The tablets behind every page are real blocks: the last eight from mempool.space, or a saved set on a page that fetches nothing. The dust around the next block is decoration, not live activity. The squares in the air are the 256 bits of the newest block's hash: set bits are orange. They are decoration too.",
+    motion: "The tablets behind the home page are real blocks: the last eight from mempool.space. Behind each tool is a picture drawn from that tool's own numbers, explained on its page. The dust around the next block is decoration, not live activity. The squares in the air are the 256 bits of the newest block's hash: set bits are orange. They are decoration too.",
     barcode: "The line under the top bar is the newest block's hash, one mark per bit.",
     toolsLabel: 'All tools',
     follow: 'Follow @PlainBTC on X',
