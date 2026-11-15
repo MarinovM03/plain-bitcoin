@@ -13,6 +13,7 @@ export const TOKENS = {
     inkCool: '#8fbde6',
     inkWarm: '#e4dccb',
     btc: '#f7931a',
+    good: '#7fd6a4',
     glass: 'rgb(17 19 23 / 0.84)',
 
     fontBody: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
