@@ -1,73 +1,132 @@
-import type { BackdropData, BackdropId } from '../backdrop/types.ts';
-import type { ChainEffect } from '../chain/machine.ts';
-import type { ChainBlock } from '../data/height.ts';
-
-/** One scene per page: the chain on home, and each tool's own picture. */
-export type SceneId = 'home' | BackdropId;
-
-export interface HeroFrame {
-    /** Newest first. */
-    readonly blocks: readonly ChainBlock[];
-    /** The newest block's timestamp in seconds when a live feed vouches for it; null draws no forming block. */
-    readonly formingSince: number | null;
-    readonly effect: ChainEffect;
+/** Every scene is handed plain numbers only, never anything a person typed. */
+export interface MinerInput {
+    /** Zero bits a hash needs to win a block today. */
+    readonly needed: number;
+    /** The deepest hash of this visit so far, or -1. */
+    readonly best: number;
+    /** The real block's own hash depth, once it has been checked. */
+    readonly real: number | null;
+    /** How many fresh hashes landed at each depth since the last hand-over. */
+    readonly tally: readonly number[] | null;
+    /** Turns the camera down the shaft to the target ring. */
+    readonly dive: boolean;
 }
 
-export interface Hero {
-    show(frame: HeroFrame): void;
-    /** Swaps to the scene that belongs to a page. */
-    open(scene: SceneId): void;
-    /** The open tool's own numbers, for its scene to draw. */
-    backdrop(data: BackdropData | null): void;
+export interface SatsInput {
+    readonly sats: number;
 }
 
-let listener: ((data: BackdropData) => void) | null = null;
-
-/** A tool hands the world the numbers its picture is made from. */
-export function backdrop(data: BackdropData): void {
-    listener?.(data);
+export interface WallInput {
+    /** Share of all 21 million already issued, 0 to 1. */
+    readonly issued: number;
+    /** How far the camera has dived, 0 for the whole block to 1 for single coins; null lets it dive on its own. */
+    readonly zoom?: number | null;
 }
 
-export function onBackdrop(next: (data: BackdropData) => void): void {
-    listener = next;
+export interface HalvingInput {
+    readonly height: number;
+}
+
+export interface QueueInput {
+    /** The lowest fee rate in each projected next block, nearest first, in sats per virtual byte. */
+    readonly floors: readonly number[];
+    /** How full each projected block is, 0 to 1. */
+    readonly fills: readonly number[];
+    /** Transactions waiting in each projected block. */
+    readonly counts: readonly number[];
+    /** The followed transaction's fee rate, or null when none is followed. */
+    readonly rate: number | null;
+    /** Which projected block it reaches, 1 for the next; null when it pays less than all of them. */
+    readonly slab: number | null;
+    readonly confirmed: boolean;
+}
+
+export interface MeltInput {
+    /** Share of its buying power the money still has, 0 to 1. */
+    readonly kept: number;
+}
+
+export interface StackInput {
+    /** One bar per buy or per mark, oldest first, scaled so the tallest is 1. */
+    readonly buys: readonly number[];
+}
+
+export interface MachineInputs {
+    miner: MinerInput;
+    sats: SatsInput;
+    wall: WallInput;
+    halving: HalvingInput;
+    queue: QueueInput;
+    melt: MeltInput;
+    stack: StackInput;
+}
+
+export type MachineId = keyof MachineInputs;
+
+export interface ViewOptions {
+    /** A machine's own page: bigger detail and the pointer turns it. A gallery tile only drifts. */
+    readonly page?: boolean;
+}
+
+export interface View<K extends MachineId> {
+    set(input: MachineInputs[K]): void;
+    detach(): void;
+}
+
+export interface Handle {
+    set(input: unknown): void;
+    remove(): void;
+}
+
+export interface Stage {
+    add(slot: HTMLElement, id: MachineId, input: unknown, options: ViewOptions): Handle;
+}
+
+let stage: Promise<Stage | null> | null = null;
+let deferred: ((task: () => void) => void) | null = null;
+
+/** The page says when the scenes may load: after first paint, so they never hold up the words. */
+export function startStage(after: (task: () => void) => void): void {
+    deferred = after;
+}
+
+function loadStage(): Promise<Stage | null> {
+    stage ??= new Promise<void>((resolve) => (deferred ?? ((task) => task()))(resolve))
+        .then(() => import('./stage.ts'))
+        .then(({ runStage }) => runStage())
+        .catch(() => {
+            document.documentElement.dataset.scene = 'still';
+            return null;
+        });
+    return stage;
 }
 
 /**
- * The one door between the page and the lit world behind it. The page hands over real blocks, says which page is
- * open and passes on that page's numbers; the world is loaded after first paint, draws only what it is handed, and
- * is never asked anything back.
+ * The one door between the page and the scenes. A page lends the stage an empty box and plain numbers; the stage
+ * draws into that box and is never asked anything back.
  */
-export function mountHero(host: HTMLElement, after: (task: () => void) => void): Hero {
-    let latest: HeroFrame | null = null;
-    let scene: SceneId = 'home';
-    let data: BackdropData | null = null;
-    let running: Hero | null = null;
-
-    after(() => {
-        import('./stage.ts')
-            .then(({ runHero }) => {
-                running = runHero(host);
-                running.open(scene);
-                running.backdrop(data);
-                if (latest) running.show({ ...latest, effect: 'replay' });
-            })
-            .catch(() => {
-                host.dataset.hero = 'still';
-            });
+export function attach<K extends MachineId>(
+    slot: HTMLElement,
+    id: K,
+    input: MachineInputs[K],
+    options: ViewOptions = {},
+): View<K> {
+    let latest: unknown = input;
+    let handle: Handle | null = null;
+    let gone = false;
+    loadStage().then((running) => {
+        if (gone || !running) return;
+        handle = running.add(slot, id, latest, options);
     });
-
     return {
-        show(frame) {
-            latest = frame;
-            running?.show(frame);
+        set(next) {
+            latest = next;
+            handle?.set(next);
         },
-        open(next) {
-            scene = next;
-            running?.open(next);
-        },
-        backdrop(next) {
-            data = next;
-            running?.backdrop(next);
+        detach() {
+            gone = true;
+            handle?.remove();
+            handle = null;
         },
     };
 }

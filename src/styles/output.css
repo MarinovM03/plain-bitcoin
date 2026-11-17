@@ -93,6 +93,10 @@
     cursor: pointer;
 }
 
+.button[hidden] {
+    display: none;
+}
+
 .button--primary {
     border-color: var(--btc);
     background: var(--btc);

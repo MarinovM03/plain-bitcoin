@@ -201,6 +201,54 @@ function drawStamp(context: Context, box: Box, signature: Extract<Signature, { k
     );
 }
 
+/** The well from the miner's page: one ring per zero bit, the best hash in white and the target in orange. */
+function drawWell(context: Context, box: Box, signature: Extract<Signature, { kind: 'well' }>): void {
+    const floor = Math.max(signature.needed, signature.best) + 2;
+    const cx = box.x + box.w / 2;
+    const top = box.y + 14;
+    const depth = box.h - 40;
+    for (let level = 0; level <= floor; level += 1) {
+        const t = level / floor;
+        const y = top + (1 - (1 - t) ** 1.6) * depth;
+        const rx = (box.w / 2) * (1 - t * 0.78);
+        const ry = rx * 0.16;
+        const target = level === signature.needed;
+        const best = signature.best >= 0 && level === signature.best;
+        if (!target && !best && level % 4 !== 0) continue;
+        context.strokeStyle = target ? TOKENS.btc : best ? TOKENS.ink : TOKENS.edge;
+        context.lineWidth = target || best ? 3 : 1.5;
+        context.beginPath();
+        context.ellipse(cx, y, rx, ry, 0, 0, Math.PI * 2);
+        context.stroke();
+        if (target) small(context, `target · ${signature.needed} zero bits`, cx + rx + 12, y + 5, TOKENS.btc);
+        if (best) small(context, `best · ${signature.best}`, cx - rx - 12, y + 5, TOKENS.ink, 'right');
+    }
+}
+
+/** The waiting line from the transaction page: one bar per projected block, the followed one in orange. */
+function drawQueue(context: Context, box: Box, signature: Extract<Signature, { kind: 'queue' }>): void {
+    const floors = signature.floors.slice(0, 8);
+    if (floors.length === 0) return;
+    const top = Math.log(1 + Math.max(2, ...floors));
+    const gap = 14;
+    const width = (box.w - gap * (floors.length - 1)) / floors.length;
+    const base = box.y + box.h - 34;
+    floors.forEach((floor, index) => {
+        const h = Math.max(6, (Math.log(1 + floor) / top) * (box.h - 70));
+        const x = box.x + index * (width + gap);
+        context.fillStyle = signature.slab === index + 1 ? TOKENS.btc : TOKENS.edge;
+        context.fillRect(x, base - h, width, h);
+        small(context, `+${index + 1}`, x + width / 2, base + 24, TOKENS.inkDim, 'center');
+    });
+    const label =
+        signature.slab === 0
+            ? 'confirmed'
+            : signature.slab === null
+              ? 'waiting behind these blocks'
+              : `in block +${signature.slab}`;
+    small(context, `next blocks by lowest fee · mine: ${label}`, box.x, box.y + 14, TOKENS.btc);
+}
+
 function drawSignature(context: Context, box: Box, signature: Signature): void {
     context.save();
     context.beginPath();
@@ -221,6 +269,14 @@ function drawSignature(context: Context, box: Box, signature: Signature): void {
             break;
         case 'stamp':
             drawStamp(context, box, signature);
+            break;
+        case 'well':
+            drawWell(context, box, signature);
+            break;
+        case 'queue':
+            drawQueue(context, box, signature);
+            break;
+        case 'blank':
             break;
     }
     context.restore();

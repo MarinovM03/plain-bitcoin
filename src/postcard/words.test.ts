@@ -15,6 +15,7 @@ import {
     homePostcard,
     leftPostcard,
     maskAddress,
+    minerPostcard,
     postcardFileName,
     powerText,
     priceLabel,
@@ -123,7 +124,7 @@ describe('leftPostcard', () => {
     it('gives home its own postcard: the block height as the number, and the 21M issued share', () => {
         const card = homePostcard({ supply: supplyAt(973_854), api: 'mempool.space', checkedAt: 0 });
         expect(card.number).toBe('973,854');
-        expect(card.line).toBe('Bitcoin, block by block. 20,105,796 of 21,000,000 BTC issued.');
+        expect(card.line).toBe('20,105,796 of 21,000,000 BTC issued so far.');
         expect(card.route).toBe('');
     });
 });
@@ -132,10 +133,10 @@ describe('composeText', () => {
     it('pairs the line with the gauge link and the handle, never over 200 characters', () => {
         const card = leftPostcard({ supply: supplyAt(973_854), api: 'mempool.space', checkedAt: 0 });
         const text = composeText(card, 'plainbitcoin.org');
-        expect(text).toBe('894,203 BTC are still to be mined. plainbitcoin.org/#/left via @PlainBTC');
+        expect(text).toBe('894,203 BTC are still to be mined. plainbitcoin.org/left via @PlainBTC');
         const long = composeText({ line: `${'word '.repeat(80)}end.`, route: 'dca' }, 'plainbitcoin.org');
         expect(long.length).toBeLessThanOrEqual(COMPOSE_LIMIT);
-        expect(long).toMatch(/… {1,2}plainbitcoin\.org\/#\/dca via @PlainBTC$/);
+        expect(long).toMatch(/… {1,2}plainbitcoin\.org\/dca via @PlainBTC$/);
     });
 
     it('names the file plain-bitcoin-<tool>-<yyyy-mm-dd>.png, dated in UTC', () => {
@@ -295,5 +296,30 @@ describe('addressText', () => {
     it('masks to the first and last four', () => {
         expect(maskAddress('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4')).toBe('bc1q…f3t4');
         expect(maskAddress('short')).toBe('short');
+    });
+});
+
+describe('minerPostcard', () => {
+    it('prints the best hash as the number, with the tries and the target in the line', () => {
+        const card = minerPostcard({
+            height: 976_313,
+            tries: 4_065_057,
+            best: 26,
+            needed: 78,
+            readAt: Date.UTC(2026, 10, 17, 19, 35),
+            savedOn: '17 Nov',
+        });
+        expect(card.route).toBe('miner');
+        expect(card.number).toBe('26 zero bits');
+        expect(card.line).toBe(
+            'I hashed block 976,313 4,065,057 times on my own device. Best: 26 zero bits. A real block needs 78.',
+        );
+        expect(card.source).toContain('mempool.space');
+        expect(card.signature).toEqual({ kind: 'well', best: 26, needed: 78 });
+    });
+
+    it('says when the header was the saved one', () => {
+        const card = minerPostcard({ height: 1, tries: 1, best: 0, needed: 78, readAt: null, savedOn: '17 Nov' });
+        expect(card.source).toContain('saved 17 Nov');
     });
 });

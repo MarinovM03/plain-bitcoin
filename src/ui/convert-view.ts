@@ -1,10 +1,11 @@
 import type { FiatUnit, Unit } from '../model/convert.ts';
 import type { Currency } from '../util/format.ts';
-import { CONVERT, FIELDS } from './copy.ts';
+import { CONVERT, FIELDS, TOOL_PAGE, TOOLS } from './copy.ts';
 import { amountField, segmentedControl } from './fields.ts';
 import { html, type SafeHtml } from './html.ts';
+import { resultBlock, shareSection, sourceLine } from './output.ts';
 
-/** The three boxes on the page. The money box holds whichever currency is picked. */
+/** The three amounts on the page. The money one holds whichever currency is picked. */
 export const CONVERT_SLOTS = ['sats', 'btc', 'fiat'] as const;
 
 export type ConvertSlot = (typeof CONVERT_SLOTS)[number];
@@ -19,26 +20,12 @@ const CURRENCY_LABEL: Record<FiatUnit, string> = { usd: FIELDS.dollars, eur: FIE
 
 export const CONVERT_DECIMALS: Record<Unit, number> = { sats: 0, btc: 8, usd: 2, eur: 2, gbp: 2 };
 
-export type ConvertPreset = keyof typeof CONVERT.presets;
+const START_SATS = '100,000';
 
-export const CONVERT_PRESETS: Record<ConvertPreset, { unit: 'sats' | 'btc'; value: string }> = {
-    sat: { unit: 'sats', value: '1' },
-    thousand: { unit: 'sats', value: '1,000' },
-    hundredThousand: { unit: 'sats', value: '100,000' },
-    cent: { unit: 'btc', value: '0.01' },
-    coin: { unit: 'btc', value: '1' },
-    pizza: { unit: 'btc', value: '10,000' },
-};
-
-export const CONVERT_DEFAULT: ConvertPreset = 'hundredThousand';
-
-function presetButton(preset: ConvertPreset): SafeHtml {
-    const hint = CONVERT.presetHints[preset];
-    return html`<button class="chip${hint ? ' chip--hint' : ''}" type="button" data-preset="${preset}" aria-pressed="${String(preset === CONVERT_DEFAULT)}">${CONVERT.presets[preset]}${hint ? html`<span class="chip__hint">${hint}</span>` : ''}</button>`;
-}
+/** The scrubber runs from 1 sat to 1 BTC in this many steps, each the same share bigger than the last. */
+export const SCRUB_STEPS = 800;
 
 function slotField(slot: ConvertSlot): SafeHtml {
-    const start = CONVERT_PRESETS[CONVERT_DEFAULT];
     const unit: Unit = slot === 'fiat' ? CONVERT_CURRENCY_DEFAULT : slot;
     return amountField({
         id: `convert-${slot}`,
@@ -46,34 +33,42 @@ function slotField(slot: ConvertSlot): SafeHtml {
         decimals: CONVERT_DECIMALS[unit],
         placeholder: '0',
         inputmode: slot === 'sats' ? 'numeric' : 'decimal',
-        ...(slot === start.unit ? { value: start.value } : {}),
+        ...(slot === 'sats' ? { value: START_SATS } : {}),
     });
 }
 
-export function renderConvertInputs(): SafeHtml {
-    return html`<div class="convert-fields">
-    ${slotField('sats')}${slotField('btc')}
-    <div class="convert-fields__money">
-        ${slotField('fiat')}
+/**
+ * The converter as one column of type standing on the world: the amount you type, the answer, the same amount in
+ * the other units, the money switch, and a line to drag from 1 sat to 1 BTC.
+ */
+export function renderConvert(head: SafeHtml): SafeHtml {
+    return html`<article class="tool tool--convert play">
+    <div class="play__top veil rise">
+        ${head}
+        <form class="play__amount" aria-label="${TOOL_PAGE.inputsLabel}" novalidate>${slotField('sats')}</form>
+        ${resultBlock({ id: 'tool-result', label: TOOL_PAGE.resultLabel, empty: TOOL_PAGE.resultEmpty })}
+    </div>
+    <div class="machine__stage play__stage" data-machine="sats" aria-hidden="true"></div>
+    <form class="play__controls rise" aria-label="${CONVERT.othersLabel}" novalidate>
+        <div class="play__others">${slotField('btc')}${slotField('fiat')}</div>
         ${segmentedControl({
             name: 'convert-currency',
             legend: CONVERT.currencyLabel,
             choices: CONVERT_CURRENCIES.map((unit) => ({ value: unit, label: CURRENCY_LABEL[unit] })),
             selected: CONVERT_CURRENCY_DEFAULT,
         })}
+        <p id="convert-note" class="note-line" role="status" hidden></p>
+        <div class="scrub">
+            <label class="field__label" for="convert-scrub">${CONVERT.scrub}</label>
+            <input id="convert-scrub" class="scrub__range" type="range" min="0" max="${SCRUB_STEPS}" step="1" value="0" />
+            <p class="scrub__ends" aria-hidden="true"><span>${CONVERT.scrubLow}</span><span>${CONVERT.scrubHigh}</span></p>
+        </div>
+        <p id="convert-point" class="play__point">${CONVERT.pointEmpty}</p>
+    </form>
+    <div class="play__below rise">
+        ${shareSection()}
+        <p class="convert-ref">${CONVERT.unitsLine}<span class="convert-ref__sep" aria-hidden="true"> · </span><span id="convert-ref-sat"></span></p>
+        ${sourceLine(TOOLS.convert.privacy)}
     </div>
-</div>
-<p id="convert-note" class="note-line" role="status" hidden></p>`;
-}
-
-export function renderConvertMore(): SafeHtml {
-    const presets = (Object.keys(CONVERT_PRESETS) as ConvertPreset[]).map(presetButton);
-    return html`<fieldset class="presets">
-    <legend class="visually-hidden">${CONVERT.presetsLabel}</legend>
-    <div class="presets__list">${presets}</div>
-</fieldset>`;
-}
-
-export function renderConvertDetail(): SafeHtml {
-    return html`<p class="convert-ref">${CONVERT.unitsLine}<span class="convert-ref__sep" aria-hidden="true"> · </span><span id="convert-ref-sat"></span></p>`;
+</article>`;
 }

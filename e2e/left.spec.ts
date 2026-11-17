@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
-import { LEFT_PAGE, TOOLS } from '../src/ui/copy.ts';
+import { LEFT_PAGE } from '../src/ui/copy.ts';
 import { formatBtc, formatPpm, formatWhole } from '../src/util/format.ts';
 import { realProblems } from './console.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest, leftFigure } from './height-api.ts';
@@ -35,9 +35,9 @@ test('home shows the live amount left and the left page counts down from the liv
     await page.goto('/');
 
     const whole = formatWhole(Math.floor(SUPPLY.left / SATS_PER_BTC));
-    await expect(page.locator('[data-fact="left"]')).toHaveText(whole);
-    await page.locator('.tool-row', { hasText: TOOLS.left.name }).click();
-    await expect(page).toHaveURL(/#\/left$/);
+    await expect(page.locator('[data-fact="left"]')).toHaveAttribute('data-roll', whole);
+    await page.locator('.tile__link[href="/left"]').click();
+    await expect(page).toHaveURL(/\/left$/);
 
     await expect(page.locator('#left-figure')).toHaveText(leftFigure());
     await expect(page.locator('#left-note')).toHaveText(
@@ -54,7 +54,7 @@ test('home shows the live amount left and the left page counts down from the liv
 test('the numbers panel shows every figure for the live height', async ({ page }) => {
     await fakeHeightApi(page);
     const { problems } = watch(page);
-    await page.goto('/#/left');
+    await page.goto('/left');
 
     const panel = page.locator('#numbers-panel');
     await expect(panel.locator('#left-height')).toHaveText(BLOCK);
@@ -72,9 +72,7 @@ test('the numbers panel shows every figure for the live height', async ({ page }
     await expect(panel.locator('#left-max')).toHaveText('20,999,999.9769 BTC');
     await expect(page.locator('#tool-source')).toContainText('mempool.space, checked');
     await expect(page.getByText(LEFT_PAGE.honesty)).toBeVisible();
-    await expect(page.locator('#picture-caption')).toHaveText(
-        /^Left: all 21 million, a band per halving era\. Right: the last 2 million, ten times larger\./,
-    );
+    await expect(page.locator('[data-machine="wall"]')).toHaveAttribute('aria-hidden', 'true');
     expect(realProblems(problems)).toEqual([]);
 });
 
@@ -84,7 +82,7 @@ test('offline, it estimates the height from the anchor and says so', async ({ pa
         Object.defineProperty(Navigator.prototype, 'onLine', { get: () => false });
     });
     const { problems } = watch(page);
-    await page.goto('/#/left');
+    await page.goto('/left');
 
     await expect(page.locator('#left-note')).toHaveText(/^Estimated, offline: block [\d,]+, assuming a block/);
     await expect(page.locator('#tool-source')).toContainText(`estimated offline from block ${BLOCK}`);
@@ -102,7 +100,7 @@ test('a new block is picked up on the next poll and announced once', async ({ pa
     test.setTimeout(90_000);
     const chain = await fakeHeightApi(page);
     await page.clock.install();
-    await page.goto('/#/left');
+    await page.goto('/left');
     await page.clock.runFor(500);
     await expect(page.locator('#left-figure')).toHaveText(leftFigure());
 
@@ -123,15 +121,15 @@ test('no route loads three.js, and only the converter asks for price and height'
     const chain = await fakeHeightApi(page);
     const prices = await fakePriceApi(page);
     const { scripts, external, problems } = watch(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await expect(page.locator('#tool-result')).toHaveText(/^100,000 sats = \$76\.78$/);
     await page.waitForTimeout(2500);
     const converter = [...external];
-    await page.goto('/#/dca');
+    await page.goto('/dca');
     await expect(page.locator('#dca-detail')).toBeVisible();
-    await page.goto('/#/power');
+    await page.goto('/power');
     await expect(page.locator('#power-detail')).toBeVisible();
-    await page.goto('/#/address');
+    await page.goto('/address');
     await page.getByLabel('Bitcoin address').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
     await expect(page.locator('#address-parts')).toBeVisible();
     await page.waitForTimeout(1500);

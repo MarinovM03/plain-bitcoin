@@ -14,7 +14,7 @@ async function openPower(page: Page) {
         if (message.type() === 'error' || message.type() === 'warning') problems.push(message.text());
     });
     page.on('pageerror', (error) => problems.push(error.message));
-    await page.goto('/#/power');
+    await page.goto('/power');
     await expect(page.locator('#power-detail')).toBeVisible();
     return { requests, problems };
 }
@@ -100,7 +100,7 @@ test('Share in the print tray hands the PNG and the compose text to Web Share wh
     expect(await shared.jsonValue()).toEqual({
         name: expect.stringMatching(postcardName('power')),
         type: 'image/png',
-        text: expect.stringMatching(/^£1,000 in January 2015 is worth .+ plainbitcoin\.org\/#\/power via @PlainBTC$/),
+        text: expect.stringMatching(/^£1,000 in January 2015 is worth .+ plainbitcoin\.org\/power via @PlainBTC$/),
     });
 });
 

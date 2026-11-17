@@ -1,6 +1,5 @@
 import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.ts';
-import { mountPicture } from '../../gauges/mount.ts';
-import { backdrop } from '../../hero/bus.ts';
+import { attach } from '../../hero/bus.ts';
 import {
     convert,
     type FiatUnit,
@@ -8,6 +7,7 @@ import {
     parseToSats,
     pasteFits,
     SATS_PER_BTC,
+    satsText,
     type Unit,
 } from '../../model/convert.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
@@ -16,29 +16,28 @@ import { type ConvertText, convertText, priceLabel } from '../../postcard/words.
 import {
     CONVERT_CURRENCIES,
     CONVERT_CURRENCY_DEFAULT,
-    CONVERT_PRESETS,
     CONVERT_SLOTS,
-    type ConvertPreset,
     type ConvertSlot,
     CURRENCY_CODE,
     CONVERT_DECIMALS as DECIMALS,
+    SCRUB_STEPS,
 } from '../../ui/convert-view.ts';
-import { CONVERT, PICTURE, TOOL_PAGE, WORLD } from '../../ui/copy.ts';
+import { CONVERT, TOOL_PAGE } from '../../ui/copy.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
+import { rollText } from '../../ui/roll.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import {
     formatFiatPrecise,
-    formatMoney,
     formatSats,
     formatShortDay,
     formatUtcClock,
     formatUtcStamp,
     isoDayMs,
 } from '../../util/format.ts';
-import { satsScale } from '../../util/sats-scale.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
+const SCRUB_DECADES = Math.log10(SATS_PER_BTC);
 
 const FAILURES: Record<Exclude<ParseFailure, 'empty'>, string> = {
     invalid: CONVERT.invalid,
@@ -47,13 +46,25 @@ const FAILURES: Record<Exclude<ParseFailure, 'empty'>, string> = {
     'no-price': CONVERT.noEuro,
 };
 
+/** A place on the scrubber as sats: each step is the same share bigger, rounded to two leading digits. */
+function scrubToSats(step: number): number {
+    const raw = 10 ** ((step / SCRUB_STEPS) * SCRUB_DECADES);
+    return Math.min(SATS_PER_BTC, Math.max(1, Number(raw.toPrecision(2))));
+}
+
+function satsToScrub(sats: number): number {
+    if (!(sats > 1)) return 0;
+    return Math.min(SCRUB_STEPS, Math.round((Math.log10(sats) / SCRUB_DECADES) * SCRUB_STEPS));
+}
+
 export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const inputs = Object.fromEntries(
         CONVERT_SLOTS.map((slot) => [slot, find<HTMLInputElement>(root, `#convert-${slot}`)]),
     ) as Record<ConvertSlot, HTMLInputElement>;
     const fiatLabel = find(root, 'label[for="convert-fiat"]');
     const currencyChoices = [...root.querySelectorAll<HTMLInputElement>('input[name="convert-currency"]')];
-    const presetButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-preset]')];
+    const scrub = find<HTMLInputElement>(root, '#convert-scrub');
+    const point = find(root, '#convert-point');
     const refSat = find(root, '#convert-ref-sat');
     const note = find(root, '#convert-note');
     const label = find(root, '#tool-result-label');
@@ -62,9 +73,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const detail = find(root, '#tool-result-detail');
     const status = find(root, '#tool-result-status');
     const source = find(root, '#tool-source');
-    const worldLine = find(root, '#world-line');
 
-    const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
     const prices = priceFeed();
     const owner = {};
@@ -78,6 +87,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     let text: ConvertText | null = null;
     let settleTimer = 0;
     let drawnSats = -1;
+    const abacus = attach(find(root, '[data-machine="sats"]'), 'sats', { sats: 0 }, { page: true });
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -97,8 +107,9 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     function showWorld(sats: number): void {
         if (sats === drawnSats) return;
         drawnSats = sats;
-        backdrop({ id: 'convert', sats });
-        worldLine.textContent = sats > 0 ? WORLD.convert(formatSats(satsScale(sats).perDot)) : WORLD.convertEmpty;
+        abacus.set({ sats });
+        scrub.style.setProperty('--at', String(satsToScrub(sats) / SCRUB_STEPS));
+        point.textContent = sats > 0 ? CONVERT.abacus : CONVERT.pointEmpty;
     }
 
     function showNote(message: string | null): void {
@@ -132,38 +143,17 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         empty.className = 'result__empty';
         empty.textContent = message;
         figure.replaceChildren(empty);
-        big.textContent = EMPTY_FIGURE;
+        rollText(big, EMPTY_FIGURE);
         detail.textContent = '';
-        picture.set(pictureData(0), PICTURE.convertEmpty);
         showWorld(0);
         share.setEnabled(false);
         settle(message);
-    }
-
-    /** The ladder is priced in the picked money; with no euro price yet it shows dollars and says so. */
-    function pictureData(sats: number): {
-        id: 'convert';
-        sats: number;
-        price: number;
-        currency: 'USD' | 'EUR' | 'GBP';
-    } {
-        const shown: FiatUnit = quote.value[currency] === null ? 'usd' : currency;
-        return { id: 'convert', sats, price: quote.value[shown] ?? 0, currency: CURRENCY_CODE[shown] };
-    }
-
-    function markPresets(): void {
-        for (const button of presetButtons) {
-            const preset = CONVERT_PRESETS[button.dataset.preset as ConvertPreset];
-            const pressed = preset.unit === slot && preset.value === inputs[slot].value;
-            button.setAttribute('aria-pressed', String(pressed));
-        }
     }
 
     function update(): void {
         const unit = unitOf(slot);
         const parsed = parseToSats(unit, inputs[slot].value, quote.value);
         const noEuro = currency === 'eur' && quote.value.eur === null;
-        markPresets();
         label.textContent = `${TOOL_PAGE.resultLabel} · ${
             quote.source === 'last close' ? priceLabel(quote) : CONVERT.labelLive(formatUtcClock(quote.asOf))
         }`;
@@ -179,11 +169,11 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         for (const other of CONVERT_SLOTS) if (other !== slot) inputs[other].value = conversion.fields[unitOf(other)];
         text = convertText(unit, conversion, quote, currency);
         figure.textContent = text.headline;
-        big.textContent = text.figure;
+        rollText(big, text.figure);
         detail.textContent = text.detail;
-        const drawn = pictureData(parsed.value);
+        if (document.activeElement !== scrub) scrub.value = String(satsToScrub(parsed.value));
+        scrub.setAttribute('aria-valuetext', formatSats(parsed.value));
         showWorld(parsed.value);
-        picture.set(drawn, PICTURE.convert(`1 BTC = ${formatMoney(drawn.price, drawn.currency)}`));
         share.setEnabled(true);
         settle(`${text.headline}. ${text.detail}`);
     }
@@ -204,14 +194,11 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         });
         input.addEventListener('beforeinput', (event) => onPaste(event, current));
     }
-    for (const button of presetButtons) {
-        button.addEventListener('click', () => {
-            const preset = CONVERT_PRESETS[button.dataset.preset as ConvertPreset];
-            slot = preset.unit;
-            inputs[slot].value = preset.value;
-            update();
-        });
-    }
+    scrub.addEventListener('input', () => {
+        slot = 'sats';
+        inputs.sats.value = satsText(scrubToSats(Number(scrub.value)));
+        update();
+    });
     for (const choice of currencyChoices) {
         choice.addEventListener('change', () => {
             if (!choice.checked) return;
@@ -249,7 +236,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         document.removeEventListener('visibilitychange', sync);
         prices.setActive(owner, false);
         window.clearTimeout(settleTimer);
+        abacus.detach();
         share.dispose();
-        picture.dispose();
     };
 }

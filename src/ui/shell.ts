@@ -10,29 +10,16 @@ function followLink(className: string, text: string): SafeHtml {
 }
 
 /**
- * The bar: the name, one Tools menu that lists every tool by its full plain name, @PlainBTC and the live facts.
- * The line under it is the newest block's hash, drawn as marks; it stays a plain hairline until a hash is known.
+ * The bar: the name, a way back to every machine, @PlainBTC and the live facts. The line under it is the newest
+ * block's hash, drawn as marks; it stays a plain hairline until a hash is known.
  */
 export function renderHeader(): SafeHtml {
-    const links = TOOL_IDS.map(
-        (id) => html`<li>
-            <a class="menu__link" href="${hrefFor(id)}" data-nav="${id}">
-                <span class="menu__name">${TOOLS[id].name}</span>
-                <span class="menu__description">${TOOLS[id].description}</span>
-            </a>
-        </li>`,
-    );
     return html`<header class="topbar">
     <div class="topbar__inner">
-        <a class="wordmark" href="${hrefFor('home')}" data-nav="home">${SITE_NAME}</a>
-        <details id="menu" class="menu">
-            <summary class="menu__toggle">${NAV.menu}</summary>
-            <nav class="menu__panel" aria-label="${NAV.label}">
-                <ul class="menu__list">${links}</ul>
-            </nav>
-        </details>
-        ${followLink('topbar__follow', FOOTER.handle)}
+        <a class="wordmark" href="${hrefFor('home')}" data-nav="home"><span class="wordmark__mark" aria-hidden="true"></span>${SITE_NAME}</a>
+        <a class="topbar__all" href="${hrefFor('home')}">${NAV.all}</a>
         ${renderStatus()}
+        ${followLink('topbar__follow', FOOTER.handle)}
     </div>
     <svg id="barcode" class="barcode" viewBox="0 0 256 1" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d=""/></svg>
 </header>`;
@@ -53,11 +40,11 @@ export function renderFooter(): SafeHtml {
             <p class="footer__promise">${HOME.promise}</p>
             <p class="footer__privacy">${FOOTER.privacy}</p>
             <p class="footer__motion">${FOOTER.motion} ${FOOTER.barcode}</p>
+            ${followLink('footer__follow', FOOTER.follow)}
         </div>
         <nav class="footer__tools" aria-label="${FOOTER.toolsLabel}">
             <ul class="footer__list">${links}</ul>
         </nav>
-        ${followLink('footer__follow', FOOTER.follow)}
     </div>
 </footer>`;
 }
@@ -71,26 +58,6 @@ export function markCurrent(route: string): void {
         if (link.dataset.nav === route) link.setAttribute('aria-current', 'page');
         else link.removeAttribute('aria-current');
     }
-}
-
-/** The Tools menu closes when a tool is chosen, on Escape (focus goes back to the button) and on a press outside. */
-export function bindMenu(menu: HTMLDetailsElement): void {
-    const toggle = menu.querySelector<HTMLElement>('summary');
-    const close = () => {
-        menu.open = false;
-    };
-    menu.addEventListener('click', (event) => {
-        if ((event.target as Element | null)?.closest('a')) close();
-    });
-    menu.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape' || !menu.open) return;
-        close();
-        toggle?.focus();
-    });
-    document.addEventListener('pointerdown', (event) => {
-        if (menu.open && !menu.contains(event.target as Node)) close();
-    });
-    window.addEventListener('hashchange', close);
 }
 
 export function trackChrome(topbar: HTMLElement): void {

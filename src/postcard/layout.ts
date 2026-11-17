@@ -46,7 +46,9 @@ export interface PostcardLayout {
 }
 
 export function font(face: Face, size: number): string {
-    return face === 'display' ? `600 ${size}px "Fraunces", Georgia, serif` : `500 ${size}px "IBM Plex Mono", monospace`;
+    return face === 'display'
+        ? `700 ${size}px "Bricolage Grotesque", system-ui, sans-serif`
+        : `500 ${size}px "IBM Plex Mono", monospace`;
 }
 
 /**

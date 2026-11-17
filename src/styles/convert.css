@@ -1,39 +1,298 @@
-.convert-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 0.5rem;
+/*
+ * The converter is a toy, not a form: one column of type on the world. Nothing in it has a panel or a border; a
+ * field is known by its caret and by the line that grows under it when it has focus.
+ */
+.play {
+    row-gap: 1.25rem;
 }
 
-.convert-fields__money {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-    gap: 0.5rem;
-    align-items: end;
+.play > :not(.play__stage) {
+    grid-column: 1;
+    max-width: 35rem;
 }
 
-/* Side by side, the money switch does not fit a 360px phone once the system font runs wide. */
-@media (max-width: 24rem) {
-    .convert-fields__money {
-        grid-template-columns: minmax(0, 1fr);
+@media (min-width: 64rem), (orientation: landscape) and (max-height: 32rem) {
+    .play > .play__top {
+        grid-row: 1;
+        padding-top: clamp(1rem, 4vh, 3rem);
+    }
+
+    .play > .play__controls {
+        grid-row: 2;
+    }
+
+    .play > .play__below {
+        grid-row: 3;
     }
 }
 
-.g-rung--yours {
-    fill: var(--btc);
+.play__top,
+.play__controls,
+.play__below {
+    display: grid;
+    min-width: 0;
 }
 
-.g-rung-rule {
-    stroke: var(--edge);
-    stroke-width: 1;
-    shape-rendering: crispEdges;
+.play__top {
+    gap: 0.625rem;
 }
 
-.picture .gauge-svg .g-rung-text {
-    font-size: 14px;
+.play__controls {
+    gap: 0.75rem;
+}
+
+.play__below {
+    gap: 1rem;
+}
+
+.play .field__control {
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+}
+
+.play .field__control:focus-within {
+    outline: none;
+}
+
+.play .field__control::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--ink-dim), transparent);
+    opacity: 0.55;
+    scale: 0.4 1;
+    transform-origin: left;
+    transition:
+        scale calc(var(--duration) * 2) var(--ease),
+        opacity calc(var(--duration) * 2) var(--ease);
+}
+
+.play .field__control:focus-within::after {
+    background: linear-gradient(to right, var(--btc), transparent);
+    opacity: 1;
+    scale: 1 1;
+}
+
+.play .field__input {
+    height: auto;
+    padding: 0 0 0.125rem;
+    border-radius: 0;
+    caret-color: var(--btc);
+    text-shadow: inherit;
+}
+
+/* The amount: the number first, its unit after it in words, as it would be said. */
+.play__amount .field {
+    display: flex;
+    flex-flow: row-reverse wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0 0.75rem;
+}
+
+.play__amount .field__label {
+    float: none;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem);
+    letter-spacing: -0.02em;
+}
+
+.play__amount .field__control {
+    width: 100%;
+    max-width: 100%;
+}
+
+.play__amount .field__input {
+    font-size: clamp(2.5rem, 1.6rem + 4.2vw, 4.25rem);
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+@supports (field-sizing: content) {
+    .play__amount .field__control {
+        width: auto;
+    }
+
+    .play__amount .field__input {
+        field-sizing: content;
+        width: auto;
+        min-width: 1.5ch;
+        max-width: 100%;
+    }
+}
+
+.play .result__figure {
+    font-size: clamp(3rem, 1.7rem + 6.2vw, 6.25rem);
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.play .result__sentence {
+    color: var(--ink-warm);
+    font-size: var(--step-small);
+}
+
+.play__others {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 1.5rem;
+}
+
+.play__others .field__input {
+    font-size: 1.25rem;
+    line-height: 1.6;
+}
+
+/* The money switch is three words; the picked one is lit and underlined. */
+.play .segmented__track {
+    justify-content: flex-start;
+    gap: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+.play .segmented__option {
+    flex: none;
+}
+
+.play .segmented__text {
+    position: relative;
+    min-height: var(--tap);
+    padding-inline: 0;
+    font-size: 1rem;
+}
+
+.play .segmented__text::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0.5rem;
+    height: 2px;
+    background: var(--btc);
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale calc(var(--duration) * 2) var(--ease);
+}
+
+.play .segmented__input:checked + .segmented__text {
+    background: none;
+    color: var(--ink);
+}
+
+.play .segmented__input:checked + .segmented__text::after {
+    scale: 1 1;
+}
+
+/* The scrubber: a bare line with a mark at every tenfold step, and the orange point you drag along it. */
+.scrub {
+    display: grid;
+}
+
+.scrub__range {
+    width: 100%;
+    height: var(--tap);
+    margin: 0;
+    background:
+        repeating-linear-gradient(to right, var(--ink-dim) 0 1px, transparent 1px 12.5%) 0.75rem 50% /
+        calc(100% - 1.5rem + 1px) 0.5rem no-repeat;
+    cursor: grab;
+    touch-action: pan-y;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.scrub__range:active {
+    cursor: grabbing;
+}
+
+.scrub__range::-webkit-slider-runnable-track {
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        var(--btc) calc(var(--at, 0) * 100%),
+        color-mix(in srgb, var(--ink-dim) 55%, transparent) 0
+    );
+}
+
+.scrub__range::-moz-range-track {
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        var(--btc) calc(var(--at, 0) * 100%),
+        color-mix(in srgb, var(--ink-dim) 55%, transparent) 0
+    );
+}
+
+.scrub__range::-webkit-slider-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: calc(1px - 0.75rem);
+    border: 0;
+    border-radius: 50%;
+    background: var(--btc);
+    box-shadow:
+        0 0 0 0.375rem color-mix(in srgb, var(--btc) 22%, transparent),
+        0 0 1.5rem var(--btc);
+    transition: scale var(--duration) var(--ease);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.scrub__range::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--btc);
+    box-shadow:
+        0 0 0 0.375rem color-mix(in srgb, var(--btc) 22%, transparent),
+        0 0 1.5rem var(--btc);
+}
+
+.scrub__range:active::-webkit-slider-thumb {
+    scale: 1.25;
+}
+
+.scrub__range:focus-visible {
+    outline: none;
+}
+
+.scrub__range:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+}
+
+.scrub__range:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+}
+
+.scrub__ends {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-dim);
     font-family: var(--font-mono);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
+    font-size: var(--step-tiny);
+}
+
+.play__point {
+    color: var(--ink-warm);
+    font-size: var(--step-small);
+    line-height: 1.4;
+}
+
+/* With no lit world there is no stack, so the line that names a point is not shown. */
+:root:not([data-world="scene"], [data-world="lite"]) .play__point {
+    display: none;
+}
+
+.play .note-line {
+    padding-left: 0;
+    border-left: 0;
+    color: var(--ink);
 }
 
 .convert-ref {
@@ -41,4 +300,53 @@
     font-family: var(--font-mono);
     font-size: var(--step-small);
     font-variant-numeric: tabular-nums;
+}
+
+/* Sharing on the two pages without boxes: plain words to press, the postcard first and in orange. */
+:is(.play, .home) .share-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+    max-width: none;
+}
+
+:is(.play, .home) .button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 1rem;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentcolor 40%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
+    text-shadow: inherit;
+}
+
+:is(.play, .home) .button--primary {
+    color: var(--btc);
+}
+
+:is(.play, .home) .button:disabled,
+:is(.play, .home) .button[aria-disabled="true"] {
+    color: var(--ink-dim);
+    text-decoration: none;
+}
+
+@media (min-width: 64rem) {
+    .play {
+        gap: 1.75rem;
+    }
+
+    .play .veil::before,
+    .play__top.veil::before {
+        inset-inline-end: -8rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .play .field__control::after,
+    .play .segmented__text::after,
+    .scrub__range::-webkit-slider-thumb {
+        transition: none;
+    }
 }

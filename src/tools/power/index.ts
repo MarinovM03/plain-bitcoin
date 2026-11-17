@@ -1,15 +1,7 @@
-import { keptByYear } from '../../backdrop/power.ts';
 import { POWER_SERIES, powerData } from '../../data/power.ts';
 import { mountPicture } from '../../gauges/mount.ts';
-import { backdrop } from '../../hero/bus.ts';
-import {
-    latestMonth,
-    type PowerOutcome,
-    type PowerResult,
-    purchasingPower,
-    sortedMonths,
-    worstStart,
-} from '../../model/power.ts';
+import { attach } from '../../hero/bus.ts';
+import { type PowerOutcome, type PowerResult, purchasingPower, sortedMonths, worstStart } from '../../model/power.ts';
 import { barScale, sparkline } from '../../model/scale.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
@@ -58,7 +50,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const worstMonths = new Map<Fiat, Month | null>();
     let text: PowerText | null = null;
     let settleTimer = 0;
-    let drawnWorld = '';
+    const note = attach(find(root, '[data-machine="melt"]'), 'melt', { kept: 1 }, { page: true });
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -101,6 +93,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function showMessage(message: string): void {
+        note.set({ kept: 1 });
         text = null;
         label.textContent = TOOL_PAGE.resultLabel;
         const empty = document.createElement('span');
@@ -164,24 +157,17 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         return POWER.empty;
     }
 
-    function showWorld(start: string, fiat: Fiat): void {
-        if (fiat + start === drawnWorld) return;
-        drawnWorld = fiat + start;
-        const { cpi } = powerData(fiat);
-        backdrop({ id: 'power', kept: keptByYear(cpi, start, latestMonth(cpi)) });
-    }
-
     function update(): void {
         const fiat = currency();
         const start = readMonthField(monthFieldset) ?? POWER_DEFAULT_START;
         markPresets(start, fiat);
-        showWorld(monthValue(start), fiat);
         const outcome = purchasingPower(parseAmount(amountInput.value) ?? 0, monthValue(start), powerData(fiat));
         if (!outcome.ok) {
             showMessage(messageFor(outcome, fiat));
             return;
         }
         const { result } = outcome;
+        note.set({ kept: result.equivalentNow > 0 ? result.amount / result.equivalentNow : 1 });
         text = powerText(result, fiat);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
@@ -205,6 +191,21 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         settle(`${text.headline} ${text.bitcoin}`);
     }
 
+    const years = find<HTMLInputElement>(root, '#power-years');
+    const showYear = () => {
+        const year = readMonthField(monthFieldset)?.year ?? first.year;
+        years.value = String(year);
+        years.style.setProperty('--at', String((year - first.year) / Math.max(1, last.year - first.year)));
+    };
+    years.addEventListener('input', () => {
+        const year = Number(years.value);
+        const month = year === first.year ? first.month : year === last.year ? Math.min(1, last.month) : 1;
+        setMonthField(monthFieldset, { year, month });
+        showYear();
+        update();
+    });
+    form.addEventListener('input', showYear);
+    form.addEventListener('change', showYear);
     form.addEventListener('input', update);
     form.addEventListener('change', update);
     for (const button of presetButtons) {
@@ -212,12 +213,17 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
             const month = presetMonth(button.dataset.preset as PowerPreset, currency());
             if (!month) return;
             setMonthField(monthFieldset, month);
+            showYear();
             update();
         });
     }
+    years.min = String(first.year);
+    years.max = String(last.year);
+    showYear();
     update();
 
     return () => {
+        note.detach();
         window.clearTimeout(settleTimer);
         share.dispose();
         picture.dispose();

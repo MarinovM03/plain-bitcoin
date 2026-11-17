@@ -1,4 +1,4 @@
-export const TOOL_IDS = ['left', 'power', 'convert', 'dca', 'address'] as const;
+export const TOOL_IDS = ['miner', 'left', 'halving', 'tx', 'power', 'convert', 'dca', 'address'] as const;
 
 export type ToolId = (typeof TOOL_IDS)[number];
 

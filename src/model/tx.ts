@@ -56,17 +56,32 @@ export function parseRecent(json: unknown): string[] {
     });
 }
 
-/** The lowest fee rate in each projected next block, nearest block first. */
-export function parseProjected(json: unknown): number[] {
-    if (!Array.isArray(json)) return [];
-    const floors: number[] = [];
+export interface WaitingLine {
+    /** The lowest fee rate in each projected next block, nearest first. */
+    floors: number[];
+    /** How full each block is, 0 to 1 of the 1,000,000 virtual bytes a block holds. */
+    fills: number[];
+    counts: number[];
+}
+
+const BLOCK_VBYTES = 1_000_000;
+
+/** The projected next blocks from mempool.space, nearest first, cut at the first entry that does not fit. */
+export function parseLine(json: unknown): WaitingLine {
+    const line: WaitingLine = { floors: [], fills: [], counts: [] };
+    if (!Array.isArray(json)) return line;
     for (const entry of json) {
-        const range = record(entry)?.feeRange;
+        const block = record(entry);
+        const range = block?.feeRange;
         const floor = Array.isArray(range) ? count(range[0]) : null;
-        if (floor === null) break;
-        floors.push(floor);
+        const vsize = count(block?.blockVSize);
+        const txs = count(block?.nTx);
+        if (floor === null || vsize === null || txs === null) break;
+        line.floors.push(floor);
+        line.fills.push(Math.min(1, vsize / BLOCK_VBYTES));
+        line.counts.push(txs);
     }
-    return floors;
+    return line;
 }
 
 /**

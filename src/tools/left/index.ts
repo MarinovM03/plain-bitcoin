@@ -1,11 +1,11 @@
 import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
-import { mountPicture } from '../../gauges/mount.ts';
-import { backdrop } from '../../hero/bus.ts';
+import { attach } from '../../hero/bus.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { leftPostcard } from '../../postcard/words.ts';
-import { LEFT_PAGE, PICTURE } from '../../ui/copy.ts';
+import { LEFT_PAGE } from '../../ui/copy.ts';
+import { ZOOM_STEPS } from '../../ui/left-view.ts';
 import { afterFirstPaint, find, link } from '../../util/dom.ts';
 import { formatBtc, formatBtcExact, formatDay, formatPpm, formatUtcStamp, formatWhole } from '../../util/format.ts';
 import { tipAge, watchActive } from './counter.ts';
@@ -17,13 +17,28 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const source = find(root, '#tool-source');
     const status = find(root, '#left-status');
     const cell = (id: string) => find(panel, `#left-${id}`);
-    const picture = mountPicture(root);
+    const kicker = find(root, '#left-kicker');
+    const zoom = find<HTMLInputElement>(root, '#left-zoom');
+    const zoomLine = find(root, '#left-zoom-line');
     const site = siteAddress(siteUrl);
     const heights = heightFeed();
     const owner = {};
     let tip = heights.tip;
+    let held: number | null = null;
+    const wall = attach(
+        find(root, '[data-machine="wall"]'),
+        'wall',
+        { issued: supplyAt(tip.height).issued / MAX_SUPPLY, zoom: null },
+        { page: true },
+    );
+    const showWall = () => wall.set({ issued: supplyAt(tip.height).issued / MAX_SUPPLY, zoom: held });
+    zoom.addEventListener('input', () => {
+        held = Number(zoom.value) / ZOOM_STEPS;
+        zoom.style.setProperty('--at', String(held));
+        zoomLine.textContent = held === 0 ? LEFT_PAGE.zoomAll : LEFT_PAGE.zoomCoins;
+        showWall();
+    });
     let ticker = 0;
-    let shownHeight = -1;
     const share = bindShareBar(root, {
         postcard: () =>
             leftPostcard({
@@ -78,11 +93,9 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
         panel.dataset.source = tip.source;
         renderSource();
 
-        if (supply.height !== shownHeight) {
-            picture.set({ id: 'left', height: supply.height }, PICTURE.left);
-            backdrop({ id: 'left', mined: supply.issued / MAX_SUPPLY });
-            shownHeight = supply.height;
-        }
+        const height = formatWhole(supply.height);
+        kicker.textContent = tip.source === 'live' ? LEFT_PAGE.kicker(height) : LEFT_PAGE.kickerEstimate(height);
+        showWall();
         share.setEnabled(true);
     }
 
@@ -111,11 +124,11 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     });
 
     return () => {
+        wall.detach();
         disposed = true;
         unwatch();
         unsubscribe();
         setTicking(false);
         share.dispose();
-        picture.dispose();
     };
 }

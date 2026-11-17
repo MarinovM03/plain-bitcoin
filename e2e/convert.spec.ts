@@ -36,7 +36,7 @@ const pick = (page: Page, currency: string) => page.getByLabel(currency, { exact
 test('converts 100,000 sats at the live price, asking only the price API', async ({ page }) => {
     const prices = await fakePriceApi(page);
     const { problems, external } = watch(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     const field = fields(page);
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     await expect(page.locator('#tool-result-detail')).toHaveText('Also 0.001 BTC.');
@@ -46,12 +46,12 @@ test('converts 100,000 sats at the live price, asking only the price API', async
     await expect(page.getByLabel(FIELDS.dollars, { exact: true })).toBeChecked();
     await expect(page.locator('#status-usd')).toHaveText('$76,777');
     await expect(page.locator('#status')).not.toContainText('£');
-    await expect(page.locator('.picture')).toHaveAttribute('data-summary', 'sats=100000;rungs=5;yours=2;currency=USD');
+    await expect(page.locator('#convert-point')).toHaveText(CONVERT.abacus);
+    await expect(page.locator('[data-machine="sats"]')).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
     await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ $0.00077');
     await expect(page.locator('#tool-result-label')).toHaveText(/live price, \d\d:\d\d UTC$/);
     await expect(page.locator('#tool-source')).toContainText('mempool.space, with CoinGecko');
-    await expect(page.locator('[data-preset="hundredThousand"]')).toHaveAttribute('aria-pressed', 'true');
     for (const kind of ['sats', 'btc', 'fiat'] as const) {
         await expect(field[kind]).toHaveAttribute('inputmode', kind === 'sats' ? 'numeric' : 'decimal');
     }
@@ -60,9 +60,9 @@ test('converts 100,000 sats at the live price, asking only the price API', async
     expect(realProblems(problems)).toEqual([]);
 });
 
-test('the last-edited field drives the others, and presets fill one field', async ({ page }) => {
+test('the last-edited field drives the others, and the scrubber runs from 1 sat to 1 BTC', async ({ page }) => {
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     const field = fields(page);
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
 
@@ -75,19 +75,18 @@ test('the last-edited field drives the others, and presets fill one field', asyn
     await expect(field.btc).toHaveValue('0.00065124');
     await expect(page.locator('#tool-result')).toHaveText('$50.00 = 65,124 sats');
 
-    await page.locator('[data-preset="sat"]').click();
+    const scrub = page.locator('#convert-scrub');
+    await scrub.fill('0');
     await expect(page.locator('#tool-result')).toHaveText('1 sat = $0.00077');
     await expect(field.fiat).toHaveValue('0.00077');
-    await page.locator('[data-preset="coin"]').click();
+    await scrub.fill('800');
     await expect(field.sats).toHaveValue('100,000,000');
-    await expect(page.locator('[data-preset="coin"]')).toHaveAttribute('aria-pressed', 'true');
-    await page.locator('[data-preset="pizza"]').click();
-    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = $767,770,000.00');
+    await expect(page.locator('#tool-result')).toHaveText('100,000,000 sats = $76,777.00');
 });
 
 test('the money switch offers dollars, euros and pounds and keeps the amount of bitcoin', async ({ page }) => {
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     const field = fields(page);
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
 
@@ -96,7 +95,6 @@ test('the money switch offers dollars, euros and pounds and keeps the amount of 
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = €66.21');
     await expect(field.fiat).toHaveValue('66.21');
     await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ €0.00066');
-    await expect(page.locator('.picture')).toHaveAttribute('data-summary', /currency=EUR$/);
 
     await field.fiat.fill('50');
     await expect(page.locator('#tool-result')).toHaveText('€50.00 = 75,517 sats');
@@ -116,7 +114,7 @@ test('what is typed before the tool finishes loading still drives the answer', a
         await held;
         await route.continue();
     });
-    await page.goto('/#/convert', { waitUntil: 'commit' });
+    await page.goto('/convert', { waitUntil: 'commit' });
     await fields(page).btc.fill('0.5');
     release();
     await expect(page.locator('#tool-result')).toHaveText(/^0\.5 BTC = \$[\d,]+\.\d{2}$/);
@@ -125,7 +123,7 @@ test('what is typed before the tool finishes loading still drives the answer', a
 
 test('refuses impossible amounts and pasted garbage calmly', async ({ page }) => {
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     const field = fields(page);
     await field.btc.fill('21000001');
@@ -159,7 +157,7 @@ test('refuses impossible amounts and pasted garbage calmly', async ({ page }) =>
 test('offline, it converts at the bundled last close and says so', async ({ page }) => {
     const prices = await fakePriceApi(page, true);
     const { problems } = watch(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await expect.poll(() => prices.calls.length).toBe(2);
     const day = new Intl.DateTimeFormat('en-GB', {
         day: 'numeric',
@@ -179,10 +177,10 @@ test('offline, it converts at the bundled last close and says so', async ({ page
     expect(realProblems(problems).filter((text) => !text.includes('net::ERR_INTERNET_DISCONNECTED'))).toEqual([]);
 });
 
-test('every field and preset is reachable by keyboard', async ({ page, isMobile }) => {
+test('every field and the scrubber are reachable by keyboard', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Keyboard focus is checked on desktop');
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await page.locator('h1').focus();
     const order: string[] = [];
     for (let i = 0; i < 14; i += 1) {
@@ -194,12 +192,12 @@ test('every field and preset is reachable by keyboard', async ({ page, isMobile 
             }),
         );
     }
-    expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-fiat', 'convert-currency']);
-    expect(order.slice(4, 7)).toEqual([SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
-    expect(order[7]).toBe(CONVERT.presetsLabel);
-    expect(order.slice(8)).toEqual(
-        Object.entries(CONVERT.presets).map(([preset, label]) => label + (CONVERT.presetHints[preset] ?? '')),
-    );
-    await page.keyboard.press('Enter');
-    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = $767,770,000.00');
+    expect(order.slice(0, 5)).toEqual([
+        'convert-sats',
+        'convert-btc',
+        'convert-fiat',
+        'convert-currency',
+        'convert-scrub',
+    ]);
+    expect(order.slice(5, 8)).toEqual([SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
 });

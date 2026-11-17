@@ -18,6 +18,14 @@ export function renderPowerInputs(min: Month, max: Month): SafeHtml {
 ${monthField({ id: 'power-when', legend: FIELDS.when, min, max, value: POWER_DEFAULT_START })}`;
 }
 
+/** Dragging back through the years burns the note in the scene; it sits under the answer so the answer stays put. */
+export function renderPowerYears(min: Month, max: Month): SafeHtml {
+    return html`<div class="scrub power-years">
+    <label class="field__label" for="power-years">${POWER.drag}</label>
+    <input id="power-years" class="scrub__range" type="range" min="${String(min.year)}" max="${String(max.year)}" step="1" value="${String(POWER_DEFAULT_START.year)}" />
+</div>`;
+}
+
 export function renderPowerMore(): SafeHtml {
     const presets = POWER_PRESETS.map(
         (preset) =>

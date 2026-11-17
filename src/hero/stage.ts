@@ -1,51 +1,49 @@
-import type { BackdropData } from '../backdrop/types.ts';
-import { formingFill } from '../chain/forming.ts';
-import { chainOffsets } from '../chain/shape.ts';
-import { arrivalCamera, type Camera, homeCamera, mixCamera, withDrift } from '../chain/view.ts';
-import { createCast, poseOf, TIMING } from './actors.ts';
-import type { Hero, HeroFrame, SceneId } from './bus.ts';
-import type { Core } from './core.ts';
-import type { ChainDraw, Layer, Tick } from './kit.ts';
+import { NeutralToneMapping, WebGLRenderer } from 'three';
+import { TOKENS } from '../styles/tokens.ts';
+import type { Handle, MachineId, Stage, ViewOptions } from './bus.ts';
+import type { Machine, MachineFactory } from './machine.ts';
 import { detectMode, forcedMode, isSoftwareRenderer } from './tier.ts';
 
-/**
- * Each step draws less: no bloom, then fewer pixels, then no shadows. Past the last step the still takes over.
- * Phones start on the second step: the bloom is a desktop nicety and costs a phone its smooth start.
- */
-const STEPS = [
-    { scale: 1, bloom: true, shadows: true, glass: true },
-    { scale: 1, bloom: false, shadows: true, glass: true },
-    { scale: 0.75, bloom: false, shadows: true, glass: true },
-    { scale: 0.55, bloom: false, shadows: false, glass: false },
-] as const;
-/** Slower than this on average and the scene steps down. */
-const SLOW_FRAME_SECONDS = 1 / 26;
-const SAMPLE_FRAMES = 75;
-const RUSH_SECONDS = 0.45;
-/** One scene gives way to the next in this long; the camera never flies between them. */
-const FADE_SECONDS = 0.45;
-/** After the last tablet lands the camera takes this long to finish pulling back. */
-const SETTLE_SECONDS = 1.2;
+const FACTORIES: Record<MachineId, () => Promise<MachineFactory<never>>> = {
+    miner: () => import('./machines/miner.ts').then((module) => module.createMiner),
+    sats: () => import('./machines/sats.ts').then((module) => module.createSats),
+    wall: () => import('./machines/wall.ts').then((module) => module.createWall),
+    halving: () => import('./machines/halving.ts').then((module) => module.createHalving),
+    queue: () => import('./machines/queue.ts').then((module) => module.createQueue),
+    melt: () => import('./machines/melt.ts').then((module) => module.createMelt),
+    stack: () => import('./machines/stack.ts').then((module) => module.createStack),
+};
 
-interface Shown {
-    id: SceneId;
-    layer: Layer;
+/** Lower pixel ratios, tried in turn while frames stay slow. */
+const SCALES = [1, 0.8, 0.62, 0.5];
+const SLOW_FRAME_SECONDS = 1 / 40;
+const SAMPLE_FRAMES = 90;
+/** How far one full drag across a box turns its scene. */
+const DRAG_TURN = Math.PI * 0.9;
+
+interface Slot {
+    element: HTMLElement;
+    page: boolean;
+    machine: Machine<unknown> | null;
+    input: unknown;
+    pointer: { x: number; y: number };
+    target: { x: number; y: number };
+    turn: number;
+    seconds: number;
+    visible: boolean;
+    dirty: boolean;
+    unbind: () => void;
 }
 
-function easeInOut(t: number): number {
-    const x = Math.min(1, Math.max(0, t));
-    return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
-}
-
-function openCanvas(): { canvas: HTMLCanvasElement; gl: WebGL2RenderingContext } | null {
+function openContext(): { canvas: HTMLCanvasElement; gl: WebGL2RenderingContext } | null {
+    if (detectMode() === 'still') return null;
     const forced = forcedMode() === 'scene';
     const canvas = document.createElement('canvas');
-    canvas.className = 'world__canvas';
+    canvas.className = 'stage-canvas';
     canvas.setAttribute('aria-hidden', 'true');
     const gl = canvas.getContext('webgl2', {
         alpha: false,
         antialias: true,
-        depth: true,
         powerPreference: 'high-performance',
         failIfMajorPerformanceCaveat: !forced,
     });
@@ -53,329 +51,270 @@ function openCanvas(): { canvas: HTMLCanvasElement; gl: WebGL2RenderingContext }
     return { canvas, gl };
 }
 
-const INERT: Hero = { show() {}, open() {}, backdrop() {} };
+/** Waits for a quiet moment, so building one scene never lands in the same task as another. */
+function idle(): Promise<void> {
+    return new Promise((resolve) => {
+        if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout: 500 });
+        else setTimeout(resolve, 50);
+    });
+}
+
+function bindPointer(slot: Slot): () => void {
+    let dragFrom: number | null = null;
+    let turnFrom = 0;
+    const element = slot.element;
+    const move = (event: PointerEvent) => {
+        const rect = element.getBoundingClientRect();
+        slot.target.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        slot.target.y = 1 - ((event.clientY - rect.top) / rect.height) * 2;
+        if (dragFrom !== null) slot.turn = turnFrom + ((event.clientX - dragFrom) / rect.width) * DRAG_TURN;
+    };
+    const down = (event: PointerEvent) => {
+        if (!slot.page) return;
+        dragFrom = event.clientX;
+        turnFrom = slot.turn;
+        element.setPointerCapture(event.pointerId);
+    };
+    const up = () => {
+        dragFrom = null;
+    };
+    const leave = () => {
+        slot.target.x = 0;
+        slot.target.y = 0;
+    };
+    element.addEventListener('pointermove', move);
+    element.addEventListener('pointerdown', down);
+    element.addEventListener('pointerup', up);
+    element.addEventListener('pointercancel', up);
+    element.addEventListener('pointerleave', leave);
+    return () => {
+        element.removeEventListener('pointermove', move);
+        element.removeEventListener('pointerdown', down);
+        element.removeEventListener('pointerup', up);
+        element.removeEventListener('pointercancel', up);
+        element.removeEventListener('pointerleave', leave);
+    };
+}
 
 /**
- * The world behind every page: one canvas, one context and one renderer for the whole visit, with one scene per
- * page that fades in over the last. It is checked for a real GPU before the 3D library is fetched, so a phone that
- * will only ever show the still never pays for it.
+ * One canvas and one context for the whole visit, fixed behind the page. Every box a page lends the stage gets
+ * its own scene, drawn into that box's place on the screen; boxes out of view are skipped.
  */
-export function runHero(host: HTMLElement): Hero {
+export function runStage(): Stage | null {
     const root = document.documentElement;
-    const mark = (mode: 'scene' | 'lite' | 'still') => {
-        host.dataset.hero = mode === 'still' ? 'still' : 'scene';
-        root.dataset.world = mode;
-    };
-    mark('still');
-    const surface = detectMode() === 'scene' ? openCanvas() : null;
-    if (!surface) return INERT;
-    const { canvas } = surface;
+    const surface = openContext();
+    if (!surface) {
+        root.dataset.scene = 'still';
+        return null;
+    }
+    const { canvas, gl } = surface;
+    document.body.prepend(canvas);
+    const renderer = new WebGLRenderer({ canvas, context: gl, antialias: true });
+    renderer.toneMapping = NeutralToneMapping;
+    renderer.autoClear = false;
+    renderer.setClearColor(TOKENS.void, 1);
+    const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
 
-    const cast = createCast();
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const phone = window.matchMedia('(pointer: coarse)').matches;
-    const dprCap = phone ? 1.5 : 2;
-    let core: Core | null = null;
-    let frame: HeroFrame | null = null;
-    let data: BackdropData | null = null;
-    let scene: SceneId = 'home';
-    let front: Shown | null = null;
-    let back: Shown | null = null;
-    let fade = 1;
-    let request = 0;
-    let loading: SceneId | null = null;
-    let introPlayed = false;
-    let travel: { from: Camera; t: number; seconds: number } | null = null;
-    let raf = 0;
-    let last = 0;
-    let lastTick = 0;
-    let skipped = false;
-    let seconds = 0;
-    let frames = 0;
-    let lost = false;
-    let gaveUp = false;
-    let step = phone ? 1 : 0;
-    let slowTotal = 0;
-    let slowCount = 0;
+    const slots = new Set<Slot>();
+    let scale = 0;
     let width = 0;
     let height = 0;
-    let shownFill = 0;
-    let shownGhost = 0;
-    let sinceIntro = 0;
-    let introSeconds = 0;
-    let sinceSnap = Number.POSITIVE_INFINITY;
+    let raf = 0;
+    let last = 0;
+    let slowTotal = 0;
+    let slowCount = 0;
+    let lost = false;
+    let shown = false;
+    let queue: Promise<void> = Promise.resolve();
 
-    const nowSeconds = () => Date.now() / 1000;
-    const hasBlocks = () => frame !== null && frame.blocks.length > 0;
-    const drawing = () => core !== null && front !== null && !gaveUp && !lost && width > 1;
-    const animating = () => drawing() && !document.hidden && !motion.matches;
-
-    function size(): void {
-        if (!core) return;
-        const rect = host.getBoundingClientRect();
-        width = rect.width;
-        height = rect.height;
-        if (width < 2 || height < 2) return;
-        const quality = STEPS[step] ?? STEPS[0];
-        core.resize(width, height, Math.min(window.devicePixelRatio || 1, dprCap) * quality.scale);
-        core.quality(quality);
-    }
-
-    function targets(): { fill: number; ghost: number } {
-        if (!frame || frame.formingSince === null) return { fill: 0, ghost: 0 };
-        const fill = formingFill(nowSeconds() - frame.formingSince);
-        if (sinceSnap < RUSH_SECONDS) return { fill: 1.12, ghost: 1 };
-        if (sinceIntro < introSeconds) return { fill: 0, ghost: 0 };
-        return { fill, ghost: 1 };
-    }
-
-    function chain(): ChainDraw {
-        const home = homeCamera(width / height);
-        const steady = motion.matches ? home : withDrift(home, seconds);
-        return {
-            camera: travel ? mixCamera(travel.from, steady, easeInOut(travel.t)) : steady,
-            slabs: cast.actors.map((actor) => ({ actor, pose: poseOf(actor) })),
-            ghost: shownGhost,
-            fill: shownFill,
-        };
-    }
-
-    function tickFor(id: SceneId): Tick {
-        return {
-            seconds,
-            width,
-            height,
-            pixels: core?.pixels() ?? 1,
-            still: motion.matches,
-            hash: frame?.blocks[0]?.hash ?? null,
-            chain: id === 'home' ? chain() : null,
-            data: id === 'home' ? null : data,
-        };
-    }
-
-    function retire(): void {
-        back?.layer.dispose();
-        back = null;
-        fade = 1;
-    }
-
-    function draw(): void {
-        if (!core || !front || !drawing()) return;
-        front.layer.update(tickFor(front.id));
-        back?.layer.update(tickFor(back.id));
-        core.draw(front.layer, back?.layer ?? null, easeInOut(fade));
-        frames += 1;
-        host.dataset.frames = String(frames);
-        host.dataset.scene = front.id;
-        if (frames === 1) mark(STEPS[step]?.glass ? 'scene' : 'lite');
-    }
-
-    function giveUp(): void {
-        gaveUp = true;
-        cancelAnimationFrame(raf);
-        raf = 0;
-        retire();
-        front?.layer.dispose();
-        front = null;
-        canvas.remove();
-        mark('still');
+    function resize(): void {
+        const nextWidth = canvas.clientWidth;
+        const nextHeight = canvas.clientHeight;
+        const ratio = Math.min(window.devicePixelRatio || 1, phone ? 1.5 : 2) * (SCALES[scale] ?? 1);
+        if (nextWidth === width && nextHeight === height && renderer.getPixelRatio() === ratio) return;
+        width = nextWidth;
+        height = nextHeight;
+        renderer.setPixelRatio(ratio);
+        renderer.setSize(width, height, false);
+        for (const slot of slots) slot.dirty = true;
     }
 
     function measure(delta: number): void {
-        if (seconds < 1.5 || delta > 0.25) return;
+        if (delta > 0.25 || delta === 0) return;
         slowTotal += delta;
         slowCount += 1;
         if (slowCount < SAMPLE_FRAMES) return;
         const average = slowTotal / slowCount;
-        host.dataset.fps = (1 / average).toFixed(0);
+        root.dataset.fps = (1 / average).toFixed(0);
         slowTotal = 0;
         slowCount = 0;
-        if (average <= SLOW_FRAME_SECONDS || forcedMode() === 'scene') return;
-        if (step < STEPS.length - 1) {
-            step += 1;
-            size();
-            mark(STEPS[step]?.glass ? 'scene' : 'lite');
-        } else {
-            giveUp();
+        if (average > SLOW_FRAME_SECONDS && scale < SCALES.length - 1 && forcedMode() !== 'scene') {
+            scale += 1;
+            resize();
+        }
+    }
+
+    function draw(delta: number): void {
+        resize();
+        const still = motion.matches;
+        renderer.setScissorTest(false);
+        renderer.clear();
+        renderer.setScissorTest(true);
+        let drew = 0;
+        for (const slot of slots) {
+            const machine = slot.machine;
+            const rect = slot.element.getBoundingClientRect();
+            slot.visible = rect.bottom > 0 && rect.top < height && rect.right > 0 && rect.left < width;
+            if (!machine || !slot.visible || rect.width < 2 || rect.height < 2) continue;
+            const step = still ? 0 : delta;
+            slot.seconds += step;
+            slot.pointer.x += (slot.target.x - slot.pointer.x) * (still ? 1 : 1 - Math.exp(-4 * delta));
+            slot.pointer.y += (slot.target.y - slot.pointer.y) * (still ? 1 : 1 - Math.exp(-4 * delta));
+            machine.frame({
+                seconds: slot.seconds,
+                delta: step,
+                aspect: rect.width / rect.height,
+                pixels: rect.height * renderer.getPixelRatio(),
+                still,
+                pointer: still ? { x: 0, y: 0 } : slot.pointer,
+                turn: slot.turn,
+                page: slot.page,
+            });
+            const left = Math.round(rect.left);
+            const bottom = Math.round(height - rect.bottom);
+            renderer.setViewport(left, bottom, Math.round(rect.width), Math.round(rect.height));
+            renderer.setScissor(left, bottom, Math.round(rect.width), Math.round(rect.height));
+            renderer.render(machine.scene, machine.camera);
+            slot.dirty = false;
+            drew += 1;
+        }
+        if (drew > 0 && !shown) {
+            shown = true;
+            root.dataset.scene = 'live';
         }
     }
 
     function tick(now: number): void {
         raf = 0;
-        if (!animating()) return;
-        measure(Math.max(0, (now - lastTick) / 1000));
-        lastTick = now;
-        raf = requestAnimationFrame(tick);
-        // Behind a tool the world is scenery: every other frame is enough unless something is changing hands.
-        const busy = back !== null || sinceSnap < 2 || sinceIntro < introSeconds + SETTLE_SECONDS;
-        if (front?.id !== 'home' && !busy && !skipped) {
-            skipped = true;
+        if (lost || document.hidden || slots.size === 0) return;
+        const delta = last === 0 ? 0 : Math.min(0.1, (now - last) / 1000);
+        last = now;
+        if (motion.matches) {
+            if ([...slots].some((slot) => slot.dirty)) draw(0);
             return;
         }
-        skipped = false;
-        const delta = Math.min(0.1, Math.max(0, (now - last) / 1000));
-        last = now;
-        seconds += delta;
-        sinceIntro += delta;
-        sinceSnap += delta;
-        if (back) {
-            fade += delta / FADE_SECONDS;
-            if (fade >= 1) retire();
-        }
-        if (travel) {
-            travel.t += delta / travel.seconds;
-            if (travel.t >= 1) travel = null;
-        }
-        const target = targets();
-        shownFill += (target.fill - shownFill) * (1 - Math.exp(-delta * (target.fill > shownFill ? 7 : 2.2)));
-        shownGhost += (target.ghost - shownGhost) * (1 - Math.exp(-delta * 2.5));
-        if (frame) cast.retarget(chainOffsets(frame.blocks, frame.formingSince === null ? null : nowSeconds()));
-        cast.step(delta);
-        draw();
-    }
-
-    /** One finished frame, nothing in motion: reduced motion, and any change while the loop is parked. */
-    function still(): void {
-        cast.settle();
-        travel = null;
-        retire();
-        const target = targets();
-        shownFill = Math.min(1, target.fill);
-        shownGhost = target.ghost;
-        draw();
+        measure(delta);
+        draw(delta);
+        raf = requestAnimationFrame(tick);
     }
 
     function wake(): void {
-        if (!drawing()) return;
-        if (motion.matches) {
-            cancelAnimationFrame(raf);
-            raf = 0;
-            sinceIntro = Number.POSITIVE_INFINITY;
-            sinceSnap = Number.POSITIVE_INFINITY;
-            still();
-            return;
-        }
-        if (raf === 0 && animating()) {
-            last = performance.now();
-            lastTick = last;
-            raf = requestAnimationFrame(tick);
-        }
+        if (raf !== 0 || lost || document.hidden) return;
+        last = 0;
+        raf = requestAnimationFrame(tick);
     }
 
-    /** The first time the chain is seen on a visit it plays its entrance from the start, wherever the visit began. */
-    function playIntro(): void {
-        if (introPlayed || !frame) return;
-        introPlayed = true;
-        cast.sync(
-            frame.blocks,
-            chainOffsets(frame.blocks, frame.formingSince === null ? null : nowSeconds()),
-            'replay',
-        );
-        sinceIntro = 0;
-        introSeconds = Math.max(0, frame.blocks.length - 1) * TIMING.dropStagger + TIMING.dropSeconds;
-        if (!motion.matches) {
-            travel = { from: arrivalCamera(width / height), t: 0, seconds: introSeconds + SETTLE_SECONDS };
-        }
-    }
-
-    function arrive(next: Shown): void {
-        retire();
-        back = front;
-        front = next;
-        fade = back && !motion.matches ? 0 : 1;
-        if (fade >= 1) retire();
-        if (next.id === 'home') playIntro();
-        if (!canvas.isConnected) host.append(canvas);
+    const redrawStill = () => {
+        if (!motion.matches) return;
+        for (const slot of slots) slot.dirty = true;
         wake();
-        if (raf === 0 && drawing()) still();
-    }
-
-    /** Fetches and builds the open page's scene. The one on show keeps running until the next is ready to draw. */
-    function want(): void {
-        if (!core || gaveUp || lost) return;
-        if (front?.id === scene) {
-            request += 1;
-            loading = null;
-            return;
-        }
-        if (loading === scene || (scene === 'home' && !hasBlocks())) return;
-        size();
-        if (width < 2 || height < 2) return;
-        const running = core;
-        const id = scene;
-        const token = ++request;
-        loading = id;
-        running
-            .load(id)
-            .then(async (layer) => {
-                layer.update(tickFor(id));
-                await running.warm(layer).catch(() => {});
-                if (token !== request || gaveUp) {
-                    layer.dispose();
-                    return;
-                }
-                loading = null;
-                arrive({ id, layer });
-            })
-            .catch(() => {
-                if (token !== request) return;
-                loading = null;
-                if (!front) giveUp();
-            });
-    }
-
-    new ResizeObserver(() => {
-        size();
-        want();
-        if (motion.matches && drawing()) still();
-    }).observe(host);
-
+    };
+    window.addEventListener('scroll', redrawStill, { passive: true });
+    window.addEventListener('resize', redrawStill);
+    document.addEventListener('visibilitychange', wake);
+    motion.addEventListener('change', () => {
+        for (const slot of slots) slot.dirty = true;
+        wake();
+    });
     canvas.addEventListener('webglcontextlost', (event) => {
         event.preventDefault();
         lost = true;
-        cancelAnimationFrame(raf);
-        raf = 0;
-        mark('still');
+        root.dataset.scene = 'still';
     });
     canvas.addEventListener('webglcontextrestored', () => {
-        if (gaveUp) return;
         lost = false;
-        frames = 0;
-        size();
+        root.dataset.scene = 'live';
+        for (const slot of slots) slot.dirty = true;
         wake();
     });
-    document.addEventListener('visibilitychange', wake);
-    motion.addEventListener('change', wake);
-
-    import('./core.ts')
-        .then(({ createCore }) => {
-            core = createCore(canvas, surface.gl);
-            want();
-        })
-        .catch(giveUp);
 
     return {
-        show(next) {
-            const first = !hasBlocks();
-            frame = next;
-            const effect = first ? 'replay' : next.effect;
-            cast.sync(next.blocks, chainOffsets(next.blocks, next.formingSince === null ? null : nowSeconds()), effect);
-            if (effect === 'replay' && front?.id === 'home') {
-                sinceIntro = 0;
-                introSeconds = Math.max(0, next.blocks.length - 1) * TIMING.dropStagger + TIMING.dropSeconds;
-            }
-            if (effect === 'snap') sinceSnap = 0;
-            want();
+        add(element, id, input, options: ViewOptions): Handle {
+            const slot: Slot = {
+                element,
+                page: options.page === true,
+                machine: null,
+                input,
+                pointer: { x: 0, y: 0 },
+                target: { x: 0, y: 0 },
+                turn: 0,
+                seconds: 0,
+                visible: false,
+                dirty: true,
+                unbind: () => {},
+            };
+            slot.unbind = bindPointer(slot);
+            slots.add(slot);
+            element.dataset.scene = 'loading';
+            const build = () =>
+                FACTORIES[id]()
+                    .then(async (factory) => {
+                        if (!slots.has(slot)) return;
+                        await idle();
+                        if (!slots.has(slot)) return;
+                        const machine = (factory as MachineFactory<unknown>)(slot.input, slot.page);
+                        // Programs compile in the background, so no frame stops to build them.
+                        if (parallel) await renderer.compileAsync(machine.scene, machine.camera).catch(() => {});
+                        else renderer.compile(machine.scene, machine.camera);
+                        if (!slots.has(slot)) {
+                            machine.dispose();
+                            return;
+                        }
+                        machine.set(slot.input);
+                        slot.machine = machine;
+                        element.dataset.scene = 'live';
+                        slot.dirty = true;
+                        wake();
+                    })
+                    .catch(() => {
+                        element.dataset.scene = 'still';
+                    });
+            // A scene is built when its box first comes near the screen, so a long page never builds them all at once.
+            const near = new IntersectionObserver(
+                ([entry]) => {
+                    if (!entry?.isIntersecting) return;
+                    near.disconnect();
+                    queue = queue.then(build);
+                },
+                { rootMargin: '50% 0px' },
+            );
+            near.observe(element);
+            slot.unbind = ((unbind) => () => {
+                near.disconnect();
+                unbind();
+            })(slot.unbind);
             wake();
-            if (!motion.matches && raf === 0 && drawing()) still();
-        },
-        open(next) {
-            scene = next;
-            want();
-        },
-        backdrop(next) {
-            data = next;
-            if (raf === 0 && drawing()) still();
+            return {
+                set(next) {
+                    slot.input = next;
+                    slot.machine?.set(next);
+                    slot.dirty = true;
+                    if (motion.matches) wake();
+                },
+                remove() {
+                    slots.delete(slot);
+                    slot.unbind();
+                    slot.machine?.dispose();
+                    slot.machine = null;
+                    delete element.dataset.scene;
+                    if (slots.size === 0) {
+                        renderer.setScissorTest(false);
+                        renderer.clear();
+                    }
+                },
+            };
         },
     };
 }

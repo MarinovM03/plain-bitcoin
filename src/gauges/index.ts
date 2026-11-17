@@ -3,12 +3,8 @@ import type { Gauge, GaugeLayout, SceneData, SceneId, Viewport } from './types.t
 
 function load(id: SceneId): Promise<GaugeLayout> {
     switch (id) {
-        case 'left':
-            return import('./left.ts').then((module) => module.leftLayout);
         case 'power':
             return import('./power.ts').then((module) => module.powerLayout);
-        case 'convert':
-            return import('./convert.ts').then((module) => module.convertLayout);
         case 'dca':
             return import('./dca.ts').then((module) => module.dcaLayout);
         case 'address':

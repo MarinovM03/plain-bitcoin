@@ -12,7 +12,7 @@ async function openDca(page: Page) {
     page.on('request', (request) => {
         if (new URL(request.url()).hostname !== 'localhost') external.push(request.url());
     });
-    await page.goto('/#/dca');
+    await page.goto('/dca');
     await expect(page.locator('#dca-detail')).toBeVisible();
     return { problems, external };
 }

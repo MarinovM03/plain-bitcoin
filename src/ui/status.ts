@@ -6,7 +6,7 @@ import { formatMinutes, formatMoney, formatShortDay, formatUtcClock, formatWhole
 import { STATUS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
-export const LIVE_ROUTES: ReadonlySet<string> = new Set(['home', 'left', 'convert']);
+export const LIVE_ROUTES: ReadonlySet<string> = new Set(['home', 'miner', 'left', 'halving', 'tx', 'convert']);
 
 const AGE_TICK_MS = 15_000;
 const SOURCE_URLS: Record<PriceQuote['source'], string> = {

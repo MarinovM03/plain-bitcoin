@@ -1,0 +1,163 @@
+import {
+    AdditiveBlending,
+    BoxGeometry,
+    EdgesGeometry,
+    LineBasicMaterial,
+    LineSegments,
+    Mesh,
+    PerspectiveCamera,
+    Scene,
+    ShaderMaterial,
+    Vector3,
+} from 'three';
+import type { WallInput } from '../bus.ts';
+import { disposeTree, ORANGE, WHITE } from '../glow.ts';
+import { approach, type Frame, type Machine } from '../machine.ts';
+
+/** 300 wide, 280 deep, 250 layers high: one cell for each of the 21,000,000 bitcoin. */
+const CELLS = new Vector3(300, 250, 280);
+const PER_LAYER = 300 * 280;
+const SIZE = new Vector3(3, 2.5, 2.8).multiplyScalar(0.62);
+const LOOP_SECONDS = 24;
+
+const VERTEX = /* glsl */ `
+varying vec3 vCell;
+varying vec3 vNormal;
+uniform vec3 uCells;
+uniform vec3 uSize;
+void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vCell = (world.xyz + uSize * 0.5) / uSize * uCells;
+    vNormal = normal;
+    gl_Position = projectionMatrix * viewMatrix * world;
+}
+`;
+
+const FRAGMENT = /* glsl */ `
+varying vec3 vCell;
+varying vec3 vNormal;
+uniform vec3 uCells;
+uniform vec3 uLit;
+uniform vec3 uNew;
+uniform float uPartial;
+uniform float uLayer;
+float grain(vec3 cell) { return fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+void main() {
+    vec3 n = normalize(vNormal);
+    vec2 face = abs(n.y) > 0.5 ? vCell.xz : abs(n.x) > 0.5 ? vCell.zy : vCell.xy;
+    vec3 cell = min(floor(vCell - n * 0.5), uCells - 1.0);
+    vec2 inside = fract(face);
+    vec2 edge = fwidth(face);
+    float pixel = max(edge.x, edge.y);
+    vec2 border = smoothstep(vec2(0.0), edge * 1.2, inside) * smoothstep(vec2(0.0), edge * 1.2, 1.0 - inside);
+    float gap = mix(border.x * border.y, 1.0, smoothstep(0.12, 0.45, pixel));
+    float shade = abs(n.y) > 0.5 ? 1.0 : abs(n.x) > 0.5 ? 0.62 : 0.78;
+    vec3 color = uLit * (0.6 + 0.4 * grain(cell)) * shade;
+    if (uLayer > 0.5) {
+        float index = cell.z * uCells.x + cell.x;
+        if (index >= uPartial) discard;
+        color = mix(uLit, uNew, 0.28) * (0.8 + 0.2 * grain(cell)) * shade * 1.15;
+    }
+    gl_FragColor = vec4(color * (0.35 + 0.65 * gap), 1.0);
+    #include <colorspace_fragment>
+}
+`;
+
+function material(layer: boolean): ShaderMaterial {
+    return new ShaderMaterial({
+        vertexShader: VERTEX,
+        fragmentShader: FRAGMENT,
+        uniforms: {
+            uCells: { value: CELLS },
+            uSize: { value: SIZE },
+            uLit: { value: ORANGE },
+            uNew: { value: WHITE },
+            uPartial: { value: 0 },
+            uLayer: { value: layer ? 1 : 0 },
+        },
+    });
+}
+
+function ease(t: number): number {
+    const x = Math.min(1, Math.max(0, t));
+    return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+}
+
+/**
+ * Every bitcoin there will ever be, as one block of 21,000,000 cells stacked in layers. The issued coins fill it
+ * from the bottom; the top layer is the one being mined now, lit up to the newest block. The empty frame above is
+ * what is still to come.
+ */
+export function createWall(first: WallInput, page: boolean): Machine<WallInput> {
+    const scene = new Scene();
+    const camera = new PerspectiveCamera(32, 1, 0.01, 60);
+    const box = new BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const body = new Mesh(box, material(false));
+    const layer = new Mesh(box, material(true));
+    const frame = new LineSegments(
+        new EdgesGeometry(new BoxGeometry(SIZE.x, SIZE.y, SIZE.z)),
+        new LineBasicMaterial({ color: WHITE, transparent: true, opacity: 0.35, blending: AdditiveBlending }),
+    );
+    scene.add(body, layer, frame);
+
+    const focus = new Vector3();
+    const eye = new Vector3();
+    const far = new Vector3();
+    const near = new Vector3();
+    let input = first;
+    let held: number | null = null;
+
+    function fill(): void {
+        const coins = Math.round(Math.min(1, Math.max(0, input.issued)) * PER_LAYER * CELLS.y);
+        const full = Math.min(CELLS.y, Math.floor(coins / PER_LAYER));
+        const partial = coins - full * PER_LAYER;
+        const layerHeight = SIZE.y / CELLS.y;
+        const bottom = -SIZE.y / 2;
+        body.scale.set(SIZE.x, Math.max(1e-4, full * layerHeight), SIZE.z);
+        body.position.y = bottom;
+        layer.scale.set(SIZE.x, layerHeight, SIZE.z);
+        layer.position.y = bottom + full * layerHeight;
+        layer.visible = partial > 0;
+        const uniforms = (layer.material as ShaderMaterial).uniforms;
+        if (uniforms.uPartial) uniforms.uPartial.value = partial;
+        const row = Math.floor(partial / CELLS.x);
+        const column = partial % CELLS.x;
+        focus.set(
+            -SIZE.x / 2 + ((column + 0.5) / CELLS.x) * SIZE.x,
+            bottom + (full + 1) * layerHeight,
+            -SIZE.z / 2 + ((row + 0.5) / CELLS.z) * SIZE.z,
+        );
+    }
+    fill();
+
+    function frameScene(frame: Frame): void {
+        const phase = frame.still ? 0 : (frame.seconds / LOOP_SECONDS) % 1;
+        const auto = ease(phase < 0.5 ? (phase - 0.12) * 3.2 : (0.92 - phase) * 3.2);
+        const wanted = input.zoom ?? null;
+        held = wanted === null ? null : frame.still || held === null ? wanted : approach(held, wanted, 6, frame.delta);
+        const dive = held === null ? auto : ease(held);
+        const swing = frame.turn + frame.pointer.x * 0.35 + 0.7 + (frame.still ? 0 : frame.seconds * 0.06);
+        const distance = (frame.aspect < 1 ? 7.2 : 5.6) * (page ? 0.92 : 1);
+        far.set(Math.sin(swing) * distance, 2.6 + frame.pointer.y * 0.6, Math.cos(swing) * distance);
+        near.copy(focus).add(new Vector3(Math.sin(swing) * 0.32, 0.22, Math.cos(swing) * 0.32));
+        eye.copy(far).lerp(near, dive);
+        camera.position.copy(eye);
+        camera.lookAt(new Vector3(0, -0.1, 0).lerp(focus, dive));
+        camera.aspect = frame.aspect;
+        camera.updateProjectionMatrix();
+    }
+
+    return {
+        scene,
+        camera,
+        set(next) {
+            input = next;
+            fill();
+        },
+        frame: frameScene,
+        dispose() {
+            disposeTree(scene);
+        },
+    };
+}

@@ -1,258 +1,297 @@
 .home {
     display: grid;
-    gap: 1.5rem;
+    gap: clamp(2rem, 5vw, 3.5rem);
 }
 
-/*
- * The first screen, sized from fixed lengths so nothing moves when the bar above it is measured: the headline at the top, the tools at the bottom, and between them nothing at all, so the
- * chain behind the page shows through.
- */
-.hero {
+.intro {
     display: grid;
-    grid-template-rows: auto minmax(5.5rem, 1fr) auto;
-    min-height: calc(100svh - 7rem);
+    gap: 1rem;
+    padding-top: clamp(1.75rem, 6vw, 4.5rem);
 }
 
-.hero__intro {
-    position: relative;
-    display: grid;
-    gap: 0.625rem;
-    min-width: 0;
-    padding-top: 0.75rem;
-}
-
-/*
- * A veil the colour of the dark behind the words. It is one flat tint cut by a mask that reaches nothing at every
- * side of its box, so it has no edge anywhere: it only thins out.
- */
-.hero__intro::before {
-    --veil-fall: linear-gradient(
-        to bottom,
-        transparent,
-        rgb(0 0 0 / 0.55) 2.25rem,
-        #000 5rem,
-        #000 calc(100% - 8rem),
-        rgb(0 0 0 / 0.6) calc(100% - 4.75rem),
-        rgb(0 0 0 / 0.2) calc(100% - 2rem),
-        transparent
-    );
-    content: "";
-    position: absolute;
-    inset: -5rem -0.625rem -6rem;
-    z-index: -1;
-    background: color-mix(in srgb, var(--void) 90%, transparent);
-    -webkit-mask-image: var(--veil-fall);
-    mask-image: var(--veil-fall);
-    pointer-events: none;
-}
-
-.hero__heading {
-    max-width: 11ch;
+.intro__title {
+    max-width: 12ch;
     font-family: var(--font-display);
-    font-weight: 600;
     font-size: var(--step-display);
-    line-height: 0.98;
-    letter-spacing: -0.04em;
+    font-weight: 780;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
     text-wrap: balance;
 }
 
-.hero__accent {
+.intro__accent {
     color: var(--btc);
 }
 
-.hero__lead {
-    max-width: 30rem;
-    color: var(--ink-warm);
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.hero__tools {
-    grid-row: 3;
-    display: grid;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.chain__legend {
-    display: grid;
-    gap: 0.125rem;
-    align-content: center;
-    justify-self: start;
-    max-width: 100%;
-    min-height: 5rem;
-    padding: 0.5rem 0.875rem;
-}
-
-#chain-source {
-    min-height: 1.5em;
-}
-
-.chain__forming {
-    font-size: var(--step-small);
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.chain__newest {
+.intro__lead {
+    max-width: 34rem;
     color: var(--ink-dim);
-    font-size: var(--step-tiny);
-    line-height: 1.4;
-}
-
-.tool-list__rows {
-    display: grid;
-    gap: 0.375rem;
-}
-
-.tool-list__source {
-    color: var(--ink-dim);
-    font-size: var(--step-tiny);
+    font-size: var(--step-lead);
     line-height: 1.45;
-    text-shadow:
-        0 0 0.5rem var(--void),
-        0 0 0.25rem var(--void);
 }
 
-/* A tool as a chip of glass: the name and one line on the left, one real number in orange on the right. */
-.tool-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+.intro__live {
+    display: inline-flex;
     align-items: center;
-    column-gap: 0.75rem;
-    min-height: 3.25rem;
-    padding: 0.375rem 1rem;
-    border-radius: 1rem;
-    transition:
-        border-color var(--duration) var(--ease),
-        translate var(--duration) var(--ease);
+    gap: 0.625rem;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: var(--step-small);
+    font-variant-numeric: tabular-nums;
 }
 
-.tool-row__words {
+.intro__pulse {
+    position: relative;
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--btc);
+}
+
+.intro__pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--btc);
+    animation: pulse 2.4s var(--ease) infinite;
+}
+
+@keyframes pulse {
+    to {
+        scale: 3.2;
+        opacity: 0;
+    }
+}
+
+/*
+ * The gallery. Every tile is a link: a window onto its live scene on top, its words on an opaque band below. The
+ * miner takes the big square.
+ */
+.gallery__grid {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+}
+
+.tile {
     min-width: 0;
 }
 
-.tool-row__name {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1.125rem;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
+.tile__link {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid var(--edge);
+    border-radius: 3px;
+    transition:
+        border-color calc(var(--duration) * 1.5) var(--ease),
+        translate calc(var(--duration) * 2) var(--ease);
 }
 
-.tool-row__description {
-    overflow: hidden;
+.tile__scene {
+    flex: 1 1 auto;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+    pointer-events: none;
+}
+
+.tile__scene--type {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25ch;
+    background: var(--plate);
     color: var(--ink-dim);
+    font-family: var(--font-mono);
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+:root:not([data-scene="live"]) .tile__scene--type {
+    background: var(--plate);
+}
+
+.tile__scene--type span:first-child {
+    color: var(--btc);
+}
+
+.tile__badge {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 2px;
+    background: var(--btc);
+    color: var(--void);
     font-size: var(--step-tiny);
-    line-height: 1.35;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-weight: 700;
 }
 
-.tool-row__fact {
+.tile__text {
     display: grid;
-    justify-items: end;
-    max-width: 9rem;
-    text-align: right;
+    gap: 0.25rem;
+    padding: 0.875rem 1rem 1rem;
+    border-top: 1px solid var(--edge);
+    background: var(--plate);
 }
 
-.tool-row__figure {
+.tile__name {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    transition: color calc(var(--duration) * 1.5) var(--ease);
+}
+
+.tile__line {
+    color: var(--ink-dim);
+    font-size: var(--step-small);
+}
+
+.tile__fact {
+    margin-top: 0.375rem;
+    color: var(--ink-dim);
+    font-size: var(--step-small);
+}
+
+.tile__figure {
     color: var(--btc);
     font-family: var(--font-mono);
     font-size: 1.0625rem;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
 }
 
-.tool-row__unit {
-    color: var(--ink-dim);
-    font-size: 0.6875rem;
-    line-height: 1.3;
+.tile--hero .tile__name {
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+    letter-spacing: -0.04em;
 }
 
-.tool-row:active {
-    border-color: var(--btc);
+.tile--hero .tile__scene {
+    aspect-ratio: 1 / 1;
+}
+
+/* Before the scene draws, and wherever it never will, a still grid of cells keeps the window from looking empty. */
+:root:not([data-scene="live"]) .tile__scene,
+.tile__scene[data-scene="still"] {
+    background:
+        radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--btc) 22%, transparent), transparent 60%),
+        repeating-linear-gradient(90deg, var(--well) 0 1px, transparent 1px 14px),
+        repeating-linear-gradient(0deg, var(--well) 0 1px, transparent 1px 14px);
+}
+
+.tile__link:focus-visible {
+    outline-offset: 2px;
 }
 
 @media (hover: hover) {
-    .tool-row:hover {
-        border-color: var(--btc);
-        translate: 0 -0.1875rem;
+    .tile__link:hover {
+        border-color: color-mix(in srgb, var(--btc) 70%, var(--edge));
+        translate: 0 -3px;
+    }
+
+    .tile__link:hover .tile__name {
+        color: var(--btc);
     }
 }
 
-.chain-about {
-    display: grid;
-    gap: 0.75rem;
-    max-width: var(--measure);
+@media (min-width: 40rem) {
+    .gallery__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tile--hero {
+        grid-column: 1 / -1;
+    }
+
+    .tile--wide {
+        grid-column: 1 / -1;
+    }
+
+    .tile--wide .tile__scene {
+        aspect-ratio: 21 / 9;
+    }
+
+    .tile--hero .tile__scene {
+        aspect-ratio: 16 / 9;
+    }
 }
 
-.chain-about__explain {
+@media (min-width: 64rem) {
+    .gallery__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tile--hero {
+        grid-column: span 2;
+        grid-row: span 2;
+    }
+
+    .tile--wide {
+        grid-column: span 2;
+    }
+
+    .tile--hero .tile__scene {
+        aspect-ratio: auto;
+    }
+
+    .home {
+        gap: 3rem;
+    }
+
+    .intro {
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        align-items: end;
+        column-gap: 3rem;
+    }
+
+    .intro__title {
+        grid-row: span 2;
+    }
+}
+
+.tile {
+    animation: rise calc(var(--duration) * 4) var(--ease) backwards;
+}
+
+.tile:nth-child(2) {
+    animation-delay: 70ms;
+}
+
+.tile:nth-child(3) {
+    animation-delay: 140ms;
+}
+
+.tile:nth-child(4) {
+    animation-delay: 210ms;
+}
+
+.tile:nth-child(5) {
+    animation-delay: 280ms;
+}
+
+.tile:nth-child(6) {
+    animation-delay: 350ms;
+}
+
+.tile:nth-child(n + 7) {
+    animation-delay: 420ms;
+}
+
+.gallery__source {
+    margin-top: -1.5rem;
     color: var(--ink-dim);
-    font-size: var(--step-small);
-    line-height: 1.55;
+    font-size: var(--step-tiny);
 }
 
-.chain-about__summary {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--tap);
-    font-size: var(--step-small);
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.chain-about__scroll {
-    overflow-x: auto;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    background: var(--plate);
-}
-
-.chain-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--step-small);
-    white-space: nowrap;
-}
-
-.chain-table th,
-.chain-table td {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-}
-
-.chain-table th {
-    color: var(--ink-dim);
-    font-weight: 600;
-}
-
-.chain-table td {
-    border-top: 1px solid var(--edge);
-}
-
-.chain-table__figure {
-    font-family: var(--font-mono);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-}
-
-.home__share {
-    display: grid;
-    gap: 0.625rem;
-    max-width: var(--measure);
-}
-
-.home__share-heading,
 .cautions__heading {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 700;
     font-size: var(--step-lead);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
 .cautions {
@@ -268,160 +307,9 @@
     font-size: var(--step-small);
 }
 
-.cautions__item {
-    padding-left: 0.875rem;
-    border-left: 2px solid var(--edge);
-}
-
-/* A row of five once there is room across: short landscape phones and desktops. */
-@media (orientation: landscape) and (max-height: 32rem), (min-width: 64rem) {
-    .tool-list__rows {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 48rem) {
-    .hero__intro::before {
-        inset-inline: calc(var(--gutter) * -1);
-    }
-}
-
-@media (min-width: 64rem) {
-    .home {
-        gap: 2rem;
-    }
-
-    .hero {
-        min-height: calc(100svh - 5.75rem);
-    }
-
-    .hero__intro {
-        gap: 1.125rem;
-        padding-top: 2.5rem;
-    }
-
-    .hero__intro::before {
-        --veil-run: linear-gradient(
-            to right,
-            transparent,
-            rgb(0 0 0 / 0.5) 5rem,
-            #000 10rem,
-            #000 40%,
-            rgb(0 0 0 / 0.6) 55%,
-            rgb(0 0 0 / 0.2) 70%,
-            transparent 84%
-        );
-        inset-inline: -12rem 0;
-        -webkit-mask-image: var(--veil-fall), var(--veil-run);
-        mask-image: var(--veil-fall), var(--veil-run);
-        -webkit-mask-composite: source-in;
-        mask-composite: intersect;
-    }
-
-    .hero__lead {
-        font-size: 1.1875rem;
-    }
-
-    .hero__tools {
-        gap: 0.75rem;
-    }
-
-    .chain__legend {
-        min-height: 3.5rem;
-    }
-
-    .tool-list__rows {
-        gap: 0.75rem;
-    }
-
-    .tool-row {
-        grid-template-columns: minmax(0, 1fr);
-        align-content: space-between;
-        row-gap: 1rem;
-        min-height: 9rem;
-        padding: 1rem 1.125rem;
-    }
-
-    .tool-row__name {
-        font-size: 1.375rem;
-    }
-
-    .tool-row__description {
-        font-size: var(--step-small);
-        white-space: normal;
-    }
-
-    .tool-row__fact {
-        justify-items: start;
-        max-width: none;
-        text-align: left;
-    }
-
-    .tool-row__figure {
-        font-size: 1.625rem;
-    }
-
-    .tool-row__unit {
-        font-size: var(--step-tiny);
-    }
-}
-
-@media (orientation: landscape) and (max-height: 32rem) {
-    .hero {
-        grid-template-rows: auto minmax(2rem, 1fr) auto;
-        min-height: calc(100svh - 3.75rem);
-    }
-
-    .hero__intro {
-        padding-top: 0.25rem;
-    }
-
-    .hero__heading {
-        max-width: none;
-        font-size: 1.75rem;
-    }
-
-    .hero__lead,
-    .tool-row__description,
-    .tool-list__source {
-        display: none;
-    }
-
-    .chain__legend {
-        min-height: 0;
-        padding-block: 0.25rem;
-    }
-
-    .chain__newest {
-        display: none;
-    }
-
-    .tool-row {
-        grid-template-columns: minmax(0, 1fr);
-        min-height: 3.25rem;
-        padding: 0.375rem 0.625rem;
-    }
-
-    .tool-row__name {
-        font-size: 0.9375rem;
-    }
-
-    .tool-row__fact {
-        justify-items: start;
-        text-align: left;
-    }
-
-    .tool-row__figure {
-        font-size: 0.875rem;
-    }
-
-    .tool-row__unit {
-        display: none;
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .tool-row {
-        transition: none;
+    .tile,
+    .intro__pulse::after {
+        animation: none;
     }
 }

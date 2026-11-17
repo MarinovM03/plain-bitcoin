@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS, type ToolId } from '../src/tools/index.ts';
-import { fakeHeightApi } from './height-api.ts';
+import { TOOLS } from '../src/ui/copy.ts';
+import { fakeHeaderApi, fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const SIZES = [
@@ -14,19 +15,41 @@ const INPUT = '.tool__fields .field__control, .tool__fields .segmented__track';
 
 test.beforeEach(async ({ page }) => {
     await fakeHeightApi(page);
+    await fakeHeaderApi(page);
     await fakePriceApi(page);
 });
 
 async function ready(page: Page, id: ToolId): Promise<void> {
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
+    if (id === 'miner') {
+        await expect(page.locator('#miner-run')).toBeEnabled({ timeout: 10_000 });
+        return;
+    }
+    if (id === 'halving') {
+        await expect(page.locator('#halving-blocks')).toHaveAttribute('data-roll', /\d/);
+        return;
+    }
+    if (id === 'tx') {
+        await expect(page.locator('#tx-line li')).toHaveCount(3);
+        return;
+    }
     if (id === 'address') await page.locator('#address-input').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
     const answer = id === 'left' ? '#left-figure' : '#tool-result-figure';
     await expect(page.locator(answer)).toHaveText(/\d|[A-Z][a-z]/);
-    await expect(page.locator('#picture-plot > svg.gauge-svg')).toHaveCount(1);
+    if (id === 'power' || id === 'dca' || id === 'address')
+        await expect(page.locator('#picture-plot > svg.gauge-svg')).toHaveCount(1);
 }
+
+const PARTS: Partial<Record<ToolId, { input: string; figure: string; answer: string }>> = {
+    miner: { input: '#miner-run', figure: '#miner-best', answer: '#miner-needs' },
+    convert: { input: '#convert-sats', figure: '#tool-result-figure', answer: '#tool-result' },
+    halving: { input: '#halving-scrub', figure: '#halving-blocks', answer: '#halving-sentence' },
+    tx: { input: '#tx-id', figure: '#tx-rate', answer: '#tx-sentence' },
+};
 
 async function boxes(page: Page, id: ToolId) {
     return page.evaluate(
-        ({ input, left, dca }) => {
+        ({ input, left, dca, own }) => {
             const box = (selector: string) => {
                 const element = document.querySelector(selector);
                 if (!element) return null;
@@ -39,14 +62,14 @@ async function boxes(page: Page, id: ToolId) {
                 width: window.innerWidth,
                 parts: {
                     title: box('h1'),
-                    ...(left ? {} : { input: box(input) }),
-                    figure: box(left ? '#left-figure' : '#tool-result-figure'),
-                    answer: box(left ? '#left-supply' : '#tool-result'),
+                    ...(left ? {} : { input: box(own?.input ?? input) }),
+                    figure: box(own?.figure ?? (left ? '#left-figure' : '#tool-result-figure')),
+                    answer: box(own?.answer ?? (left ? '#left-supply' : '#tool-result')),
                     ...(dca ? { graph: box('#picture-plot .dca-chart') } : {}),
                 },
             };
         },
-        { input: INPUT, left: id === 'left', dca: id === 'dca' },
+        { input: INPUT, left: id === 'left', dca: id === 'dca', own: PARTS[id] ?? null },
     );
 }
 
@@ -59,7 +82,7 @@ test('on every viewport the plain name, the first input and the answer share the
     for (const [width, height] of SIZES) {
         await page.setViewportSize({ width, height });
         for (const id of TOOL_IDS) {
-            await page.goto(`/#/${id}`);
+            await page.goto(`/${id}`);
             await ready(page, id);
             const measured = await boxes(page, id);
             expect(measured.scrollY).toBe(0);
@@ -79,9 +102,12 @@ test('typing on a phone keeps the answer on screen', async ({ page, isMobile }) 
     test.skip(!isMobile, 'Checked with a touch screen');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const id of ['power', 'convert', 'dca', 'address'] as const) {
-        await page.goto(`/#/${id}`);
+        await page.goto(`/${id}`);
         await ready(page, id);
-        await page.locator('.tool__fields .field__input').first().focus();
+        await page
+            .locator(id === 'convert' ? '#convert-sats' : '.tool__fields .field__input')
+            .first()
+            .focus();
         await page.waitForTimeout(300);
         for (const selector of ['#tool-result-figure', '#tool-result']) {
             const box = await page.locator(selector).boundingBox();
