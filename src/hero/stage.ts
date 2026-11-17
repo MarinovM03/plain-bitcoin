@@ -8,6 +8,8 @@ const FACTORIES: Record<MachineId, () => Promise<MachineFactory<never>>> = {
     miner: () => import('./machines/miner.ts').then((module) => module.createMiner),
     sats: () => import('./machines/sats.ts').then((module) => module.createSats),
     wall: () => import('./machines/wall.ts').then((module) => module.createWall),
+    halving: () => import('./machines/halving.ts').then((module) => module.createHalving),
+    queue: () => import('./machines/queue.ts').then((module) => module.createQueue),
     melt: () => import('./machines/melt.ts').then((module) => module.createMelt),
     stack: () => import('./machines/stack.ts').then((module) => module.createStack),
 };
@@ -47,6 +49,14 @@ function openContext(): { canvas: HTMLCanvasElement; gl: WebGL2RenderingContext 
     });
     if (!gl || (!forced && isSoftwareRenderer(gl))) return null;
     return { canvas, gl };
+}
+
+/** Waits for a quiet moment, so building one scene never lands in the same task as another. */
+function idle(): Promise<void> {
+    return new Promise((resolve) => {
+        if ('requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout: 500 });
+        else setTimeout(resolve, 50);
+    });
 }
 
 function bindPointer(slot: Slot): () => void {
@@ -103,6 +113,7 @@ export function runStage(): Stage | null {
     renderer.toneMapping = NeutralToneMapping;
     renderer.autoClear = false;
     renderer.setClearColor(TOKENS.void, 1);
+    const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
 
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const phone = window.matchMedia('(pointer: coarse)').matches;
@@ -116,6 +127,7 @@ export function runStage(): Stage | null {
     let slowCount = 0;
     let lost = false;
     let shown = false;
+    let queue: Promise<void> = Promise.resolve();
 
     function resize(): void {
         const nextWidth = canvas.clientWidth;
@@ -246,25 +258,43 @@ export function runStage(): Stage | null {
             slot.unbind = bindPointer(slot);
             slots.add(slot);
             element.dataset.scene = 'loading';
-            FACTORIES[id]()
-                .then(async (factory) => {
-                    if (!slots.has(slot)) return;
-                    const machine = (factory as MachineFactory<unknown>)(slot.input, slot.page);
-                    // Programs compile in the background, so no frame stops to build them.
-                    await renderer.compileAsync(machine.scene, machine.camera).catch(() => {});
-                    if (!slots.has(slot)) {
-                        machine.dispose();
-                        return;
-                    }
-                    machine.set(slot.input);
-                    slot.machine = machine;
-                    element.dataset.scene = 'live';
-                    slot.dirty = true;
-                    wake();
-                })
-                .catch(() => {
-                    element.dataset.scene = 'still';
-                });
+            const build = () =>
+                FACTORIES[id]()
+                    .then(async (factory) => {
+                        if (!slots.has(slot)) return;
+                        await idle();
+                        if (!slots.has(slot)) return;
+                        const machine = (factory as MachineFactory<unknown>)(slot.input, slot.page);
+                        // Programs compile in the background, so no frame stops to build them.
+                        if (parallel) await renderer.compileAsync(machine.scene, machine.camera).catch(() => {});
+                        else renderer.compile(machine.scene, machine.camera);
+                        if (!slots.has(slot)) {
+                            machine.dispose();
+                            return;
+                        }
+                        machine.set(slot.input);
+                        slot.machine = machine;
+                        element.dataset.scene = 'live';
+                        slot.dirty = true;
+                        wake();
+                    })
+                    .catch(() => {
+                        element.dataset.scene = 'still';
+                    });
+            // A scene is built when its box first comes near the screen, so a long page never builds them all at once.
+            const near = new IntersectionObserver(
+                ([entry]) => {
+                    if (!entry?.isIntersecting) return;
+                    near.disconnect();
+                    queue = queue.then(build);
+                },
+                { rootMargin: '50% 0px' },
+            );
+            near.observe(element);
+            slot.unbind = ((unbind) => () => {
+                near.disconnect();
+                unbind();
+            })(slot.unbind);
             wake();
             return {
                 set(next) {

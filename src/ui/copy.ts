@@ -15,10 +15,57 @@ export const OG_IMAGE = {
     height: 628,
     kicker: 'Plain Bitcoin',
     number: '21,000,000',
-    line: 'Bitcoin, block by block. Five plain tools, and a postcard for every answer.',
+    line: 'Small machines that run on the real Bitcoin chain. Mine a block on your own phone.',
     source: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
-    alt: 'Plain Bitcoin postcard: 21,000,000, Bitcoin block by block, with the supply bar issued in bone and still to mine in orange.',
+    alt: 'Plain Bitcoin postcard: 21,000,000, small machines on the real Bitcoin chain, with the supply bar issued in bone and still to mine in orange.',
 } as const;
+
+/**
+ * The preview card X shows for each page's link: a postcard drawn once, by hand, with `npm run og`. Numbers on
+ * them are examples or fixed facts, never live readings that would go stale.
+ */
+export const OG_PAGES: Record<ToolId, { number: string; line: string; alt: string }> = {
+    miner: {
+        number: '79 zero bits',
+        line: 'Mine a real Bitcoin block on your own phone. See how close you get.',
+        alt: 'Plain Bitcoin postcard: Be a miner. A well of rings with the target depth in orange.',
+    },
+    left: {
+        number: '21,000,000',
+        line: 'Every bitcoin there will ever be, one cell each. See how many are left.',
+        alt: 'Plain Bitcoin postcard: Bitcoin left. The supply bar, issued in bone and still to mine in orange.',
+    },
+    halving: {
+        number: '210,000 blocks',
+        line: 'The reward halves every 210,000 blocks. See when the next one lands.',
+        alt: 'Plain Bitcoin postcard: Halving clock. The supply bar with a cut at every halving.',
+    },
+    tx: {
+        number: 'sat/vB',
+        line: 'Follow a transaction as it waits in line for a block.',
+        alt: 'Plain Bitcoin postcard: Follow a transaction. Bars for the next blocks by lowest fee.',
+    },
+    power: {
+        number: 'Then vs now',
+        line: 'Watch old money burn away to inflation, and see what bitcoin did instead.',
+        alt: 'Plain Bitcoin postcard: Then vs now. Cash in steel beside bitcoin in orange.',
+    },
+    convert: {
+        number: '100,000,000 sats',
+        line: 'Sats to dollars, euros and pounds, counted out on an abacus.',
+        alt: 'Plain Bitcoin postcard: Sats converter. A grid of sats.',
+    },
+    dca: {
+        number: 'Stack weekly',
+        line: 'What buying a little bitcoin every week since any date would be worth today.',
+        alt: 'Plain Bitcoin postcard: Stack weekly. Lines for money put in and its value.',
+    },
+    address: {
+        number: 'Address check',
+        line: 'Is this Bitcoin address typed right? Checked in your browser.',
+        alt: 'Plain Bitcoin postcard: Address check. An address with its checksum confirmed.',
+    },
+};
 
 export const HOME = {
     headline: 'Bitcoin, running in your hand.',
@@ -34,6 +81,8 @@ export const HOME = {
     hashedNone: 'Hashing in your browser',
     facts: {
         left: { unit: 'BTC still to mine' },
+        halving: { unit: 'blocks to the next halving' },
+        tx: { unit: 'sat/vB gets you into the next block' },
         power: { amount: 100, year: 2010, unit: (amount: string, year: string) => `of ${amount} from ${year} is left` },
         convert: { unit: 'sats for one dollar' },
         dca: { amount: 50, unit: (amount: string) => `sats for ${amount} this week` },
@@ -78,6 +127,17 @@ export const TOOLS: Record<ToolId, { name: string; description: string; privacy:
         privacy:
             'Reads the newest block header from mempool.space, a public API. Every hash is worked out on your device.',
     },
+    halving: {
+        name: 'Halving clock',
+        description: 'When the bitcoin reward halves next',
+        privacy: 'Reads the latest blocks from mempool.space, a public API. No tracking.',
+    },
+    tx: {
+        name: 'Follow a transaction',
+        description: 'Watch one wait in line for a block',
+        privacy:
+            'Reads the waiting line from mempool.space. A transaction id is only sent when you tap Follow or Pick one.',
+    },
     left: {
         name: 'Bitcoin left',
         description: 'How much is still to be mined',
@@ -114,7 +174,6 @@ export const TOOL_PAGE = {
 } as const;
 
 export const PICTURE = {
-    left: 'Left: all 21 million, a band per halving era. Right: the last 2 million, ten times larger. White is issued, orange still to mine. Tap a band for its dates.',
     power: (log: boolean) =>
         `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
@@ -127,14 +186,6 @@ export const PICTURE = {
 } as const;
 
 export const GAUGE = {
-    left: {
-        max: '21M',
-        zoomFloor: '19M',
-        mined: (share: string) => `${share} mined`,
-        era: (era: number, reward: string) => `Era ${era} · ${reward}`,
-        eraOnward: (era: number) => `Era ${era} on`,
-        now: ' · now',
-    },
     power: {
         cash: 'Kept as cash',
         bitcoin: 'As bitcoin',
@@ -202,6 +253,7 @@ function months(count: number): string {
 }
 
 export const POWER = {
+    drag: 'Drag back through the years and watch the note burn',
     presetsLabel: 'Try a start',
     presets: { y2015: '2015', fiveYears: 'Five years ago', oneYear: 'A year ago', worst: 'The worst month to start' },
     empty: 'Type an amount to see the answer.',
@@ -499,10 +551,34 @@ export const LEFT_PAGE = {
         `estimated offline from block ${height} (${stamp}) at one block every 10 minutes. `,
     supplyLabel: 'Supply: ',
     supplySource: "worked out from Bitcoin's issuance schedule, 50 BTC a block halving every 210,000 blocks.",
+    kicker: (height: string) => `Live on block ${height}`,
+    kickerEstimate: (height: string) => `Estimated block ${height}`,
+    zoom: 'Zoom from all 21 million to single coins',
+    zoomAll: 'All 21,000,000 bitcoin, one cell each.',
+    zoomCoins: 'Down at the layer being mined now. Each cell is one whole bitcoin.',
+    explain:
+        'Every bitcoin there will ever be is one cell of this block, stacked in 250 layers of 84,000. Issued coins glow and fill it from the bottom. The bright top layer is the one being mined now, lit up to the newest block; the empty frame above is what is still to come.',
 } as const;
 
 export const POSTCARD = {
     estimated: ' est.',
+    halving: {
+        kicker: (height: string) => `Halving clock · block ${height}`,
+        number: (blocks: string) => `${blocks} blocks`,
+        line: (blocks: string, from: string, to: string, date: string) =>
+            `${blocks} blocks to the next halving. The reward drops from ${from} to ${to} around ${date}.`,
+        source: (height: string, stamp: string) =>
+            `Block ${height} via mempool.space · ${stamp} · date estimated from recent block times`,
+        estimate: (height: string) => `Block ${height}, estimated at one block every 10 minutes`,
+    },
+    tx: {
+        kicker: (txid: string) => `Follow a transaction · ${txid}`,
+        number: (rate: string) => `${rate} sat/vB`,
+        waiting: (rate: string, place: string) => `My transaction pays ${rate} sats per byte. ${place}`,
+        confirmed: (height: string, count: string) =>
+            `My transaction made it into block ${height}. ${count} confirmations.`,
+        source: (stamp: string) => `Transaction and waiting line: mempool.space · ${stamp}`,
+    },
     miner: {
         kicker: (height: string) => `Be a miner · block ${height}`,
         number: (best: string) => `${best} zero bits`,
@@ -629,6 +705,61 @@ export const MINER = {
         nonce: 'Winning nonce',
     },
     hashLabel: 'Hash, newest byte first',
+} as const;
+
+export const HALVING = {
+    kicker: (height: string) => `Live on block ${height}`,
+    kickerEstimate: (height: string) => `Estimated block ${height}`,
+    resultLabel: 'Blocks to the next halving',
+    unit: 'blocks',
+    sentence: (from: string, to: string, at: string) => `The reward drops from ${from} to ${to} at block ${at}.`,
+    when: (date: string, pace: string) => `About ${date}, at the recent pace of one block every ${pace}.`,
+    whenTarget: (date: string) => `About ${date}, at the target pace of one block every 10 minutes.`,
+    scrub: 'Drag through every halving',
+    scrubNow: 'Back to now',
+    scrubLine: (height: string, reward: string, issued: string) =>
+        `Block ${height}: ${reward} a block, ${issued} of all bitcoin issued by then.`,
+    erasHeading: 'Every era',
+    tableLabel: 'Table of every era, scrolls sideways',
+    columns: { era: 'Era', blocks: 'Blocks', reward: 'Reward', ends: 'Ends' },
+    endsAbout: (year: string) => `about ${year}`,
+    endsDone: (year: string) => year,
+    eraNow: 'now',
+    explain:
+        'Every 210,000 blocks the new bitcoin paid to whoever finds a block halves. Each ring of the clock is one era, half as thick as the one inside it. The bead is the newest block.',
+    source: (api: string, clock: string) =>
+        `Height from ${api}, read at ${clock}. Dates are estimates from block times.`,
+    sourceEstimate: 'Height estimated at one block every 10 minutes: mempool.space did not answer.',
+} as const;
+
+export const TX = {
+    kicker: 'The waiting line, live from mempool.space',
+    resultLabel: 'Fee rate',
+    unit: 'sat/vB',
+    empty: 'Paste an id, or pick a live one.',
+    field: 'Transaction id',
+    placeholder: '64 letters and numbers',
+    follow: 'Follow',
+    pick: 'Pick a live one',
+    consent: 'Following asks mempool.space for this one transaction. Nothing else is sent.',
+    looking: 'Asking mempool.space…',
+    invalid: 'A transaction id is 64 letters and numbers, 0 to 9 and a to f.',
+    notFound: 'mempool.space does not know this transaction. It may be too new, dropped, or mistyped.',
+    failed: "Couldn't reach mempool.space. Try again in a moment.",
+    next: 'Pays enough for the very next block.',
+    away: (blocks: string) => `About ${blocks} blocks back in the line.`,
+    behind: 'Pays less than everything in the next few blocks, so it may wait a long time.',
+    confirmed: (height: string, count: string) => `Confirmed in block ${height}. ${count} confirmations so far.`,
+    confirmedOne: (height: string) => `Confirmed in block ${height}, just now.`,
+    detail: (fee: string, vsize: string) => `It pays ${fee} sats for ${vsize} virtual bytes.`,
+    lineHeading: 'The next blocks',
+    lineLabel: (index: string, floor: string, count: string) =>
+        `Block +${index}: from ${floor} sat/vB, ${count} transactions`,
+    linePending: 'Reading the waiting line…',
+    explain:
+        'Miners fill each block with the transactions that pay the most per byte. Each slab of the scene is one block the waiting line would fill right now; the nearest goes first. Your transaction is the bright bead, placed by its fee rate.',
+    source: (clock: string) =>
+        `Waiting line from mempool.space, read at ${clock}. Updated every 30 seconds while this page is open.`,
 } as const;
 
 export function pageTitle(page?: string): string {

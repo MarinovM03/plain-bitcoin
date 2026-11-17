@@ -3,8 +3,10 @@ import type { DcaMarks } from '../gauges/types.ts';
 import type { Address } from '../model/address.ts';
 import { btcText, type Conversion, type FiatUnit, type Unit } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
+import type { HalvingClock } from '../model/halving.ts';
 import type { PowerResult } from '../model/power.ts';
-import { MAX_SUPPLY, SATS_PER_BTC, type Supply } from '../model/supply.ts';
+import { MAX_SUPPLY, SATS_PER_BTC, type Supply, supplyAt } from '../model/supply.ts';
+import { maskTxid } from '../model/tx.ts';
 import { ADDRESS, CONVERT, DCA, HOME, POSTCARD, POWER, SHARE } from '../ui/copy.ts';
 import {
     type Fiat,
@@ -36,7 +38,7 @@ export function postcardFileName(tool: PostcardTool, printedAt: number): string 
  * than 200 characters; a line that would overflow is cut at a word, never mid-number.
  */
 export function composeText(postcard: Pick<Postcard, 'line' | 'route'>, site: string): string {
-    const tail = ` ${site}/#/${postcard.route} ${SHARE.via}`;
+    const tail = ` ${site}/${postcard.route} ${SHARE.via}`;
     const room = COMPOSE_LIMIT - tail.length;
     let line = postcard.line;
     if (line.length > room) {
@@ -296,6 +298,63 @@ export function minerPostcard(reading: MinerReading): Postcard {
                 ? POSTCARD.miner.sourceSaved(reading.savedOn)
                 : POSTCARD.miner.source(formatUtcStamp(reading.readAt)),
         signature: { kind: 'well', best: reading.best, needed: reading.needed },
+    });
+}
+
+export interface HalvingReading {
+    clock: HalvingClock;
+    height: number;
+    live: boolean;
+    checkedAt: number;
+}
+
+export function halvingPostcard({ clock, height, live, checkedAt }: HalvingReading): Postcard {
+    const at = `${formatWhole(height)}${live ? '' : POSTCARD.estimated}`;
+    const blocks = formatWhole(clock.blocks);
+    return card({
+        tool: 'halving',
+        route: 'halving',
+        kicker: POSTCARD.halving.kicker(at),
+        number: POSTCARD.halving.number(blocks),
+        line: POSTCARD.halving.line(
+            blocks,
+            formatBtcExact(clock.reward),
+            formatBtcExact(clock.nextReward),
+            formatShortDay(clock.estimatedAt),
+        ),
+        source: live ? POSTCARD.halving.source(at, formatUtcStamp(checkedAt)) : POSTCARD.halving.estimate(at),
+        signature: { kind: 'supply', issued: supplyAt(height).issued, max: MAX_SUPPLY },
+    });
+}
+
+export interface TxReading {
+    txid: string;
+    rate: number;
+    place: string;
+    confirmedIn: number | null;
+    confirmations: number;
+    readAt: number;
+    floors: readonly number[];
+    slab: number | null;
+}
+
+export function txPostcard(reading: TxReading): Postcard {
+    const rate = reading.rate.toLocaleString('en-GB', { maximumFractionDigits: 1 });
+    return card({
+        tool: 'tx',
+        route: 'tx',
+        kicker: POSTCARD.tx.kicker(maskTxid(reading.txid)),
+        number: POSTCARD.tx.number(rate),
+        line:
+            reading.confirmedIn === null
+                ? POSTCARD.tx.waiting(rate, reading.place)
+                : POSTCARD.tx.confirmed(formatWhole(reading.confirmedIn), formatWhole(reading.confirmations)),
+        source: POSTCARD.tx.source(formatUtcStamp(reading.readAt)),
+        signature: {
+            kind: 'queue',
+            floors: [...reading.floors],
+            slab: reading.confirmedIn === null ? reading.slab : 0,
+        },
     });
 }
 

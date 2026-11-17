@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_SUPPLY, supplyAt } from '../model/supply.ts';
 import { addressLayout, foreignChars } from './address.ts';
 import { dcaFrame, dcaLayout, niceStep, yearTicks } from './dca.ts';
 import { loadLayout } from './index.ts';
-import { leftFill, leftLayout } from './left.ts';
 import { powerFills, powerLayout } from './power.ts';
 import type { Gauge, Mark, SceneData } from './types.ts';
 
@@ -33,36 +31,6 @@ function sane(gauge: Gauge): void {
 }
 
 const text = (gauge: Gauge, key: string) => gauge.marks.find((mark) => mark.key === key)?.text;
-
-describe('left gauge', () => {
-    it('splits the 21 million at the real issued amount, in ink and orange', () => {
-        const height = 974_569;
-        const gauge = leftLayout({ id: 'left', height }, VIEW);
-        sane(gauge);
-        const supply = supplyAt(height);
-        expect(gauge.summary).toBe(`issued=${supply.issued};max=${MAX_SUPPLY};left=${supply.left}`);
-        expect(text(gauge, 'left-in')).toBe('891,968');
-        expect(gauge.marks.filter((mark) => mark.attrs.class === 'g-outline--btc')).toHaveLength(1);
-        expect(text(gauge, 'mined')).toBe('95.7525% mined');
-    });
-
-    it('offers every era as a tap target whose reading names its dates and reward', () => {
-        const gauge = leftLayout({ id: 'left', height: 974_569 }, VIEW);
-        const tips = gauge.marks.filter((mark) => mark.attrs['data-tip']).map((mark) => String(mark.attrs['data-tip']));
-        expect(tips[0]).toMatch(/^Era 1 · 3 Jan 2009 to 28 Nov 2012 · 50 BTC a block/);
-        expect(tips.some((tip) => /^Era 5 · since 20 Apr 2024 · 3\.125 BTC a block · being mined now$/.test(tip))).toBe(
-            true,
-        );
-    });
-
-    it('never draws NaN or a broken box for a bad height or size', () => {
-        for (const height of [Number.NaN, -1, 0, 1.5, 10_000_000]) {
-            for (const view of SIZES) sane(leftLayout({ id: 'left', height }, view));
-        }
-        expect(leftFill(Number.NaN).issued).toBe(supplyAt(0).issued);
-        sane(leftLayout({ id: 'left', height: 1 }, { width: Number.NaN, height: -4, mini: false }));
-    });
-});
 
 describe('power gauge', () => {
     it('fills two columns on the same scale as the bars, switching to log at ten times', () => {
@@ -188,15 +156,15 @@ describe('address gauge', () => {
 
 describe('loadLayout', () => {
     it('loads every gauge and turns a throw into an empty gauge, never a broken one', async () => {
-        for (const id of ['left', 'power', 'dca', 'address'] as const) {
+        for (const id of ['power', 'dca', 'address'] as const) {
             const layout = await loadLayout(id);
             sane(layout({ id } as SceneData, VIEW));
         }
-        const left = await loadLayout('left');
-        const broken = left(
+        const power = await loadLayout('power');
+        const broken = power(
             {
-                id: 'left',
-                get height(): number {
+                id: 'power',
+                get cash(): number {
                     throw new Error('boom');
                 },
             } as SceneData,

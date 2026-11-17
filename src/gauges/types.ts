@@ -1,6 +1,6 @@
 import type { Fiat } from '../util/format.ts';
 
-export type SceneId = 'left' | 'power' | 'dca' | 'address';
+export type SceneId = 'power' | 'dca' | 'address';
 
 export type CharRole = 'hrp' | 'separator' | 'version' | 'program' | 'checksum' | 'prefix' | 'body' | 'unknown';
 
@@ -13,7 +13,6 @@ export interface DcaMarks {
 }
 
 export type SceneData =
-    | { id: 'left'; height: number }
     | {
           id: 'power';
           cash: number;

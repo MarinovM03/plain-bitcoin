@@ -133,10 +133,10 @@ describe('composeText', () => {
     it('pairs the line with the gauge link and the handle, never over 200 characters', () => {
         const card = leftPostcard({ supply: supplyAt(973_854), api: 'mempool.space', checkedAt: 0 });
         const text = composeText(card, 'plainbitcoin.org');
-        expect(text).toBe('894,203 BTC are still to be mined. plainbitcoin.org/#/left via @PlainBTC');
+        expect(text).toBe('894,203 BTC are still to be mined. plainbitcoin.org/left via @PlainBTC');
         const long = composeText({ line: `${'word '.repeat(80)}end.`, route: 'dca' }, 'plainbitcoin.org');
         expect(long.length).toBeLessThanOrEqual(COMPOSE_LIMIT);
-        expect(long).toMatch(/… {1,2}plainbitcoin\.org\/#\/dca via @PlainBTC$/);
+        expect(long).toMatch(/… {1,2}plainbitcoin\.org\/dca via @PlainBTC$/);
     });
 
     it('names the file plain-bitcoin-<tool>-<yyyy-mm-dd>.png, dated in UTC', () => {

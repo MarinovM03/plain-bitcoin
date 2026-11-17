@@ -16,17 +16,24 @@
     touch-action: pan-y;
 }
 
-:root:not([data-scene="live"]) .machine__stage {
-    background:
-        radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--btc) 18%, transparent), transparent 55%),
-        var(--void);
-}
-
 .machine__body {
     display: grid;
     gap: 1.5rem;
     min-width: 0;
     padding-top: 1rem;
+}
+
+/* Following a transaction needs its box and its answer above the fold, so its scene is a shorter band. */
+.machine--tx .machine__stage,
+.machine--halving .machine__stage {
+    height: 28svh;
+    min-height: 10rem;
+}
+
+:root:not([data-scene="live"]) .machine__stage {
+    background:
+        radial-gradient(ellipse at 50% 80%, color-mix(in srgb, var(--btc) 18%, transparent), transparent 55%),
+        var(--void);
 }
 
 /* A calculator keeps its inputs and answer first on a phone; its scene follows the answer as a band. */
@@ -293,6 +300,88 @@
     color: var(--btc);
 }
 
+.tx-form {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.tx-form__input {
+    width: 100%;
+    min-height: var(--tap);
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-control);
+    background: var(--well);
+    color: var(--ink);
+    font: 500 0.875rem / 1.4 var(--font-mono);
+}
+
+.tx-form__input:focus-visible {
+    border-color: var(--btc);
+    outline: none;
+}
+
+.tx-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.line-list {
+    display: grid;
+    gap: 1px;
+    border: 1px solid var(--edge);
+    background: var(--edge);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+}
+
+.line-list > li {
+    padding: 0.5rem 0.75rem;
+    background: var(--plate);
+    color: var(--ink-dim);
+}
+
+.line-list > .line-list__mine {
+    color: var(--btc);
+}
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+.era-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step-small);
+}
+
+.era-table th,
+.era-table td {
+    padding: 0.5rem 0.625rem 0.5rem 0;
+    border-bottom: 1px solid var(--edge);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.era-table th {
+    color: var(--ink-dim);
+    font-weight: 600;
+}
+
+.era-table td {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.era-table__now td {
+    color: var(--btc);
+}
+
+#halving-now {
+    justify-self: start;
+}
+
 @media (min-width: 64rem) {
     .machine,
     .play {
@@ -334,6 +423,11 @@
         margin-top: clamp(1rem, 3vh, 2rem);
     }
 
+    .machine--tx .machine__stage,
+    .machine--halving .machine__stage {
+        height: calc(100svh - var(--chrome, 3.5rem));
+    }
+
     .tool.machine .machine__stage {
         height: calc(100svh - var(--chrome, 3.5rem));
     }
@@ -358,6 +452,11 @@
         height: calc(100svh - var(--chrome, 3rem));
         min-height: 0;
         margin-inline: 0 calc(-1 * max(0.75rem, env(safe-area-inset-right)));
+    }
+
+    .machine--tx .machine__stage,
+    .machine--halving .machine__stage {
+        height: calc(100svh - var(--chrome, 3rem));
     }
 
     .machine__body {

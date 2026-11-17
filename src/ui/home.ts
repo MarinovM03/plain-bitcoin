@@ -1,6 +1,7 @@
 import { hrefFor } from '../app/routes.ts';
 import { savedHeader } from '../data/header.ts';
 import { heightFeed, type Tip } from '../data/height.ts';
+import { fetchLine } from '../data/mempool.ts';
 import { priceFeed } from '../data/price.ts';
 import { attach, type MachineId, type View } from '../hero/bus.ts';
 import { targetZeroBits } from '../model/header.ts';
@@ -18,6 +19,8 @@ import { rollText } from './roll.ts';
 const TILES: readonly { id: ToolId; machine: MachineId | null; size: 'hero' | 'wide' | 'small' }[] = [
     { id: 'miner', machine: 'miner', size: 'hero' },
     { id: 'left', machine: 'wall', size: 'small' },
+    { id: 'halving', machine: 'halving', size: 'small' },
+    { id: 'tx', machine: 'queue', size: 'wide' },
     { id: 'convert', machine: 'sats', size: 'small' },
     { id: 'power', machine: 'melt', size: 'small' },
     { id: 'dca', machine: 'stack', size: 'small' },
@@ -27,6 +30,8 @@ const TILES: readonly { id: ToolId; machine: MachineId | null; size: 'hero' | 'w
 const FACT_UNITS: Record<ToolId, string> = {
     miner: HOME.hashedNone,
     left: HOME.facts.left.unit,
+    halving: HOME.facts.halving.unit,
+    tx: HOME.facts.tx.unit,
     power: HOME.facts.power.unit(formatAmount(HOME.facts.power.amount, 'USD'), String(HOME.facts.power.year)),
     convert: HOME.facts.convert.unit,
     dca: HOME.facts.dca.unit(formatAmount(HOME.facts.dca.amount, 'USD')),
@@ -149,13 +154,19 @@ export function mountHome(root: HTMLElement): () => void {
     const sats = satsSlot ? attach(satsSlot, 'sats', { sats: 0 }) : null;
     const meltSlot = slot('melt');
     const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1 }) : null;
+    const halvingSlot = slot('halving');
+    const halving = halvingSlot ? attach(halvingSlot, 'halving', { height: heights.tip.height }) : null;
+    const queueSlot = slot('queue');
+    const queue = queueSlot
+        ? attach(queueSlot, 'queue', { floors: [], fills: [], counts: [], rate: null, slab: null, confirmed: false })
+        : null;
     const stackSlot = slot('stack');
     const stack = stackSlot ? attach(stackSlot, 'stack', { buys: [] }) : null;
     const minerSlot = slot('miner');
     const miner = minerSlot
         ? attach(minerSlot, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: false })
         : null;
-    for (const view of [wall, sats, melt, stack, miner]) if (view) views.push(view as View<MachineId>);
+    for (const view of [wall, halving, queue, sats, melt, stack, miner]) if (view) views.push(view as View<MachineId>);
 
     if (minerSlot && miner) {
         stops.push(
@@ -172,6 +183,8 @@ export function mountHome(root: HTMLElement): () => void {
         const supply = supplyAt(tip.height);
         setFact('left', formatWhole(Math.floor(supply.left / SATS_PER_BTC)));
         wall?.set({ issued: supply.issued / MAX_SUPPLY });
+        halving?.set({ height: tip.height });
+        setFact('halving', formatWhole(supply.blocksToHalving));
     }
 
     function onPrice(): void {
@@ -183,6 +196,14 @@ export function mountHome(root: HTMLElement): () => void {
     }
 
     afterFirstPaint(() => {
+        fetchLine((url, init) => window.fetch(url, init))
+            .then((line) => {
+                if (disposed) return;
+                queue?.set({ ...line, rate: null, slab: null, confirmed: false });
+                const floor = line.floors[0];
+                if (floor !== undefined) setFact('tx', floor.toLocaleString('en-GB', { maximumFractionDigits: 1 }));
+            })
+            .catch(() => {});
         Promise.all([import('../data/power.ts'), import('../model/power.ts'), import('../model/melt.ts')])
             .then(([{ powerData }, { sortedMonths }, { melt: meltOf }]) => {
                 if (disposed) return;

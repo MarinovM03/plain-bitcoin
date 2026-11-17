@@ -12,7 +12,7 @@ import {
 } from 'three';
 import type { WallInput } from '../bus.ts';
 import { disposeTree, ORANGE, WHITE } from '../glow.ts';
-import type { Frame, Machine } from '../machine.ts';
+import { approach, type Frame, type Machine } from '../machine.ts';
 
 /** 300 wide, 280 deep, 250 layers high: one cell for each of the 21,000,000 bitcoin. */
 const CELLS = new Vector3(300, 250, 280);
@@ -106,6 +106,7 @@ export function createWall(first: WallInput, page: boolean): Machine<WallInput> 
     const far = new Vector3();
     const near = new Vector3();
     let input = first;
+    let held: number | null = null;
 
     function fill(): void {
         const coins = Math.round(Math.min(1, Math.max(0, input.issued)) * PER_LAYER * CELLS.y);
@@ -132,7 +133,10 @@ export function createWall(first: WallInput, page: boolean): Machine<WallInput> 
 
     function frameScene(frame: Frame): void {
         const phase = frame.still ? 0 : (frame.seconds / LOOP_SECONDS) % 1;
-        const dive = ease(phase < 0.5 ? (phase - 0.12) * 3.2 : (0.92 - phase) * 3.2);
+        const auto = ease(phase < 0.5 ? (phase - 0.12) * 3.2 : (0.92 - phase) * 3.2);
+        const wanted = input.zoom ?? null;
+        held = wanted === null ? null : frame.still || held === null ? wanted : approach(held, wanted, 6, frame.delta);
+        const dive = held === null ? auto : ease(held);
         const swing = frame.turn + frame.pointer.x * 0.35 + 0.7 + (frame.still ? 0 : frame.seconds * 0.06);
         const distance = (frame.aspect < 1 ? 7.2 : 5.6) * (page ? 0.92 : 1);
         far.set(Math.sin(swing) * distance, 2.6 + frame.pointer.y * 0.6, Math.cos(swing) * distance);

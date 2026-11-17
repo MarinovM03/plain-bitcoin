@@ -19,6 +19,26 @@ export interface SatsInput {
 export interface WallInput {
     /** Share of all 21 million already issued, 0 to 1. */
     readonly issued: number;
+    /** How far the camera has dived, 0 for the whole block to 1 for single coins; null lets it dive on its own. */
+    readonly zoom?: number | null;
+}
+
+export interface HalvingInput {
+    readonly height: number;
+}
+
+export interface QueueInput {
+    /** The lowest fee rate in each projected next block, nearest first, in sats per virtual byte. */
+    readonly floors: readonly number[];
+    /** How full each projected block is, 0 to 1. */
+    readonly fills: readonly number[];
+    /** Transactions waiting in each projected block. */
+    readonly counts: readonly number[];
+    /** The followed transaction's fee rate, or null when none is followed. */
+    readonly rate: number | null;
+    /** Which projected block it reaches, 1 for the next; null when it pays less than all of them. */
+    readonly slab: number | null;
+    readonly confirmed: boolean;
 }
 
 export interface MeltInput {
@@ -35,6 +55,8 @@ export interface MachineInputs {
     miner: MinerInput;
     sats: SatsInput;
     wall: WallInput;
+    halving: HalvingInput;
+    queue: QueueInput;
     melt: MeltInput;
     stack: StackInput;
 }

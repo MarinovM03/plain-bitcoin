@@ -191,6 +191,21 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         settle(`${text.headline} ${text.bitcoin}`);
     }
 
+    const years = find<HTMLInputElement>(root, '#power-years');
+    const showYear = () => {
+        const year = readMonthField(monthFieldset)?.year ?? first.year;
+        years.value = String(year);
+        years.style.setProperty('--at', String((year - first.year) / Math.max(1, last.year - first.year)));
+    };
+    years.addEventListener('input', () => {
+        const year = Number(years.value);
+        const month = year === first.year ? first.month : year === last.year ? Math.min(1, last.month) : 1;
+        setMonthField(monthFieldset, { year, month });
+        showYear();
+        update();
+    });
+    form.addEventListener('input', showYear);
+    form.addEventListener('change', showYear);
     form.addEventListener('input', update);
     form.addEventListener('change', update);
     for (const button of presetButtons) {
@@ -198,9 +213,13 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
             const month = presetMonth(button.dataset.preset as PowerPreset, currency());
             if (!month) return;
             setMonthField(monthFieldset, month);
+            showYear();
             update();
         });
     }
+    years.min = String(first.year);
+    years.max = String(last.year);
+    showYear();
     update();
 
     return () => {
