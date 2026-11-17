@@ -48,6 +48,7 @@ export function renderConvert(head: SafeHtml): SafeHtml {
         <form class="play__amount" aria-label="${TOOL_PAGE.inputsLabel}" novalidate>${slotField('sats')}</form>
         ${resultBlock({ id: 'tool-result', label: TOOL_PAGE.resultLabel, empty: TOOL_PAGE.resultEmpty })}
     </div>
+    <div class="machine__stage play__stage" data-machine="sats" aria-hidden="true"></div>
     <form class="play__controls rise" aria-label="${CONVERT.othersLabel}" novalidate>
         <div class="play__others">${slotField('btc')}${slotField('fiat')}</div>
         ${segmentedControl({

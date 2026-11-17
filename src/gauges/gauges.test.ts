@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_SUPPLY, SATS_PER_BTC, supplyAt } from '../model/supply.ts';
+import { MAX_SUPPLY, supplyAt } from '../model/supply.ts';
 import { addressLayout, foreignChars } from './address.ts';
-import { convertLayout, rungsFor, unitText } from './convert.ts';
 import { dcaFrame, dcaLayout, niceStep, yearTicks } from './dca.ts';
 import { loadLayout } from './index.ts';
 import { leftFill, leftLayout } from './left.ts';
-import { buildFor } from './paint.ts';
 import { powerFills, powerLayout } from './power.ts';
 import type { Gauge, Mark, SceneData } from './types.ts';
 
@@ -90,40 +88,6 @@ describe('power gauge', () => {
     it('survives Infinity and NaN inputs', () => {
         for (const view of SIZES)
             sane(powerLayout({ id: 'power', cash: Number.POSITIVE_INFINITY, bitcoin: Number.NaN }, view));
-    });
-});
-
-describe('converter gauge', () => {
-    const ladder = (sats: number) => convertLayout({ id: 'convert', sats, price: 76_777, currency: 'USD' }, VIEW);
-
-    it('prices round amounts and slots the typed amount in as the one orange row', () => {
-        const gauge = ladder(2000);
-        sane(gauge);
-        expect(gauge.summary).toBe('sats=2000;rungs=6;yours=2;currency=USD');
-        expect(text(gauge, 'r1-amount')).toBe('1 sat');
-        expect(text(gauge, 'r1-worth')).toBe('$0.00077');
-        expect(text(gauge, 'r100000000-worth')).toBe('$76,777.00');
-        expect(text(gauge, 'yours-amount')).toBe('Yours: 2,000 sats');
-        expect(text(gauge, 'yours-worth')).toBe('$1.54');
-        expect(gauge.marks.filter((mark) => String(mark.attrs.class).includes('g-rung--yours'))).toHaveLength(1);
-    });
-
-    it('lights a round rung instead of adding a row when the amount is one of them', () => {
-        const gauge = ladder(100_000);
-        expect(gauge.summary).toBe('sats=100000;rungs=5;yours=2;currency=USD');
-        expect(text(gauge, 'yours-amount')).toBe('100,000 sats');
-        expect(rungsFor(0).some((rung) => rung.yours)).toBe(false);
-        expect(buildFor(ladder(2000).rebuild, ladder(3000))).toBe('none');
-    });
-
-    it('names units plainly and clamps impossible amounts', () => {
-        expect(unitText(1)).toBe('1 sat');
-        expect(unitText(100_000)).toBe('100,000 sats');
-        expect(unitText(1_000_000)).toBe('0.01 BTC');
-        expect(unitText(SATS_PER_BTC * 10)).toBe('10 BTC');
-        expect(unitText(150_000_000)).toBe('1.5 BTC');
-        for (const sats of [Number.NaN, -5, Number.POSITIVE_INFINITY]) sane(ladder(sats));
-        sane(convertLayout({ id: 'convert', sats: 5, price: Number.NaN, currency: 'EUR' }, VIEW));
     });
 });
 
@@ -224,7 +188,7 @@ describe('address gauge', () => {
 
 describe('loadLayout', () => {
     it('loads every gauge and turns a throw into an empty gauge, never a broken one', async () => {
-        for (const id of ['left', 'power', 'convert', 'dca', 'address'] as const) {
+        for (const id of ['left', 'power', 'dca', 'address'] as const) {
             const layout = await loadLayout(id);
             sane(layout({ id } as SceneData, VIEW));
         }

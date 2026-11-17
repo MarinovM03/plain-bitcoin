@@ -1,5 +1,6 @@
 import { POWER_SERIES, powerData } from '../../data/power.ts';
 import { mountPicture } from '../../gauges/mount.ts';
+import { attach } from '../../hero/bus.ts';
 import { type PowerOutcome, type PowerResult, purchasingPower, sortedMonths, worstStart } from '../../model/power.ts';
 import { barScale, sparkline } from '../../model/scale.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
@@ -49,6 +50,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const worstMonths = new Map<Fiat, Month | null>();
     let text: PowerText | null = null;
     let settleTimer = 0;
+    const note = attach(find(root, '[data-machine="melt"]'), 'melt', { kept: 1 }, { page: true });
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -91,6 +93,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function showMessage(message: string): void {
+        note.set({ kept: 1 });
         text = null;
         label.textContent = TOOL_PAGE.resultLabel;
         const empty = document.createElement('span');
@@ -164,6 +167,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
             return;
         }
         const { result } = outcome;
+        note.set({ kept: result.equivalentNow > 0 ? result.amount / result.equivalentNow : 1 });
         text = powerText(result, fiat);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
@@ -200,6 +204,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     update();
 
     return () => {
+        note.detach();
         window.clearTimeout(settleTimer);
         share.dispose();
         picture.dispose();

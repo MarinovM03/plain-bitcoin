@@ -1,5 +1,5 @@
 import { LAST_CLOSE_SOURCE, type PriceQuote, priceFeed } from '../../data/price.ts';
-import { pile } from '../../hero/bus.ts';
+import { attach } from '../../hero/bus.ts';
 import {
     convert,
     type FiatUnit,
@@ -32,10 +32,8 @@ import {
     formatShortDay,
     formatUtcClock,
     formatUtcStamp,
-    formatWhole,
     isoDayMs,
 } from '../../util/format.ts';
-import { satsScale } from '../../util/sats-scale.ts';
 
 const SETTLE_MS = 700;
 const MEMPOOL = 'https://mempool.space/';
@@ -89,6 +87,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     let text: ConvertText | null = null;
     let settleTimer = 0;
     let drawnSats = -1;
+    const abacus = attach(find(root, '[data-machine="sats"]'), 'sats', { sats: 0 }, { page: true });
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -105,29 +104,12 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         }, SETTLE_MS);
     }
 
-    /** New points leave from the amount on the page, so the stack is seen to be made of what was typed. */
-    function origin(): readonly [number, number] {
-        const box = inputs.sats.getBoundingClientRect();
-        const x = (box.left + Math.min(box.width, 240) / 2) / Math.max(1, window.innerWidth);
-        const y = (box.top + box.height / 2) / Math.max(1, window.innerHeight);
-        return [x * 2 - 1, 1 - y * 2];
-    }
-
     function showWorld(sats: number): void {
         if (sats === drawnSats) return;
         drawnSats = sats;
-        const scale = satsScale(sats);
-        const points = sats > 0 ? Math.max(1, scale.filled + (scale.partial >= 0.5 ? 1 : 0)) : 0;
-        pile({ points, from: origin() });
+        abacus.set({ sats });
         scrub.style.setProperty('--at', String(satsToScrub(sats) / SCRUB_STEPS));
-        if (sats <= 0) {
-            point.textContent = CONVERT.pointEmpty;
-            return;
-        }
-        point.textContent =
-            scale.partial === 0
-                ? CONVERT.point(formatSats(scale.perDot))
-                : CONVERT.pointRounded(formatSats(scale.perDot), formatWhole(points));
+        point.textContent = sats > 0 ? CONVERT.abacus : CONVERT.pointEmpty;
     }
 
     function showNote(message: string | null): void {
@@ -254,7 +236,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         document.removeEventListener('visibilitychange', sync);
         prices.setActive(owner, false);
         window.clearTimeout(settleTimer);
-        pile(null);
+        abacus.detach();
         share.dispose();
     };
 }

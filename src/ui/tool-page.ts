@@ -1,3 +1,4 @@
+import type { MachineId } from '../hero/bus.ts';
 import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
@@ -8,7 +9,7 @@ import { html, type SafeHtml } from './html.ts';
 import { moreOptions, noteLine, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs, renderPowerMore } from './power-view.ts';
 
-type CalculatorId = Exclude<ToolId, 'left' | 'convert'>;
+type CalculatorId = Exclude<ToolId, 'miner' | 'left' | 'convert'>;
 
 interface Calculator {
     inputs: SafeHtml;
@@ -61,10 +62,17 @@ export function toolHead(id: ToolId): SafeHtml {
  * A tool page, in reading order: its plain name, the inputs, the answer, the picture, then sharing and the rest.
  * On a wide screen the picture stands beside the calculator instead of under the answer.
  */
+const SCENES: Partial<Record<ToolId, MachineId>> = { left: 'wall', power: 'melt', dca: 'stack' };
+
 function page(id: ToolId, screen: SafeHtml, below: SafeHtml): SafeHtml {
-    return html`<article class="tool tool--${id}">
-    <div class="tool__screen">${toolHead(id)}${screen}</div>
-    <div class="tool__below">${below}</div>
+    const machine = SCENES[id];
+    const stage = machine ? html`<div class="machine__stage" data-machine="${machine}" aria-hidden="true"></div>` : '';
+    return html`<article class="tool tool--${id} machine${machine ? '' : ' machine--plain'}">
+    <div class="machine__body">
+        <div class="tool__screen">${toolHead(id)}${screen}</div>
+        ${stage}
+        <div class="tool__below">${below}</div>
+    </div>
 </article>`;
 }
 
@@ -131,7 +139,7 @@ function renderLeft(): SafeHtml {
     );
 }
 
-export function renderToolPage(id: ToolId): SafeHtml {
+export function renderToolPage(id: Exclude<ToolId, 'miner'>): SafeHtml {
     if (id === 'convert') return renderConvert(toolHead(id));
     return id === 'left' ? renderLeft() : renderCalculator(id);
 }

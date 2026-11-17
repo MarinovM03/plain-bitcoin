@@ -1,5 +1,6 @@
 import { HEIGHT_ANCHOR, heightFeed, type Tip } from '../../data/height.ts';
 import { mountPicture } from '../../gauges/mount.ts';
+import { attach } from '../../hero/bus.ts';
 import { estimatedHalvingTime, MAX_SUPPLY, supplyAt } from '../../model/supply.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
@@ -21,6 +22,15 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     const heights = heightFeed();
     const owner = {};
     let tip = heights.tip;
+    const wall = attach(
+        find(root, '[data-machine="wall"]'),
+        'wall',
+        { issued: supplyAt(tip.height).issued / MAX_SUPPLY },
+        {
+            page: true,
+        },
+    );
+    const stopWall = heights.subscribe((next) => wall.set({ issued: supplyAt(next.height).issued / MAX_SUPPLY }));
     let ticker = 0;
     let shownHeight = -1;
     const share = bindShareBar(root, {
@@ -109,6 +119,8 @@ export function mountLeft(root: HTMLElement, siteUrl: string): () => void {
     });
 
     return () => {
+        stopWall();
+        wall.detach();
         disposed = true;
         unwatch();
         unsubscribe();

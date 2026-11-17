@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { SAVED_HEADER } from '../src/data/header.ts';
 import { HEIGHT_ANCHOR } from '../src/data/height.ts';
 import { supplyAt } from '../src/model/supply.ts';
 import { formatBtcExact } from '../src/util/format.ts';
@@ -49,4 +50,14 @@ export async function fakeHeightApi(page: Page, height = FAKE_HEIGHT): Promise<F
 
 export function isApiRequest(url: string): boolean {
     return API_HOSTS.includes(new URL(url).hostname);
+}
+
+/** Every header request gets the saved real header, so the miner checks a real block whatever the fake tip says. */
+export async function fakeHeaderApi(page: Page): Promise<string[]> {
+    const calls: string[] = [];
+    await page.route(/^https:\/\/mempool\.space\/api\/block\/[0-9a-f]{64}\/header$/, (route) => {
+        calls.push(route.request().url());
+        return route.fulfill({ body: SAVED_HEADER.hex, headers: { 'access-control-allow-origin': '*' } });
+    });
+    return calls;
 }

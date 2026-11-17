@@ -1,15 +1,16 @@
 import './styles/main.css';
 import { type RouteChange, startRouter } from './app/router.ts';
+import { startStage } from './hero/bus.ts';
 import { mountCounter } from './tools/left/counter.ts';
 import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
 import { bindFields } from './ui/field-behaviour.ts';
 import { mountHome, renderHome } from './ui/home.ts';
 import { html } from './ui/html.ts';
-import { bindMenu, markCurrent, trackChrome } from './ui/shell.ts';
+import { renderMiner } from './ui/miner-view.ts';
+import { markCurrent, trackChrome } from './ui/shell.ts';
 import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
-import { mountWorld } from './ui/world.ts';
-import { byId, find } from './util/dom.ts';
+import { afterFirstPaint, byId, find } from './util/dom.ts';
 import { prefersReducedMotion } from './util/motion.ts';
 
 const SITE = import.meta.env.VITE_SITE_URL;
@@ -17,12 +18,11 @@ const SITE = import.meta.env.VITE_SITE_URL;
 const main = byId('main');
 const announcer = byId('announcer');
 trackChrome(find(document, '.topbar'));
-bindMenu(byId<HTMLDetailsElement>('menu'));
+startStage(afterFirstPaint);
 const status = mountStatus(byId('status'), document.querySelector<SVGPathElement>('#barcode path'));
 const announce = (message: string) => {
     announcer.textContent = message;
 };
-const world = mountWorld(byId('chain'), announce);
 let cleanups: (() => void)[] = [];
 let viewCount = 0;
 let leaving = 0;
@@ -36,7 +36,7 @@ function whileCurrent(view: number, mount: () => () => void): void {
 function show({ route, initial, notFound }: RouteChange, view: number): void {
     const prerendered = initial && route === 'home' && !notFound;
     if (!prerendered) {
-        const page = route === 'home' ? renderHome() : renderToolPage(route);
+        const page = route === 'home' ? renderHome() : route === 'miner' ? renderMiner() : renderToolPage(route);
         const note = notFound ? html`<p class="route-note">${ROUTE.notFound}</p>` : '';
         main.innerHTML = html`<div class="view${initial ? '' : ' view--enter'}">${note}${page}</div>`.value;
     }
@@ -46,7 +46,12 @@ function show({ route, initial, notFound }: RouteChange, view: number): void {
     status.setRoute(route);
     bindFields(main);
 
-    if (route === 'home') cleanups.push(mountHome(main, SITE, world));
+    if (route === 'home') cleanups.push(mountHome(main));
+    if (route === 'miner') {
+        import('./tools/miner/index.ts').then(({ mountMiner }) => {
+            whileCurrent(view, () => mountMiner(main, SITE));
+        });
+    }
     if (route === 'left') {
         cleanups.push(mountCounter(main, announce));
         import('./tools/left/index.ts').then(({ mountLeft }) => {
@@ -86,7 +91,6 @@ startRouter((change) => {
     cleanups = [];
     const view = ++viewCount;
     window.clearTimeout(leaving);
-    world.setRoute(change.route);
     const old = change.initial || prefersReducedMotion() ? null : main.firstElementChild;
     if (!old) {
         show(change, view);

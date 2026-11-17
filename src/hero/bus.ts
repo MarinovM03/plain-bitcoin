@@ -1,76 +1,110 @@
-import type { ChainEffect } from '../chain/machine.ts';
-import type { Focus } from '../chain/view.ts';
-import type { ChainBlock } from '../data/height.ts';
-
-export interface HeroFrame {
-    /** Newest first. */
-    readonly blocks: readonly ChainBlock[];
-    /** The newest block's timestamp in seconds when a live feed vouches for it; null draws no forming block. */
-    readonly formingSince: number | null;
-    readonly effect: ChainEffect;
+/** Every scene is handed plain numbers only, never anything a person typed. */
+export interface MinerInput {
+    /** Zero bits a hash needs to win a block today. */
+    readonly needed: number;
+    /** The deepest hash of this visit so far, or -1. */
+    readonly best: number;
+    /** The real block's own hash depth, once it has been checked. */
+    readonly real: number | null;
+    /** How many fresh hashes landed at each depth since the last hand-over. */
+    readonly tally: readonly number[] | null;
+    /** Turns the camera down the shaft to the target ring. */
+    readonly dive: boolean;
 }
 
-/** An amount as a stack of points in the world. Only a count and a place on the screen: never what was typed. */
-export interface Pile {
-    readonly points: number;
-    /** Where new points fly in from, in screen units: x from -1 at the left to 1, y from -1 at the bottom to 1. */
-    readonly from: readonly [number, number];
+export interface SatsInput {
+    readonly sats: number;
 }
 
-export interface Hero {
-    show(frame: HeroFrame): void;
-    /** Turns the world towards the page that is open. */
-    open(focus: Focus): void;
-    pile(next: Pile | null): void;
+export interface WallInput {
+    /** Share of all 21 million already issued, 0 to 1. */
+    readonly issued: number;
 }
 
-let listener: ((next: Pile | null) => void) | null = null;
-
-/** A tool hands the world the amount its stack is made from. */
-export function pile(next: Pile | null): void {
-    listener?.(next);
+export interface MeltInput {
+    /** Share of its buying power the money still has, 0 to 1. */
+    readonly kept: number;
 }
 
-export function onPile(next: (pile: Pile | null) => void): void {
-    listener = next;
+export interface StackInput {
+    /** One bar per buy or per mark, oldest first, scaled so the tallest is 1. */
+    readonly buys: readonly number[];
+}
+
+export interface MachineInputs {
+    miner: MinerInput;
+    sats: SatsInput;
+    wall: WallInput;
+    melt: MeltInput;
+    stack: StackInput;
+}
+
+export type MachineId = keyof MachineInputs;
+
+export interface ViewOptions {
+    /** A machine's own page: bigger detail and the pointer turns it. A gallery tile only drifts. */
+    readonly page?: boolean;
+}
+
+export interface View<K extends MachineId> {
+    set(input: MachineInputs[K]): void;
+    detach(): void;
+}
+
+export interface Handle {
+    set(input: unknown): void;
+    remove(): void;
+}
+
+export interface Stage {
+    add(slot: HTMLElement, id: MachineId, input: unknown, options: ViewOptions): Handle;
+}
+
+let stage: Promise<Stage | null> | null = null;
+let deferred: ((task: () => void) => void) | null = null;
+
+/** The page says when the scenes may load: after first paint, so they never hold up the words. */
+export function startStage(after: (task: () => void) => void): void {
+    deferred = after;
+}
+
+function loadStage(): Promise<Stage | null> {
+    stage ??= new Promise<void>((resolve) => (deferred ?? ((task) => task()))(resolve))
+        .then(() => import('./stage.ts'))
+        .then(({ runStage }) => runStage())
+        .catch(() => {
+            document.documentElement.dataset.scene = 'still';
+            return null;
+        });
+    return stage;
 }
 
 /**
- * The one door between the page and the lit world behind it. The page hands over real blocks, says which page is
- * open and passes on a count of points; the world is loaded after first paint, draws only what it is handed, and
- * is never asked anything back.
+ * The one door between the page and the scenes. A page lends the stage an empty box and plain numbers; the stage
+ * draws into that box and is never asked anything back.
  */
-export function mountHero(host: HTMLElement, after: (task: () => void) => void): Hero {
-    let latest: HeroFrame | null = null;
-    let focus: Focus = 'home';
-    let stack: Pile | null = null;
-    let running: Hero | null = null;
-
-    after(() => {
-        import('./stage.ts')
-            .then(({ runHero }) => {
-                running = runHero(host);
-                running.open(focus);
-                running.pile(stack);
-                if (latest) running.show({ ...latest, effect: 'replay' });
-            })
-            .catch(() => {
-                host.dataset.hero = 'still';
-            });
+export function attach<K extends MachineId>(
+    slot: HTMLElement,
+    id: K,
+    input: MachineInputs[K],
+    options: ViewOptions = {},
+): View<K> {
+    let latest: unknown = input;
+    let handle: Handle | null = null;
+    let gone = false;
+    loadStage().then((running) => {
+        if (gone || !running) return;
+        handle = running.add(slot, id, latest, options);
     });
-
     return {
-        show(frame) {
-            latest = frame;
-            running?.show(frame);
+        set(next) {
+            latest = next;
+            handle?.set(next);
         },
-        open(next) {
-            focus = next;
-            running?.open(next);
-        },
-        pile(next) {
-            stack = next;
-            running?.pile(next);
+        detach() {
+            gone = true;
+            handle?.remove();
+            handle = null;
         },
     };
 }

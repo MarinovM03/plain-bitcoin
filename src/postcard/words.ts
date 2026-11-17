@@ -271,6 +271,34 @@ export function homePostcard(reading: LeftReading): Postcard {
     });
 }
 
+export interface MinerReading {
+    height: number;
+    tries: number;
+    best: number;
+    needed: number;
+    /** When the header was read live, or null for the saved one. */
+    readAt: number | null;
+    savedOn: string;
+}
+
+export function minerPostcard(reading: MinerReading): Postcard {
+    const height = formatWhole(reading.height);
+    const best = String(reading.best);
+    const needed = String(reading.needed);
+    return card({
+        tool: 'miner',
+        route: 'miner',
+        kicker: POSTCARD.miner.kicker(height),
+        number: POSTCARD.miner.number(best),
+        line: POSTCARD.miner.line(formatWhole(reading.tries), height, best, needed),
+        source:
+            reading.readAt === null
+                ? POSTCARD.miner.sourceSaved(reading.savedOn)
+                : POSTCARD.miner.source(formatUtcStamp(reading.readAt)),
+        signature: { kind: 'well', best: reading.best, needed: reading.needed },
+    });
+}
+
 export interface AddressText {
     headline: string;
     detail: string;

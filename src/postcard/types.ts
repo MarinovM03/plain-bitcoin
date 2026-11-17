@@ -1,6 +1,6 @@
 import type { DcaMarks } from '../gauges/types.ts';
 
-export type PostcardTool = 'home' | 'left' | 'power' | 'convert' | 'dca' | 'address';
+export type PostcardTool = 'home' | 'miner' | 'left' | 'power' | 'convert' | 'dca' | 'address';
 
 export type PostcardFormat = 'wide' | 'square';
 
@@ -10,7 +10,8 @@ export type Signature =
     | { kind: 'columns'; cash: number; bitcoin: number; cashLabel: string; bitcoinLabel: string }
     | { kind: 'cells'; sats: number }
     | ({ kind: 'lines' } & DcaMarks)
-    | { kind: 'stamp'; type: string; encoding: string; shown: string };
+    | { kind: 'stamp'; type: string; encoding: string; shown: string }
+    | { kind: 'well'; best: number; needed: number };
 
 /** One printed answer. Every field is text the page already shows, or data it already drew. */
 export interface Postcard {

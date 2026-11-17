@@ -1,31 +1,31 @@
 import { hrefFor } from '../app/routes.ts';
-import { type ChainBlock, heightFeed } from '../data/height.ts';
+import { savedHeader } from '../data/header.ts';
+import { heightFeed, type Tip } from '../data/height.ts';
 import { priceFeed } from '../data/price.ts';
-import { SATS_PER_BTC, supplyAt } from '../model/supply.ts';
-import { bindShareBar } from '../postcard/bar.ts';
-import { siteAddress } from '../postcard/site.ts';
-import { homePostcard } from '../postcard/words.ts';
-import { TOOL_IDS, type ToolId } from '../tools/index.ts';
+import { attach, type MachineId, type View } from '../hero/bus.ts';
+import { targetZeroBits } from '../model/header.ts';
+import { createMiner, leadingZeroBits } from '../model/sha256.ts';
+import { MAX_SUPPLY, SATS_PER_BTC, supplyAt } from '../model/supply.ts';
+import type { ToolId } from '../tools/index.ts';
+import { DEPTHS } from '../tools/miner/protocol.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
-import {
-    formatAmount,
-    formatMinutes,
-    formatMoney,
-    formatShortDay,
-    formatUtcClock,
-    formatWhole,
-    isoDayMs,
-} from '../util/format.ts';
-import { CHAIN, HOME, SHARE, TOOLS } from './copy.ts';
+import { formatAmount, formatMinutes, formatMoney, formatWhole } from '../util/format.ts';
+import { prefersReducedMotion } from '../util/motion.ts';
+import { HOME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
-import { shareBar } from './output.ts';
 import { rollText } from './roll.ts';
-import type { ChainView, World } from './world.ts';
 
-const LEGEND_TICK_MS = 15_000;
-const FACT_START = '2015-01';
+const TILES: readonly { id: ToolId; machine: MachineId | null; size: 'hero' | 'wide' | 'small' }[] = [
+    { id: 'miner', machine: 'miner', size: 'hero' },
+    { id: 'left', machine: 'wall', size: 'small' },
+    { id: 'convert', machine: 'sats', size: 'small' },
+    { id: 'power', machine: 'melt', size: 'small' },
+    { id: 'dca', machine: 'stack', size: 'small' },
+    { id: 'address', machine: null, size: 'small' },
+];
 
 const FACT_UNITS: Record<ToolId, string> = {
+    miner: HOME.hashedNone,
     left: HOME.facts.left.unit,
     power: HOME.facts.power.unit(formatAmount(HOME.facts.power.amount, 'USD'), String(HOME.facts.power.year)),
     convert: HOME.facts.convert.unit,
@@ -33,20 +33,23 @@ const FACT_UNITS: Record<ToolId, string> = {
     address: HOME.facts.address.unit,
 };
 
-/**
- * A tool as one line of the menu: its name set large, one line that explains it, and one real number. The number's
- * place is held from the first paint, so nothing shifts when it arrives.
- */
-function renderRow(id: ToolId): SafeHtml {
-    return html`<li class="tool-list__item">
-        <a class="tool-row" href="${hrefFor(id)}" data-tool="${id}">
-            <span class="tool-row__words">
-                <span class="tool-row__name">${TOOLS[id].name}</span>
-                <span class="tool-row__description">${TOOLS[id].description}</span>
-            </span>
-            <span class="tool-row__fact">
-                <span class="tool-row__figure" data-fact="${id}">${id === 'address' ? HOME.facts.address.figure : HOME.pending}</span>
-                <span class="tool-row__unit">${FACT_UNITS[id]}</span>
+const STACK_MONTHS = 72;
+const HASH_TICK_MS = 150;
+const HASHES_PER_TICK = 400;
+
+function renderTile({ id, machine, size }: (typeof TILES)[number]): SafeHtml {
+    const scene = machine
+        ? html`<div class="tile__scene" data-machine="${machine}" aria-hidden="true"></div>`
+        : html`<div class="tile__scene tile__scene--type" aria-hidden="true"><span>bc1q</span><span>…</span><span>x0wlh</span></div>`;
+    const badge = id === 'miner' ? html`<span class="tile__badge">${HOME.fresh}</span>` : '';
+    return html`<li class="tile tile--${size}">
+        <a class="tile__link" href="${hrefFor(id)}" data-tool="${id}">
+            ${scene}
+            ${badge}
+            <span class="tile__text">
+                <span class="tile__name">${TOOLS[id].name}</span>
+                <span class="tile__line">${TOOLS[id].description}</span>
+                <span class="tile__fact"><span class="tile__figure" data-fact="${id}">${id === 'address' ? HOME.facts.address.figure : HOME.pending}</span> <span class="tile__unit" data-unit="${id}">${FACT_UNITS[id]}</span></span>
             </span>
         </a>
     </li>`;
@@ -60,196 +63,157 @@ function renderCautions(): SafeHtml {
 </section>`;
 }
 
-/**
- * Home: the headline over the world, then the five tools as plain links with one live number each. The chain stands
- * behind the page (decoration for the eye, never clickable); the lines above the tools and the list further down
- * say the same in words.
- */
+/** Home: one line of promise, then every machine as a live tile. Each tile is a plain link; its scene only shows. */
 export function renderHome(): SafeHtml {
-    const columns = Object.values(CHAIN.columns).map((name) => html`<th scope="col">${name}</th>`);
+    const head = HOME.headline.slice(0, -HOME.headlineAccent.length);
     return html`<div class="home">
-    <section class="hero" aria-labelledby="home-heading">
-        <div class="hero__intro veil rise">
-            <h1 id="home-heading" class="hero__heading" tabindex="-1">${HOME.headline.slice(0, -HOME.headlineAccent.length)}<span class="hero__accent">${HOME.headlineAccent}</span></h1>
-            <p class="hero__lead">${HOME.lead}</p>
-        </div>
-        <div class="hero__tools veil">
-            <nav class="tool-list" aria-label="${HOME.toolsHeading}">
-                <ul class="tool-list__rows rise">${TOOL_IDS.map(renderRow)}</ul>
-            </nav>
-            <div class="chain__legend">
-                <p id="chain-forming" class="chain__forming">${CHAIN.waiting}</p>
-                <p id="chain-newest" class="chain__newest"></p>
-            </div>
-            <p class="tool-list__source">${HOME.factsSource}</p>
-        </div>
+    <section class="intro" aria-labelledby="home-heading">
+        <h1 id="home-heading" class="intro__title" tabindex="-1">${head}<span class="intro__accent">${HOME.headlineAccent}</span></h1>
+        <p class="intro__lead">${HOME.lead}</p>
+        <p id="home-live" class="intro__live"><span class="intro__pulse" aria-hidden="true"></span><span id="home-live-text">${HOME.pending}</span></p>
     </section>
-    <section class="chain-about" aria-label="${CHAIN.label}">
-        <p class="chain-about__explain">${CHAIN.explain}</p>
-        <details class="chain-about__list">
-            <summary class="chain-about__summary">${CHAIN.listSummary}</summary>
-            <div class="chain-about__scroll" tabindex="0" role="region" aria-label="${CHAIN.tableLabel}">
-                <table class="chain-table">
-                    <thead><tr>${columns}</tr></thead>
-                    <tbody id="chain-rows"></tbody>
-                </table>
-            </div>
-        </details>
-        <p id="chain-source" class="source-line"></p>
-    </section>
-    <section class="home__share" aria-labelledby="share-heading">
-        <h2 id="share-heading" class="home__share-heading">${HOME.shareHeading}</h2>
-        <p class="share__title">${SHARE.title} <span class="share__tag">${SHARE.titleTag}</span></p>
-        ${shareBar()}
-        <p id="home-status" class="visually-hidden" aria-live="polite"></p>
-    </section>
+    <nav class="gallery" aria-label="${HOME.galleryLabel}">
+        <ul class="gallery__grid">${TILES.map(renderTile)}</ul>
+    </nav>
+    <p class="gallery__source">${HOME.factsSource}</p>
     ${renderCautions()}
 </div>`;
 }
 
-function megabytes(bytes: number): string {
-    return CHAIN.megabytes((bytes / 1_000_000).toFixed(2));
+function liveLine(tip: Tip): string {
+    const height = formatWhole(tip.height);
+    if (tip.source !== 'live' || tip.time === null) return HOME.liveUnknown(height);
+    return HOME.live(height, formatMinutes(Date.now() / 1000 - tip.time));
 }
 
-function cell(text: string, className = ''): HTMLTableCellElement {
-    const element = document.createElement('td');
-    element.textContent = text;
-    if (className) element.className = className;
-    return element;
+/**
+ * The miner tile hashes for real while it is on screen: the saved header, a few thousand nonces at a time, so the
+ * sparks in its well are this browser's own work.
+ */
+function hashOnTile(slot: HTMLElement, view: View<'miner'>, onCount: (count: number) => void): () => void {
+    const reading = savedHeader();
+    const miner = createMiner(reading.header.bytes);
+    const needed = targetZeroBits(reading.header.bits);
+    let nonce = 0;
+    let count = 0;
+    let best = -1;
+    let visible = false;
+    const observer = new IntersectionObserver(([entry]) => {
+        visible = entry?.isIntersecting === true;
+    });
+    observer.observe(slot);
+    const timer = window.setInterval(() => {
+        if (!visible || document.hidden || prefersReducedMotion()) return;
+        const tally = new Array<number>(DEPTHS).fill(0);
+        for (let i = 0; i < HASHES_PER_TICK; i += 1) {
+            const zeros = Math.min(DEPTHS - 1, leadingZeroBits(miner.hash(nonce)));
+            tally[zeros] = (tally[zeros] ?? 0) + 1;
+            if (zeros > best) best = zeros;
+            nonce = (nonce + 1) >>> 0;
+        }
+        count += HASHES_PER_TICK;
+        view.set({ needed, best, real: null, tally, dive: false });
+        onCount(count);
+    }, HASH_TICK_MS);
+    view.set({ needed, best, real: null, tally: null, dive: false });
+    return () => {
+        observer.disconnect();
+        window.clearInterval(timer);
+    };
 }
 
-function blockRow(block: ChainBlock, nowSeconds: number, dated: boolean): HTMLTableRowElement {
-    const row = document.createElement('tr');
-    const found =
-        block.time === null
-            ? CHAIN.unknown
-            : dated
-              ? CHAIN.ago(formatMinutes(nowSeconds - block.time))
-              : formatUtcClock(block.time * 1000);
-    row.append(
-        cell(formatWhole(block.height), 'chain-table__figure'),
-        cell(found),
-        cell(block.txCount === null ? CHAIN.unknown : formatWhole(block.txCount), 'chain-table__figure'),
-        cell(block.size === null ? CHAIN.unknown : megabytes(block.size), 'chain-table__figure'),
-        cell(block.hash === null ? CHAIN.unknown : `…${block.hash.slice(-12)}`, 'chain-table__figure'),
-    );
-    return row;
-}
-
-export function mountHome(root: HTMLElement, siteUrl: string, world: World): () => void {
+export function mountHome(root: HTMLElement): () => void {
     const heights = heightFeed();
     const prices = priceFeed();
-    const site = siteAddress(siteUrl);
-    const forming = find(root, '#chain-forming');
-    const newest = find(root, '#chain-newest');
-    const rows = find(root, '#chain-rows');
-    const source = find(root, '#chain-source');
-    const status = find(root, '#home-status');
+    const liveText = find(root, '#home-live-text');
     const fact = (id: ToolId) => root.querySelector<HTMLElement>(`[data-fact="${id}"]`);
-    let chain: ChainView | null = null;
+    const unit = (id: ToolId) => root.querySelector<HTMLElement>(`[data-unit="${id}"]`);
+    const views: View<MachineId>[] = [];
+    const stops: (() => void)[] = [];
     let disposed = false;
-
-    const share = bindShareBar(root, {
-        postcard: () => {
-            const tip = heights.tip;
-            return homePostcard({
-                supply: supplyAt(tip.height),
-                api: tip.source === 'live' ? tip.api : null,
-                checkedAt: tip.checkedAt,
-            });
-        },
-        site,
-        onStatus: (message) => {
-            status.textContent = message;
-        },
-    });
-    share.setEnabled(true);
-
-    function renderLegend(): void {
-        if (!chain) return;
-        const { blocks, savedOn, formingSince: since, tip } = chain;
-        const now = Date.now() / 1000;
-        const first = blocks[0];
-        const last = blocks[blocks.length - 1];
-        if (!first || !last) {
-            rollText(forming, CHAIN.waiting);
-            newest.textContent = '';
-            return;
-        }
-        if (savedOn !== null) {
-            rollText(
-                forming,
-                CHAIN.saved(formatWhole(last.height), formatWhole(first.height), formatShortDay(isoDayMs(savedOn))),
-            );
-        } else if (since === null) {
-            rollText(
-                forming,
-                tip.source === 'offline' && tip.blocksAt !== null
-                    ? CHAIN.lastSeen(formatUtcClock(tip.blocksAt))
-                    : CHAIN.formingUnknown,
-            );
-        } else {
-            rollText(forming, CHAIN.forming(formatMinutes(now - since)));
-        }
-        const height = formatWhole(first.height);
-        const headline =
-            since === null || first.time === null
-                ? CHAIN.newestUnknown(height)
-                : CHAIN.newest(height, formatMinutes(now - first.time));
-        const contents =
-            first.txCount !== null && first.size !== null
-                ? ` ${CHAIN.contents(formatWhole(first.txCount), megabytes(first.size))}`
-                : '';
-        newest.textContent = headline + contents;
-        rows.replaceChildren(...blocks.map((block) => blockRow(block, now, since !== null)));
-        source.textContent =
-            savedOn !== null
-                ? ''
-                : tip.blocksAt !== null
-                  ? CHAIN.source(tip.api ?? 'mempool.space', formatUtcClock(tip.blocksAt))
-                  : '';
-    }
 
     function setFact(id: ToolId, text: string): void {
         const target = fact(id);
         if (target) rollText(target, text);
     }
 
-    function onChain(view: ChainView): void {
-        chain = view;
-        renderLegend();
-        setFact('left', formatWhole(Math.floor(supplyAt(view.tip.height).left / SATS_PER_BTC)));
-        share.refresh();
+    function slot(machine: MachineId): HTMLElement | null {
+        return root.querySelector<HTMLElement>(`[data-machine="${machine}"]`);
     }
 
-    function renderPrice(): void {
-        const satsFor = (dollars: number) => Math.round((dollars * SATS_PER_BTC) / prices.quote.value.usd);
-        setFact('convert', HOME.sats(formatWhole(satsFor(1))));
-        setFact('dca', HOME.sats(formatWhole(satsFor(HOME.facts.dca.amount))));
+    const wallSlot = slot('wall');
+    const wall = wallSlot
+        ? attach(wallSlot, 'wall', { issued: supplyAt(heights.tip.height).issued / MAX_SUPPLY })
+        : null;
+    const satsSlot = slot('sats');
+    const sats = satsSlot ? attach(satsSlot, 'sats', { sats: 0 }) : null;
+    const meltSlot = slot('melt');
+    const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1 }) : null;
+    const stackSlot = slot('stack');
+    const stack = stackSlot ? attach(stackSlot, 'stack', { buys: [] }) : null;
+    const minerSlot = slot('miner');
+    const miner = minerSlot
+        ? attach(minerSlot, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: false })
+        : null;
+    for (const view of [wall, sats, melt, stack, miner]) if (view) views.push(view as View<MachineId>);
+
+    if (minerSlot && miner) {
+        stops.push(
+            hashOnTile(minerSlot, miner, (count) => {
+                setFact('miner', formatWhole(count));
+                const target = unit('miner');
+                if (target) target.textContent = HOME.hashed;
+            }),
+        );
+    }
+
+    function onTip(tip: Tip): void {
+        liveText.textContent = liveLine(tip);
+        const supply = supplyAt(tip.height);
+        setFact('left', formatWhole(Math.floor(supply.left / SATS_PER_BTC)));
+        wall?.set({ issued: supply.issued / MAX_SUPPLY });
+    }
+
+    function onPrice(): void {
+        const usd = prices.quote.value.usd;
+        const satsFor = (dollars: number) => Math.round((dollars * SATS_PER_BTC) / usd);
+        setFact('convert', formatWhole(satsFor(1)));
+        setFact('dca', formatWhole(satsFor(HOME.facts.dca.amount)));
+        sats?.set({ sats: satsFor(1) });
     }
 
     afterFirstPaint(() => {
-        Promise.all([import('../data/power.ts'), import('../model/power.ts')])
-            .then(([{ powerData }, { purchasingPower }]) => {
+        Promise.all([import('../data/power.ts'), import('../model/power.ts'), import('../model/melt.ts')])
+            .then(([{ powerData }, { sortedMonths }, { melt: meltOf }]) => {
                 if (disposed) return;
-                const outcome = purchasingPower(HOME.facts.power.amount, FACT_START, powerData('USD'));
-                if (outcome.ok) setFact('power', formatMoney(outcome.result.equivalentNow, 'USD'));
+                const data = powerData('USD');
+                const outcome = meltOf(HOME.facts.power.amount, HOME.facts.power.year, data.cpi);
+                if (outcome.ok) {
+                    setFact('power', formatMoney(outcome.result.buysNow, 'USD'));
+                    melt?.set({ kept: outcome.result.kept });
+                }
+                const months = sortedMonths(data.closes).slice(-STACK_MONTHS);
+                const bought = months.map((month) => 1 / (data.closes[month] ?? Number.POSITIVE_INFINITY));
+                const most = Math.max(...bought);
+                if (most > 0) stack?.set({ buys: bought.map((value) => value / most) });
             })
             .catch(() => {});
     });
 
     const ticker = window.setInterval(() => {
-        if (!document.hidden) renderLegend();
-    }, LEGEND_TICK_MS);
-    const stopChain = world.subscribe(onChain);
-    const stopPrices = prices.subscribe(renderPrice);
-    renderPrice();
+        if (!document.hidden) liveText.textContent = liveLine(heights.tip);
+    }, 15_000);
+    const stopTip = heights.subscribe(onTip);
+    const stopPrices = prices.subscribe(onPrice);
+    onTip(heights.tip);
+    onPrice();
 
     return () => {
         disposed = true;
         window.clearInterval(ticker);
-        stopChain();
+        stopTip();
         stopPrices();
-        share.dispose();
+        for (const stop of stops) stop();
+        for (const view of views) view.detach();
     };
 }
