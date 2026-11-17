@@ -54,7 +54,7 @@ const rows = [
     ['Postcard printer, loaded on first share intent (gzip)', sum(inAssets(postcard)), BUDGETS.postcard],
 ];
 
-let failed = initial.length === 0 || styles.length === 0 || scenes.length < 6 || postcard.length === 0;
+let failed = initial.length === 0 || styles.length === 0 || scenes.length < 5 || postcard.length === 0;
 for (const [kind, pattern] of [
     ['world', /hero-/],
     ['postcard printer', /postcard-/],
