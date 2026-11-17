@@ -4,7 +4,7 @@ import { formatWhole } from '../src/util/format.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
-const LIVE_ROUTES = ['', 'left', 'convert'] as const;
+const LIVE_ROUTES = ['', 'miner', 'left', 'convert'] as const;
 const QUIET_ROUTES = ['power', 'dca', 'address'] as const;
 
 function apiCalls(page: Page): string[] {

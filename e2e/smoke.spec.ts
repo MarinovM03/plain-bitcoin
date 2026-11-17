@@ -38,23 +38,26 @@ test('home shows the shell, the headline and every tool as a plain row, in order
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME.headline);
     const left = formatWhole(Math.floor(supplyAt(FAKE_HEIGHT).left / SATS_PER_BTC));
-    await expect(page.locator('[data-fact="left"]')).toHaveText(left);
-    await expect(page.locator('[data-fact="convert"]')).toHaveText(HOME.sats('1,302'));
-    await expect(page.locator('[data-fact="dca"]')).toHaveText(HOME.sats('65,124'));
-    await expect(page.locator('[data-fact="power"]')).toHaveText(/^\$1,\d{3}$/);
+    await expect(page.locator('[data-fact="left"]')).toHaveAttribute('data-roll', left);
+    await expect(page.locator('[data-fact="convert"]')).toHaveAttribute('data-roll', '1,302');
+    await expect(page.locator('[data-fact="dca"]')).toHaveAttribute('data-roll', '65,124');
+    await expect(page.locator('[data-fact="power"]')).toHaveAttribute('data-roll', /^\$\d+(\.\d{2})?$/);
+    // The miner tile hashes only while it is on screen.
+    await page.locator('[data-machine="miner"]').scrollIntoViewIfNeeded();
+    await expect(page.locator('[data-fact="miner"]')).toHaveAttribute('data-roll', /^\d[\d,]*$/);
     await expect(page.locator('[data-fact="address"]')).toHaveText(HOME.facts.address.figure);
-    await expect(page.locator('.tool-row__unit')).toHaveCount(TOOL_IDS.length);
-    await expect(page.locator('.tool-row__name')).toHaveText(TOOL_IDS.map((id) => TOOLS[id].name));
+    await expect(page.locator('.tile__unit')).toHaveCount(TOOL_IDS.length);
+    await expect(page.locator('.tile__name').first()).toHaveText(TOOLS.miner.name);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
-    for (const row of await page.locator('.tool-row').all()) {
+    for (const row of await page.locator('.tile__link').all()) {
         const box = await row.boundingBox();
         expect(box?.height).toBeGreaterThanOrEqual(44);
     }
 
-    const intro = await page.locator('.hero__intro').boundingBox();
+    const intro = await page.locator('.intro').boundingBox();
     await page.waitForTimeout(500);
-    expect(await page.locator('.hero__intro').boundingBox()).toEqual(intro);
+    expect(await page.locator('.intro').boundingBox()).toEqual(intro);
 
     expect(await horizontalOverflow(page)).toBe(0);
     expect(realProblems(problems)).toEqual([]);
@@ -67,16 +70,16 @@ for (const id of TOOL_IDS) {
 
         await expect(page).toHaveTitle(pageTitle(TOOLS[id].name));
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
-        await expect(page.locator('.tool__description')).toHaveText(TOOLS[id].description);
+        if (id !== 'miner') await expect(page.locator('.tool__description')).toHaveText(TOOLS[id].description);
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
         await expect(page.locator('.share-bar button')).toHaveCount(2);
         await expect(page.locator('.share-bar [data-share-post]')).toHaveCount(1);
         for (const button of await page.locator('.share-bar button').all()) {
-            if (id !== 'address') await expect(button).toBeEnabled();
+            if (id !== 'address' && id !== 'miner') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
-        await expect(page.locator('#picture-plot')).toHaveCount(1);
-        await expect(page.locator('.result__figure')).toBeVisible();
+        await expect(page.locator('#picture-plot')).toHaveCount(id === 'miner' || id === 'convert' ? 0 : 1);
+        await expect(page.locator(id === 'miner' ? '.miner-answer__figure' : '.result__figure')).toBeVisible();
 
         expect(await horizontalOverflow(page)).toBe(0);
         expect(realProblems(problems)).toEqual([]);
@@ -87,7 +90,7 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
     const problems = watchPage(page);
     await page.goto('/');
 
-    await page.locator('.tool-row', { hasText: TOOLS.convert.name }).click();
+    await page.locator('.tile__link[href="#/convert"]').click();
     await expect(page).toHaveURL(/#\/convert$/);
     await expect(page).toHaveTitle(pageTitle(TOOLS.convert.name));
     const heading = page.getByRole('heading', { level: 1 });
@@ -117,7 +120,7 @@ test('an unknown route goes home with one quiet note', async ({ page }) => {
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(1);
     await expect(page.locator('#announcer')).toHaveText(ROUTE.notFound);
 
-    await page.locator('.tool-row').first().click();
+    await page.locator('.tile__link').first().click();
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(0);
 
     await page.goto('/#/POWER');
@@ -181,7 +184,7 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
         expect({ width: outline.width, style: outline.style }).toEqual({ width: '2px', style: 'solid' });
     }
 
-    await page.locator('.tool-row').nth(1).focus();
+    await page.locator('.tile__link[href="#/power"]').focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.power.name);
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();

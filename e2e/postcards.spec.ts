@@ -1,8 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { TOKENS } from '../src/styles/tokens.ts';
 import { SHARE } from '../src/ui/copy.ts';
-import { formatWhole } from '../src/util/format.ts';
-import { FAKE_HEIGHT, fakeHeightApi } from './height-api.ts';
+import { fakeHeaderApi, fakeHeightApi } from './height-api.ts';
 import { hex, near, pixel, postcardName, readPng } from './png.ts';
 import { fakePriceApi } from './price-api.ts';
 
@@ -16,10 +15,23 @@ interface Case {
     prepare?: (page: Page) => Promise<void>;
 }
 
-const text = (selector: string) => async (page: Page) => ((await page.locator(selector).textContent()) ?? '').trim();
+/** A rolled figure keeps its plain text in `data-roll`; its cells carry each character twice for the animation. */
+const text = (selector: string) => async (page: Page) => {
+    const element = page.locator(selector);
+    return ((await element.getAttribute('data-roll')) ?? (await element.textContent()) ?? '').trim();
+};
 
 const CASES: Case[] = [
-    { tool: 'home', route: '', figure: async () => formatWhole(FAKE_HEIGHT) },
+    {
+        tool: 'miner',
+        route: 'miner',
+        figure: async (page) => `${await text('#miner-best')(page)} zero bits`,
+        prepare: async (page) => {
+            await page.locator('#miner-run').click();
+            await expect(page.locator('#miner-best')).toHaveAttribute('data-roll', /^\d+$/);
+            await page.locator('#miner-run').click();
+        },
+    },
     { tool: 'left', route: 'left', figure: text('#left-figure') },
     { tool: 'power', route: 'power', figure: text('#tool-result-figure') },
     {
@@ -42,6 +54,7 @@ const CASES: Case[] = [
 
 test.beforeEach(async ({ page }) => {
     await fakeHeightApi(page);
+    await fakeHeaderApi(page);
     await fakePriceApi(page);
 });
 
@@ -50,8 +63,7 @@ for (const { tool, route, figure, prepare } of CASES) {
         page,
     }) => {
         await page.goto(`/?hero=still#/${route}`);
-        if (route === '' || route === 'left')
-            await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
+        if (route === 'left') await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
         await prepare?.(page);
         const print = page.locator('.share-bar [data-share="print"]').first();
         await expect(print).toBeEnabled();

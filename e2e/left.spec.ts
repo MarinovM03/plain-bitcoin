@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
-import { LEFT_PAGE, TOOLS } from '../src/ui/copy.ts';
+import { LEFT_PAGE } from '../src/ui/copy.ts';
 import { formatBtc, formatPpm, formatWhole } from '../src/util/format.ts';
 import { realProblems } from './console.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest, leftFigure } from './height-api.ts';
@@ -35,8 +35,8 @@ test('home shows the live amount left and the left page counts down from the liv
     await page.goto('/');
 
     const whole = formatWhole(Math.floor(SUPPLY.left / SATS_PER_BTC));
-    await expect(page.locator('[data-fact="left"]')).toHaveText(whole);
-    await page.locator('.tool-row', { hasText: TOOLS.left.name }).click();
+    await expect(page.locator('[data-fact="left"]')).toHaveAttribute('data-roll', whole);
+    await page.locator('.tile__link[href="#/left"]').click();
     await expect(page).toHaveURL(/#\/left$/);
 
     await expect(page.locator('#left-figure')).toHaveText(leftFigure());
