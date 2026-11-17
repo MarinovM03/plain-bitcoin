@@ -49,7 +49,7 @@ async function horizontalOverflow(page: Page): Promise<number> {
 }
 
 test.beforeEach(async ({ page }) => {
-    await page.goto('/#/address');
+    await page.goto('/address');
     await expect(page.locator('#tool-result')).toHaveText(ADDRESS.empty);
 });
 
@@ -132,7 +132,7 @@ test('the secrets guard clears a seed phrase or private key and sends nothing', 
     }
     await page.waitForTimeout(500);
     expect(external).toEqual([]);
-    expect(page.url()).toMatch(/\/#\/address$/);
+    expect(page.url()).toMatch(/\/address$/);
     expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
     expect(realProblems(problems)).toEqual([]);
 });
@@ -159,7 +159,7 @@ test('the guard sees through hidden characters, numbering and labels, and Enter 
     await expect(page.locator('#tool-result')).toHaveText(ADDRESS.headline(ADDRESS.types.p2wpkh));
     await page.waitForTimeout(500);
     expect(external).toEqual([]);
-    expect(page.url()).toMatch(/\/#\/address$/);
+    expect(page.url()).toMatch(/\/address$/);
     const stored = await page.evaluate(async () => {
         const databases = typeof indexedDB.databases === 'function' ? await indexedDB.databases() : [];
         return localStorage.length + sessionStorage.length + databases.length + document.cookie.length;

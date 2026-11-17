@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
 test('the miner hashes a real header on the device and checks the real block', async ({ page }) => {
     const headers = await fakeHeaderApi(page);
-    await page.goto('/?hero=still#/miner');
+    await page.goto('/miner?hero=still');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.miner.name);
     const run = page.locator('#miner-run');
     await expect(run).toBeEnabled();
@@ -40,7 +40,7 @@ test('the miner hashes a real header on the device and checks the real block', a
 
 test('with mempool.space out of reach the miner hashes the saved block and says so', async ({ page }) => {
     await page.route(/^https:\/\/(mempool\.space|blockstream\.info)\//, (route) => route.abort());
-    await page.goto('/?hero=still#/miner');
+    await page.goto('/miner?hero=still');
     await expect(page.locator('#miner-run')).toBeEnabled({ timeout: 10_000 });
     await expect(page.locator('#miner-kicker-text')).toHaveText(MINER.kickerSaved(formatWhole(SAVED_HEADER.height)));
     await expect(page.locator('#tool-source')).toContainText('saved');
@@ -48,7 +48,7 @@ test('with mempool.space out of reach the miner hashes the saved block and says 
 
 test('the scene box is hidden from assistive tech and the canvas never takes a pointer', async ({ page }) => {
     await fakeHeaderApi(page);
-    await page.goto('/#/miner');
+    await page.goto('/miner');
     const stage = page.locator('.machine__stage');
     await expect(stage).toHaveAttribute('aria-hidden', 'true');
     await expect(stage.locator('a, button, [tabindex]')).toHaveCount(0);

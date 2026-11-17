@@ -36,7 +36,7 @@ const pick = (page: Page, currency: string) => page.getByLabel(currency, { exact
 test('converts 100,000 sats at the live price, asking only the price API', async ({ page }) => {
     const prices = await fakePriceApi(page);
     const { problems, external } = watch(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     const field = fields(page);
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     await expect(page.locator('#tool-result-detail')).toHaveText('Also 0.001 BTC.');
@@ -62,7 +62,7 @@ test('converts 100,000 sats at the live price, asking only the price API', async
 
 test('the last-edited field drives the others, and the scrubber runs from 1 sat to 1 BTC', async ({ page }) => {
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     const field = fields(page);
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
 
@@ -86,7 +86,7 @@ test('the last-edited field drives the others, and the scrubber runs from 1 sat 
 
 test('the money switch offers dollars, euros and pounds and keeps the amount of bitcoin', async ({ page }) => {
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     const field = fields(page);
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
 
@@ -114,7 +114,7 @@ test('what is typed before the tool finishes loading still drives the answer', a
         await held;
         await route.continue();
     });
-    await page.goto('/#/convert', { waitUntil: 'commit' });
+    await page.goto('/convert', { waitUntil: 'commit' });
     await fields(page).btc.fill('0.5');
     release();
     await expect(page.locator('#tool-result')).toHaveText(/^0\.5 BTC = \$[\d,]+\.\d{2}$/);
@@ -123,7 +123,7 @@ test('what is typed before the tool finishes loading still drives the answer', a
 
 test('refuses impossible amounts and pasted garbage calmly', async ({ page }) => {
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     const field = fields(page);
     await field.btc.fill('21000001');
@@ -157,7 +157,7 @@ test('refuses impossible amounts and pasted garbage calmly', async ({ page }) =>
 test('offline, it converts at the bundled last close and says so', async ({ page }) => {
     const prices = await fakePriceApi(page, true);
     const { problems } = watch(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await expect.poll(() => prices.calls.length).toBe(2);
     const day = new Intl.DateTimeFormat('en-GB', {
         day: 'numeric',
@@ -180,7 +180,7 @@ test('offline, it converts at the bundled last close and says so', async ({ page
 test('every field and the scrubber are reachable by keyboard', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Keyboard focus is checked on desktop');
     await fakePriceApi(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await page.locator('h1').focus();
     const order: string[] = [];
     for (let i = 0; i < 14; i += 1) {

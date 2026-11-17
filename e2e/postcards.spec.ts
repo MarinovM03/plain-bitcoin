@@ -62,7 +62,7 @@ for (const { tool, route, figure, prepare } of CASES) {
     test(`#/${route} prints a postcard: 2400 x 1256, plate to the corners, the page's own number, nothing sent`, async ({
         page,
     }) => {
-        await page.goto(`/?hero=still#/${route}`);
+        await page.goto(`/${route}?hero=still`);
         if (route === 'left') await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
         await prepare?.(page);
         const print = page.locator('.share-bar [data-share="print"]').first();
@@ -113,7 +113,7 @@ for (const { tool, route, figure, prepare } of CASES) {
         expect(`${href.origin}${href.pathname}`).toBe('https://x.com/intent/post');
         const compose = href.searchParams.get('text') ?? '';
         expect(compose.length).toBeLessThanOrEqual(200);
-        expect(compose).toContain(`plainbitcoin.org/#/${route}`);
+        expect(compose).toContain(`plainbitcoin.org/${route}`);
         expect(compose).toContain('@PlainBTC');
         expect(compose).not.toContain('#bitcoin');
         if (tool === 'address') expect(compose).not.toContain(TAPROOT);
@@ -127,7 +127,7 @@ test('the postcard renderer loads only on a first sign of sharing, never with th
     page.on('request', (request) => {
         if (/\/assets\/postcard-/.test(request.url())) chunks.push(request.url());
     });
-    await page.goto('/?hero=still#/convert');
+    await page.goto('/convert?hero=still');
     await expect(page.locator('#tool-result')).toHaveText('100,000 sats = $76.78');
     await page.waitForTimeout(1_500);
     expect(chunks).toEqual([]);
@@ -139,14 +139,14 @@ test('Copy image says plainly when this browser cannot copy images', async ({ pa
     await page.addInitScript(() => {
         Object.defineProperty(window, 'ClipboardItem', { value: undefined, configurable: true });
     });
-    await page.goto('/?hero=still#/convert');
+    await page.goto('/convert?hero=still');
     await page.locator('[data-share="print"]').click();
     await page.locator('.tray [data-tray="copy"]').click();
     await expect(page.locator('.tray__status')).toHaveText(SHARE.copyUnsupported);
 });
 
 test('the postcard slides up into the tray, and appears at once under reduced motion', async ({ page }) => {
-    await page.goto('/?hero=still#/dca');
+    await page.goto('/dca?hero=still');
     await page.locator('[data-share="print"]').click();
     await expect(page.locator('.tray__paper')).toHaveClass(/is-arriving/);
     await page.locator('.tray [data-tray="close"]').click();

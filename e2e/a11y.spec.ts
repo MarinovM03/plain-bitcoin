@@ -6,7 +6,7 @@ import { fakeHeaderApi, fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const ROUTES = ['', ...TOOL_IDS] as const;
-const TILE_ORDER = ['miner', 'left', 'convert', 'power', 'dca', 'address'] as const;
+const TILE_ORDER = ['miner', 'left', 'halving', 'tx', 'convert', 'power', 'dca', 'address'] as const;
 const TAPROOT = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 const SIZES = [
     [360, 740],
@@ -18,14 +18,15 @@ const SIZES = [
 ] as const;
 
 async function open(page: Page, route: string) {
-    await page.goto(`/?hero=still#/${route}`);
+    await page.goto(`/${route}?hero=still`);
     if (route === 'address') await page.locator('#address-input').fill(TAPROOT);
     if (route === 'miner') {
         await page.locator('#miner-run').click();
         await expect(page.locator('#miner-best')).toHaveAttribute('data-roll', /^\d+$/);
         await page.locator('#miner-run').click();
     }
-    if (route !== '' && route !== 'left') await expect(page.locator('[data-share="print"]')).toBeEnabled();
+    if (route !== '' && route !== 'left' && route !== 'tx')
+        await expect(page.locator('[data-share="print"]')).toBeEnabled();
     if (route === 'left') await expect(page.locator('#left-note')).not.toBeEmpty();
     const live = route === '' || route === 'miner' || route === 'left' || route === 'convert';
     if (live) await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
@@ -62,6 +63,7 @@ for (const route of ROUTES) {
 
 test('no route scrolls sideways at phone, landscape, 200% zoom or desktop sizes', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Viewport sweep runs once, on desktop');
+    test.setTimeout(180_000);
     for (const [width, height] of SIZES) {
         await page.setViewportSize({ width, height });
         for (const route of ROUTES) {

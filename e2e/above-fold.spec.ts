@@ -25,15 +25,26 @@ async function ready(page: Page, id: ToolId): Promise<void> {
         await expect(page.locator('#miner-run')).toBeEnabled({ timeout: 10_000 });
         return;
     }
+    if (id === 'halving') {
+        await expect(page.locator('#halving-blocks')).toHaveAttribute('data-roll', /\d/);
+        return;
+    }
+    if (id === 'tx') {
+        await expect(page.locator('#tx-line li')).toHaveCount(3);
+        return;
+    }
     if (id === 'address') await page.locator('#address-input').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
     const answer = id === 'left' ? '#left-figure' : '#tool-result-figure';
     await expect(page.locator(answer)).toHaveText(/\d|[A-Z][a-z]/);
-    if (id !== 'convert') await expect(page.locator('#picture-plot > svg.gauge-svg')).toHaveCount(1);
+    if (id === 'power' || id === 'dca' || id === 'address')
+        await expect(page.locator('#picture-plot > svg.gauge-svg')).toHaveCount(1);
 }
 
 const PARTS: Partial<Record<ToolId, { input: string; figure: string; answer: string }>> = {
     miner: { input: '#miner-run', figure: '#miner-best', answer: '#miner-needs' },
     convert: { input: '#convert-sats', figure: '#tool-result-figure', answer: '#tool-result' },
+    halving: { input: '#halving-scrub', figure: '#halving-blocks', answer: '#halving-sentence' },
+    tx: { input: '#tx-id', figure: '#tx-rate', answer: '#tx-sentence' },
 };
 
 async function boxes(page: Page, id: ToolId) {
@@ -71,7 +82,7 @@ test('on every viewport the plain name, the first input and the answer share the
     for (const [width, height] of SIZES) {
         await page.setViewportSize({ width, height });
         for (const id of TOOL_IDS) {
-            await page.goto(`/#/${id}`);
+            await page.goto(`/${id}`);
             await ready(page, id);
             const measured = await boxes(page, id);
             expect(measured.scrollY).toBe(0);
@@ -91,7 +102,7 @@ test('typing on a phone keeps the answer on screen', async ({ page, isMobile }) 
     test.skip(!isMobile, 'Checked with a touch screen');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const id of ['power', 'convert', 'dca', 'address'] as const) {
-        await page.goto(`/#/${id}`);
+        await page.goto(`/${id}`);
         await ready(page, id);
         await page
             .locator(id === 'convert' ? '#convert-sats' : '.tool__fields .field__input')

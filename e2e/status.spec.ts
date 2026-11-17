@@ -1,10 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
-import { STATUS } from '../src/ui/copy.ts';
+import { STATUS, TOOLS } from '../src/ui/copy.ts';
 import { formatWhole } from '../src/util/format.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
-const LIVE_ROUTES = ['', 'miner', 'left', 'convert'] as const;
+const LIVE_ROUTES = ['', 'miner', 'left', 'halving', 'tx', 'convert'] as const;
 const QUIET_ROUTES = ['power', 'dca', 'address'] as const;
 
 function apiCalls(page: Page): string[] {
@@ -22,7 +22,7 @@ for (const route of LIVE_ROUTES) {
     test(`#/${route} shows the live block and price with a source`, async ({ page }) => {
         await fakeHeightApi(page);
         await fakePriceApi(page);
-        await page.goto(`/?hero=still#/${route}`);
+        await page.goto(`/${route}?hero=still`);
         const status = page.getByRole('group', { name: STATUS.label });
         await expect(status.locator('#status-block')).toHaveText(STATUS.block(formatWhole(FAKE_HEIGHT)));
         await expect(status.locator('#status-usd')).toHaveText('$76,777');
@@ -39,7 +39,7 @@ for (const route of ['left', 'convert'] as const) {
         await fakeHeightApi(page);
         await fakePriceApi(page);
         const calls = apiCalls(page);
-        await page.goto(`/?hero=still#/${route}`);
+        await page.goto(`/${route}?hero=still`);
         await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
         await page.waitForTimeout(4000);
         expect(tipCalls(calls)).toHaveLength(1);
@@ -50,7 +50,7 @@ for (const route of ['left', 'convert'] as const) {
 for (const route of QUIET_ROUTES) {
     test(`#/${route} fetches nothing and labels the status as an estimate`, async ({ page }) => {
         const calls = apiCalls(page);
-        await page.goto(`/#/${route}`);
+        await page.goto(`/${route}`);
         await expect(page.locator('#status-block')).toHaveText(new RegExp(`${STATUS.estimated.trim()}$`));
         await expect(page.locator('#status-source')).toHaveText(/^last close /);
         await expect(page.locator('#status')).toHaveAttribute('data-state', 'estimate');
@@ -64,9 +64,10 @@ test('leaving the live routes stops polling and keeps the last value with its ti
     await fakeHeightApi(page);
     await fakePriceApi(page);
     const calls = apiCalls(page);
-    await page.goto('/#/convert');
+    await page.goto('/convert');
     await expect(page.locator('#status')).toHaveAttribute('data-state', 'live');
-    await page.goto('/#/power');
+    await page.locator('.footer__link[href="/power"]').click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.power.name);
     const before = calls.length;
     await page.waitForTimeout(3000);
     expect(calls).toHaveLength(before);

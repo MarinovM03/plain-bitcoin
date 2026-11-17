@@ -35,7 +35,7 @@ test('home shows the shell, the headline and every tool as a plain row, in order
     await page.goto('/');
 
     await expect(page).toHaveTitle(SITE_NAME);
-    await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '#/');
+    await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('href', '/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME.headline);
     const left = formatWhole(Math.floor(supplyAt(FAKE_HEIGHT).left / SATS_PER_BTC));
     await expect(page.locator('[data-fact="left"]')).toHaveAttribute('data-roll', left);
@@ -66,20 +66,22 @@ test('home shows the shell, the headline and every tool as a plain row, in order
 for (const id of TOOL_IDS) {
     test(`#/${id} loads its frame without overflow`, async ({ page }) => {
         const problems = watchPage(page);
-        await page.goto(`/#/${id}`);
+        await page.goto(`/${id}`);
 
         await expect(page).toHaveTitle(pageTitle(TOOLS[id].name));
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
-        if (id !== 'miner') await expect(page.locator('.tool__description')).toHaveText(TOOLS[id].description);
+        const machine = id === 'miner' || id === 'halving' || id === 'tx' || id === 'left';
+        if (!machine) await expect(page.locator('.tool__description')).toHaveText(TOOLS[id].description);
         await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
         await expect(page.locator('.share-bar button')).toHaveCount(2);
         await expect(page.locator('.share-bar [data-share-post]')).toHaveCount(1);
         for (const button of await page.locator('.share-bar button').all()) {
-            if (id !== 'address' && id !== 'miner') await expect(button).toBeEnabled();
+            if (id !== 'address' && id !== 'miner' && id !== 'tx') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
-        await expect(page.locator('#picture-plot')).toHaveCount(id === 'miner' || id === 'convert' ? 0 : 1);
-        await expect(page.locator(id === 'miner' ? '.miner-answer__figure' : '.result__figure')).toBeVisible();
+        await expect(page.locator('#picture-plot')).toHaveCount(['power', 'dca', 'address'].includes(id) ? 1 : 0);
+        const answer = id === 'miner' || id === 'halving' || id === 'tx' ? '.miner-answer__figure' : '.result__figure';
+        await expect(page.locator(answer)).toBeVisible();
 
         expect(await horizontalOverflow(page)).toBe(0);
         expect(realProblems(problems)).toEqual([]);
@@ -90,8 +92,8 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
     const problems = watchPage(page);
     await page.goto('/');
 
-    await page.locator('.tile__link[href="#/convert"]').click();
-    await expect(page).toHaveURL(/#\/convert$/);
+    await page.locator('.tile__link[href="/convert"]').click();
+    await expect(page).toHaveURL(/\/convert$/);
     await expect(page).toHaveTitle(pageTitle(TOOLS.convert.name));
     const heading = page.getByRole('heading', { level: 1 });
     await expect(heading).toHaveText(TOOLS.convert.name);
@@ -107,29 +109,26 @@ test('tapping a row opens the tool, focuses and announces it; back and forward w
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.convert.name);
 
     await page.getByRole('link', { name: SITE_NAME }).click();
-    await expect(page).toHaveURL(/#\/$/);
+    await expect(page).toHaveURL(/:\d+\/$/);
     expect(realProblems(problems)).toEqual([]);
 });
 
 test('an unknown route goes home with one quiet note', async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => {
-        window.location.hash = '#/nowhere';
-    });
-    await expect(page).toHaveURL(/#\/$/);
+    await page.goto('/nowhere');
+    await expect(page).toHaveURL(/:\d+\/$/);
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(1);
     await expect(page.locator('#announcer')).toHaveText(ROUTE.notFound);
 
     await page.locator('.tile__link').first().click();
     await expect(page.locator('main').getByText(ROUTE.notFound)).toHaveCount(0);
 
-    await page.goto('/#/POWER');
-    await expect(page).toHaveURL(/#\/$/);
+    await page.goto('/POWER');
+    await expect(page).toHaveURL(/:\d+\/$/);
     await expect(page.locator('main').getByText(ROUTE.notFound)).toBeVisible();
 });
 
 test('amount fields group thousands without moving the caret', async ({ page }) => {
-    await page.goto('/#/power');
+    await page.goto('/power');
     const amount = page.getByLabel('Amount', { exact: true });
     await expect(amount).toHaveValue('1,000');
 
@@ -152,12 +151,12 @@ test('amount fields group thousands without moving the caret', async ({ page }) 
 
 test('a huge paste into an amount field keeps sixteen digits and the page responsive', async ({ page }) => {
     const problems = watchPage(page);
-    await page.goto('/#/power');
+    await page.goto('/power');
     const amount = page.getByLabel('Amount', { exact: true });
     await amount.fill('9'.repeat(200_000));
     await expect(amount).toHaveValue('9,999,999,999,999,999', { timeout: 3000 });
     await amount.press('Enter');
-    expect(page.url()).toMatch(/\/#\/power$/);
+    expect(page.url()).toMatch(/\/power$/);
     expect(realProblems(problems)).toEqual([]);
 });
 
@@ -184,11 +183,17 @@ test('every link is reachable by keyboard with a visible focus ring, and Enter o
         expect({ width: outline.width, style: outline.style }).toEqual({ width: '2px', style: 'solid' });
     }
 
-    await page.locator('.tile__link[href="#/power"]').focus();
+    await page.locator('.tile__link[href="/power"]').focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.power.name);
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
 
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('Amount', { exact: true })).toBeFocused();
+});
+
+test('old #/ links still open their page, at its own address', async ({ page }) => {
+    await page.goto('/?hero=still#/power');
+    await expect(page).toHaveURL(/\/power\?hero=still$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS.power.name);
 });
