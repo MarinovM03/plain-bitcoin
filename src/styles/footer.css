@@ -2,9 +2,8 @@
     position: relative;
     z-index: 1;
     padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
-    text-shadow:
-        0 0 0.75rem var(--void),
-        0 0 0.25rem var(--void);
+    border-top: 1px solid var(--edge);
+    background: var(--void);
 }
 
 .footer__inner {
@@ -24,7 +23,8 @@
     align-items: center;
     gap: 0.5rem;
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 760;
+    letter-spacing: -0.035em;
     font-size: var(--step-lead);
 }
 

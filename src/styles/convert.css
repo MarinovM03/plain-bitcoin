@@ -3,12 +3,27 @@
  * field is known by its caret and by the line that grows under it when it has focus.
  */
 .play {
-    display: grid;
-    gap: 1.25rem;
+    row-gap: 1.25rem;
+}
+
+.play > :not(.play__stage) {
+    grid-column: 1;
     max-width: 35rem;
-    text-shadow:
-        0 0 0.75rem var(--void),
-        0 0 0.25rem var(--void);
+}
+
+@media (min-width: 64rem), (orientation: landscape) and (max-height: 32rem) {
+    .play > .play__top {
+        grid-row: 1;
+        padding-top: clamp(1rem, 4vh, 3rem);
+    }
+
+    .play > .play__controls {
+        grid-row: 2;
+    }
+
+    .play > .play__below {
+        grid-row: 3;
+    }
 }
 
 .play__top,
