@@ -19,6 +19,7 @@ import {
 import { CHAIN, HOME, SHARE, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 import { shareBar } from './output.ts';
+import { rollText } from './roll.ts';
 import type { ChainView, World } from './world.ts';
 
 const LEGEND_TICK_MS = 15_000;
@@ -33,8 +34,8 @@ const FACT_UNITS: Record<ToolId, string> = {
 };
 
 /**
- * A tool as a glass chip: its short name, one line that explains it, and one real number. The number's place is
- * held from the first paint, so nothing shifts when it arrives.
+ * A tool as one line of the menu: its name set large, one line that explains it, and one real number. The number's
+ * place is held from the first paint, so nothing shifts when it arrives.
  */
 function renderRow(id: ToolId): SafeHtml {
     return html`<li class="tool-list__item">
@@ -68,18 +69,18 @@ export function renderHome(): SafeHtml {
     const columns = Object.values(CHAIN.columns).map((name) => html`<th scope="col">${name}</th>`);
     return html`<div class="home">
     <section class="hero" aria-labelledby="home-heading">
-        <div class="hero__intro">
+        <div class="hero__intro veil rise">
             <h1 id="home-heading" class="hero__heading" tabindex="-1">${HOME.headline.slice(0, -HOME.headlineAccent.length)}<span class="hero__accent">${HOME.headlineAccent}</span></h1>
             <p class="hero__lead">${HOME.lead}</p>
         </div>
-        <div class="hero__tools">
+        <div class="hero__tools veil">
+            <nav class="tool-list" aria-label="${HOME.toolsHeading}">
+                <ul class="tool-list__rows rise">${TOOL_IDS.map(renderRow)}</ul>
+            </nav>
             <div class="chain__legend">
                 <p id="chain-forming" class="chain__forming">${CHAIN.waiting}</p>
                 <p id="chain-newest" class="chain__newest"></p>
             </div>
-            <nav class="tool-list" aria-label="${HOME.toolsHeading}">
-                <ul class="tool-list__rows">${TOOL_IDS.map(renderRow)}</ul>
-            </nav>
             <p class="tool-list__source">${HOME.factsSource}</p>
         </div>
     </section>
@@ -171,23 +172,24 @@ export function mountHome(root: HTMLElement, siteUrl: string, world: World): () 
         const first = blocks[0];
         const last = blocks[blocks.length - 1];
         if (!first || !last) {
-            forming.textContent = CHAIN.waiting;
+            rollText(forming, CHAIN.waiting);
             newest.textContent = '';
             return;
         }
         if (savedOn !== null) {
-            forming.textContent = CHAIN.saved(
-                formatWhole(last.height),
-                formatWhole(first.height),
-                formatShortDay(isoDayMs(savedOn)),
+            rollText(
+                forming,
+                CHAIN.saved(formatWhole(last.height), formatWhole(first.height), formatShortDay(isoDayMs(savedOn))),
             );
         } else if (since === null) {
-            forming.textContent =
+            rollText(
+                forming,
                 tip.source === 'offline' && tip.blocksAt !== null
                     ? CHAIN.lastSeen(formatUtcClock(tip.blocksAt))
-                    : CHAIN.formingUnknown;
+                    : CHAIN.formingUnknown,
+            );
         } else {
-            forming.textContent = CHAIN.forming(formatMinutes(now - since));
+            rollText(forming, CHAIN.forming(formatMinutes(now - since)));
         }
         const height = formatWhole(first.height);
         const headline =
@@ -210,7 +212,7 @@ export function mountHome(root: HTMLElement, siteUrl: string, world: World): () 
 
     function setFact(id: ToolId, text: string): void {
         const target = fact(id);
-        if (target) target.textContent = text;
+        if (target) rollText(target, text);
     }
 
     function onChain(view: ChainView): void {

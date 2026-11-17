@@ -1,5 +1,5 @@
 import './styles/main.css';
-import { startRouter } from './app/router.ts';
+import { type RouteChange, startRouter } from './app/router.ts';
 import { mountCounter } from './tools/left/counter.ts';
 import { pageTitle, ROUTE, TOOLS } from './ui/copy.ts';
 import { bindFields } from './ui/field-behaviour.ts';
@@ -10,6 +10,7 @@ import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
 import { mountWorld } from './ui/world.ts';
 import { byId, find } from './util/dom.ts';
+import { prefersReducedMotion } from './util/motion.ts';
 
 const SITE = import.meta.env.VITE_SITE_URL;
 
@@ -24,16 +25,15 @@ const announce = (message: string) => {
 const world = mountWorld(byId('chain'), announce);
 let cleanups: (() => void)[] = [];
 let viewCount = 0;
+let leaving = 0;
+/** The page on show staggers out for this long before the next one is drawn; matches `leave` in motion.css. */
+const LEAVE_MS = 190;
 
 function whileCurrent(view: number, mount: () => () => void): void {
     if (view === viewCount) cleanups.push(mount());
 }
 
-startRouter(({ route, initial, notFound }) => {
-    for (const cleanup of cleanups) cleanup();
-    cleanups = [];
-    const view = ++viewCount;
-
+function show({ route, initial, notFound }: RouteChange, view: number): void {
     const prerendered = initial && route === 'home' && !notFound;
     if (!prerendered) {
         const page = route === 'home' ? renderHome() : renderToolPage(route);
@@ -44,7 +44,6 @@ startRouter(({ route, initial, notFound }) => {
     document.documentElement.dataset.route = route;
     markCurrent(route);
     status.setRoute(route);
-    world.setRoute(route);
     bindFields(main);
 
     if (route === 'home') cleanups.push(mountHome(main, SITE, world));
@@ -80,4 +79,19 @@ startRouter(({ route, initial, notFound }) => {
         main.querySelector<HTMLElement>('h1')?.focus();
         announce(notFound ? ROUTE.notFound : document.title);
     }
+}
+
+startRouter((change) => {
+    for (const cleanup of cleanups) cleanup();
+    cleanups = [];
+    const view = ++viewCount;
+    window.clearTimeout(leaving);
+    world.setRoute(change.route);
+    const old = change.initial || prefersReducedMotion() ? null : main.firstElementChild;
+    if (!old) {
+        show(change, view);
+        return;
+    }
+    old.classList.add('view--leave');
+    leaving = window.setTimeout(() => show(change, view), LEAVE_MS);
 });

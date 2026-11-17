@@ -2,6 +2,7 @@
 @import "./fonts.css";
 @import "./base.css";
 @import "./shell.css";
+@import "./motion.css";
 @import "./status.css";
 @import "./home.css";
 @import "./tool-page.css";

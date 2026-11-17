@@ -23,7 +23,17 @@ main,
     position: relative;
     z-index: 2;
     padding-top: env(safe-area-inset-top);
-    background: var(--void);
+}
+
+/* The bar has no box: only a shade that thins to nothing below it, so the words stay readable over the world. */
+.topbar::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 -2.5rem;
+    z-index: -1;
+    background: linear-gradient(to bottom, var(--void) 35%, transparent);
+    opacity: 0.85;
+    pointer-events: none;
 }
 
 .topbar__inner {
@@ -66,8 +76,8 @@ main,
     display: block;
     width: 100%;
     height: 3px;
-    background: var(--edge);
     fill: var(--btc);
+    opacity: 0.7;
 }
 
 .menu {
@@ -80,10 +90,7 @@ main,
     gap: 0.5rem;
     min-height: 2.25rem;
     margin-block: 0.25rem;
-    padding-inline: 0.875rem;
-    border: 1px solid var(--edge);
-    border-radius: 999px;
-    background: var(--plate);
+    padding-inline: 0.25rem;
     color: var(--ink);
     font-size: var(--step-small);
     font-weight: 600;
@@ -117,10 +124,6 @@ main,
     border-bottom: 1.5px solid currentcolor;
     rotate: 45deg;
     transition: rotate var(--duration) var(--ease);
-}
-
-.menu[open] .menu__toggle {
-    border-color: var(--ink-dim);
 }
 
 .menu[open] .menu__toggle::after {
@@ -179,9 +182,7 @@ main,
     align-items: center;
     gap: 0.375rem;
     min-height: 2.25rem;
-    padding-inline: 0.75rem;
-    border: 1px solid var(--btc);
-    border-radius: 999px;
+    padding-inline: 0.25rem;
     color: var(--btc);
     font-size: var(--step-small);
     font-weight: 600;
@@ -202,7 +203,7 @@ main,
 
 @media (hover: hover) {
     .menu__toggle:hover {
-        border-color: var(--ink-dim);
+        color: var(--btc);
     }
 
     .menu__link:hover .menu__name {
@@ -210,8 +211,7 @@ main,
     }
 
     .topbar__follow:hover {
-        background: var(--btc);
-        color: var(--void);
+        color: var(--ink);
     }
 }
 
@@ -286,49 +286,70 @@ main {
 }
 
 /*
- * Panels. Everything a person reads sits on one: an opaque plate until the lit scene is running, then frosted
- * glass with a tint dark enough that every ink keeps its contrast whatever passes behind.
+ * Panels are for the tools that have not moved onto the world yet. Home and the converter have none: their type
+ * stands straight on the world, over a veil.
  */
-.chain__legend,
-.tool-row,
-.chain-about,
-.home__share,
-.cautions,
 .tool__screen,
 .tool__below,
 .route-note {
+    padding: 0.875rem;
     border: 1px solid var(--edge);
     border-radius: var(--radius);
     background: var(--plate);
 }
 
-.chain-about,
-.home__share,
-.cautions,
-.tool__screen,
-.tool__below,
-.route-note {
-    padding: 0.875rem;
-}
-
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    :root[data-world="scene"]
-        :is(
-            .topbar,
-            .footer,
-            .chain__legend,
-            .tool-row,
-            .chain-about,
-            .home__share,
-            .cautions,
-            .tool__screen,
-            .tool__below,
-            .route-note
-        ) {
+    :root[data-world="scene"] :is(.tool__screen, .tool__below, .route-note) {
         border-color: color-mix(in srgb, var(--ink) 16%, transparent);
         background: var(--glass);
         -webkit-backdrop-filter: blur(18px) saturate(1.35);
         backdrop-filter: blur(18px) saturate(1.35);
+    }
+}
+
+/*
+ * A veil: one flat tint of the dark behind a group of words, cut by a mask that reaches nothing on every side, so
+ * it has no edge anywhere. It only thins out.
+ */
+.veil {
+    --veil-bleed: 0.625rem;
+    position: relative;
+}
+
+.veil::before {
+    --veil-fall: linear-gradient(
+        to bottom,
+        transparent,
+        rgb(0 0 0 / 0.5) 1.75rem,
+        #000 4rem,
+        #000 calc(100% - 4rem),
+        rgb(0 0 0 / 0.5) calc(100% - 1.75rem),
+        transparent
+    );
+    --veil-run: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--veil-bleed),
+        #000 55%,
+        rgb(0 0 0 / 0.55) 75%,
+        rgb(0 0 0 / 0.15) 90%,
+        transparent
+    );
+    content: "";
+    position: absolute;
+    inset: -3.5rem calc(var(--veil-bleed) * -1);
+    z-index: -1;
+    background: color-mix(in srgb, var(--void) 84%, transparent);
+    -webkit-mask-image: var(--veil-fall), var(--veil-run);
+    mask-image: var(--veil-fall), var(--veil-run);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    pointer-events: none;
+}
+
+@media (min-width: 48rem) {
+    .veil {
+        --veil-bleed: var(--gutter);
     }
 }
 
@@ -339,9 +360,6 @@ main {
 }
 
 @media (min-width: 64rem) {
-    .chain-about,
-    .home__share,
-    .cautions,
     .tool__screen,
     .tool__below {
         padding: 1.5rem;
@@ -359,24 +377,4 @@ main {
     margin-block: 0 1rem;
     color: var(--ink-dim);
     font-size: var(--step-small);
-}
-
-.view--enter {
-    animation: view-enter calc(var(--duration) * 1.5) var(--ease);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .view--enter {
-        animation: none;
-    }
-
-    .menu__toggle::after {
-        transition: none;
-    }
-}
-
-@keyframes view-enter {
-    from {
-        opacity: 0;
-    }
 }

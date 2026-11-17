@@ -1,49 +1,27 @@
+/* Home has no boxes: every word stands on the world, with a dark halo so it reads over whatever passes behind. */
 .home {
     display: grid;
-    gap: 1.5rem;
+    gap: 2.5rem;
+    text-shadow:
+        0 0 0.75rem var(--void),
+        0 0 0.25rem var(--void);
 }
 
 /*
- * The first screen, sized from fixed lengths so nothing moves when the bar above it is measured: the headline at the top, the tools at the bottom, and between them nothing at all, so the
- * chain behind the page shows through.
+ * The first screen, sized from fixed lengths so nothing moves when the bar above it is measured: the headline at
+ * the top, the tools at the bottom, and between them nothing at all, so the chain shows through.
  */
 .hero {
     display: grid;
-    grid-template-rows: auto minmax(5.5rem, 1fr) auto;
+    grid-template-rows: auto minmax(2.5rem, 1fr) auto;
     min-height: calc(100svh - 7rem);
 }
 
 .hero__intro {
-    position: relative;
     display: grid;
     gap: 0.625rem;
     min-width: 0;
     padding-top: 0.75rem;
-}
-
-/*
- * A veil the colour of the dark behind the words. It is one flat tint cut by a mask that reaches nothing at every
- * side of its box, so it has no edge anywhere: it only thins out.
- */
-.hero__intro::before {
-    --veil-fall: linear-gradient(
-        to bottom,
-        transparent,
-        rgb(0 0 0 / 0.55) 2.25rem,
-        #000 5rem,
-        #000 calc(100% - 8rem),
-        rgb(0 0 0 / 0.6) calc(100% - 4.75rem),
-        rgb(0 0 0 / 0.2) calc(100% - 2rem),
-        transparent
-    );
-    content: "";
-    position: absolute;
-    inset: -5rem -0.625rem -6rem;
-    z-index: -1;
-    background: color-mix(in srgb, var(--void) 90%, transparent);
-    -webkit-mask-image: var(--veil-fall);
-    mask-image: var(--veil-fall);
-    pointer-events: none;
 }
 
 .hero__heading {
@@ -70,18 +48,14 @@
 .hero__tools {
     grid-row: 3;
     display: grid;
-    gap: 0.5rem;
+    gap: 0.75rem;
     min-width: 0;
 }
 
 .chain__legend {
     display: grid;
     gap: 0.125rem;
-    align-content: center;
-    justify-self: start;
-    max-width: 100%;
-    min-height: 5rem;
-    padding: 0.5rem 0.875rem;
+    min-height: 3.5rem;
 }
 
 #chain-source {
@@ -94,38 +68,29 @@
     line-height: 1.35;
 }
 
-.chain__newest {
-    color: var(--ink-dim);
-    font-size: var(--step-tiny);
-    line-height: 1.4;
-}
-
-.tool-list__rows {
-    display: grid;
-    gap: 0.375rem;
-}
-
+.chain__newest,
 .tool-list__source {
     color: var(--ink-dim);
     font-size: var(--step-tiny);
     line-height: 1.45;
-    text-shadow:
-        0 0 0.5rem var(--void),
-        0 0 0.25rem var(--void);
 }
 
-/* A tool as a chip of glass: the name and one line on the left, one real number in orange on the right. */
+/* The tools as a menu set in type: the name large on the left, one real number in orange on the right. */
+.tool-list__rows {
+    display: grid;
+}
+
 .tool-row {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    column-gap: 0.75rem;
-    min-height: 3.25rem;
-    padding: 0.375rem 1rem;
-    border-radius: 1rem;
+    column-gap: 1rem;
+    min-height: var(--tap);
+    padding-block: 0.375rem;
     transition:
-        border-color var(--duration) var(--ease),
-        translate var(--duration) var(--ease);
+        translate calc(var(--duration) * 2) var(--ease),
+        opacity calc(var(--duration) * 2) var(--ease);
 }
 
 .tool-row__words {
@@ -136,9 +101,10 @@
 .tool-row__name {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: 1.125rem;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
+    font-size: clamp(1.5rem, 1.05rem + 2vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    transition: color calc(var(--duration) * 2) var(--ease);
 }
 
 .tool-row__description {
@@ -153,14 +119,14 @@
 .tool-row__fact {
     display: grid;
     justify-items: end;
-    max-width: 9rem;
+    max-width: 9.5rem;
     text-align: right;
 }
 
 .tool-row__figure {
     color: var(--btc);
     font-family: var(--font-mono);
-    font-size: 1.0625rem;
+    font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.5rem);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     line-height: 1.2;
@@ -175,13 +141,25 @@
 }
 
 .tool-row:active {
-    border-color: var(--btc);
+    translate: 0.375rem 0;
+}
+
+.tool-row:active .tool-row__name,
+.tool-row:focus-visible .tool-row__name {
+    color: var(--btc);
 }
 
 @media (hover: hover) {
+    .tool-list__rows:hover .tool-row:not(:hover) {
+        opacity: 0.45;
+    }
+
     .tool-row:hover {
-        border-color: var(--btc);
-        translate: 0 -0.1875rem;
+        translate: 0.75rem 0;
+    }
+
+    .tool-row:hover .tool-row__name {
+        color: var(--btc);
     }
 }
 
@@ -208,9 +186,6 @@
 
 .chain-about__scroll {
     overflow-x: auto;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius);
-    background: var(--plate);
 }
 
 .chain-table {
@@ -222,17 +197,13 @@
 
 .chain-table th,
 .chain-table td {
-    padding: 0.5rem 0.75rem;
+    padding: 0.375rem 1.5rem 0.375rem 0;
     text-align: left;
 }
 
 .chain-table th {
     color: var(--ink-dim);
     font-weight: 600;
-}
-
-.chain-table td {
-    border-top: 1px solid var(--edge);
 }
 
 .chain-table__figure {
@@ -268,97 +239,62 @@
     font-size: var(--step-small);
 }
 
-.cautions__item {
-    padding-left: 0.875rem;
-    border-left: 2px solid var(--edge);
-}
-
-/* A row of five once there is room across: short landscape phones and desktops. */
-@media (orientation: landscape) and (max-height: 32rem), (min-width: 64rem) {
-    .tool-list__rows {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 48rem) {
-    .hero__intro::before {
-        inset-inline: calc(var(--gutter) * -1);
-    }
-}
-
 @media (min-width: 64rem) {
-    .home {
-        gap: 2rem;
-    }
-
     .hero {
+        grid-template-rows: auto auto;
+        align-content: start;
+        row-gap: 2rem;
+        max-width: 37rem;
         min-height: calc(100svh - 5.75rem);
     }
 
-    .hero__intro {
-        gap: 1.125rem;
-        padding-top: 2.5rem;
+    .hero .veil::before {
+        inset-inline-end: -12rem;
     }
 
-    .hero__intro::before {
-        --veil-run: linear-gradient(
-            to right,
-            transparent,
-            rgb(0 0 0 / 0.5) 5rem,
-            #000 10rem,
-            #000 40%,
-            rgb(0 0 0 / 0.6) 55%,
-            rgb(0 0 0 / 0.2) 70%,
-            transparent 84%
-        );
-        inset-inline: -12rem 0;
-        -webkit-mask-image: var(--veil-fall), var(--veil-run);
-        mask-image: var(--veil-fall), var(--veil-run);
-        -webkit-mask-composite: source-in;
-        mask-composite: intersect;
+    .hero__intro {
+        gap: 1rem;
+        padding-top: 1.5rem;
     }
 
     .hero__lead {
-        font-size: 1.1875rem;
+        font-size: 1.125rem;
     }
 
     .hero__tools {
-        gap: 0.75rem;
-    }
-
-    .chain__legend {
-        min-height: 3.5rem;
-    }
-
-    .tool-list__rows {
-        gap: 0.75rem;
+        grid-row: 2;
     }
 
     .tool-row {
-        grid-template-columns: minmax(0, 1fr);
-        align-content: space-between;
-        row-gap: 1rem;
-        min-height: 9rem;
-        padding: 1rem 1.125rem;
+        padding-block: 0.5rem;
     }
 
-    .tool-row__name {
-        font-size: 1.375rem;
+    /* The site's orange square, the one beside the wordmark, steps out beside the tool under the pointer. */
+    .tool-row::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: -1.375rem;
+        width: 0.6875rem;
+        height: 0.6875rem;
+        margin-top: -0.34375rem;
+        border-radius: 2px;
+        background: var(--btc);
+        scale: 0;
+        transition: scale calc(var(--duration) * 2) var(--ease);
+    }
+
+    .tool-row:hover::before,
+    .tool-row:focus-visible::before {
+        scale: 1;
     }
 
     .tool-row__description {
         font-size: var(--step-small);
-        white-space: normal;
     }
 
     .tool-row__fact {
-        justify-items: start;
-        max-width: none;
-        text-align: left;
-    }
-
-    .tool-row__figure {
-        font-size: 1.625rem;
+        max-width: 13rem;
     }
 
     .tool-row__unit {
@@ -368,7 +304,8 @@
 
 @media (orientation: landscape) and (max-height: 32rem) {
     .hero {
-        grid-template-rows: auto minmax(2rem, 1fr) auto;
+        grid-template-rows: auto minmax(0.5rem, 1fr) auto;
+        max-width: none;
         min-height: calc(100svh - 3.75rem);
     }
 
@@ -383,45 +320,38 @@
 
     .hero__lead,
     .tool-row__description,
-    .tool-list__source {
-        display: none;
-    }
-
-    .chain__legend {
-        min-height: 0;
-        padding-block: 0.25rem;
-    }
-
+    .tool-row__unit,
+    .tool-list__source,
     .chain__newest {
         display: none;
     }
 
-    .tool-row {
-        grid-template-columns: minmax(0, 1fr);
-        min-height: 3.25rem;
-        padding: 0.375rem 0.625rem;
+    .hero__tools {
+        grid-row: 3;
+    }
+
+    .tool-list__rows {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 2rem;
     }
 
     .tool-row__name {
-        font-size: 0.9375rem;
-    }
-
-    .tool-row__fact {
-        justify-items: start;
-        text-align: left;
+        font-size: 1.125rem;
     }
 
     .tool-row__figure {
         font-size: 0.875rem;
     }
 
-    .tool-row__unit {
-        display: none;
+    .chain__legend {
+        min-height: 0;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .tool-row {
+    .tool-row,
+    .tool-row__name,
+    .tool-row::before {
         transition: none;
     }
 }
