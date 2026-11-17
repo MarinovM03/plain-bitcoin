@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { hashBits } from '../src/chain/hash.ts';
 import { TOKENS } from '../src/styles/tokens.ts';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, WORLD } from '../src/ui/copy.ts';
+import { FOOTER } from '../src/ui/copy.ts';
 import { FAKE_HEIGHT, fakeHash, fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
@@ -28,43 +28,6 @@ test('the world stands behind every page, out of the way of pointers and screen 
         await expect(world.locator('a, button, [tabindex], [role]')).toHaveCount(0);
         await expect(page.locator('#chain-still svg')).toBeVisible();
     }
-});
-
-test('home keeps the chain, and each tool stands in front of a picture of its own with a line that says what it is', async ({
-    page,
-}) => {
-    await page.goto('/?hero=still#/');
-    await expect(page.locator('#chain-still path')).toHaveCount(8);
-    const pictures = new Set<string>();
-    for (const id of TOOL_IDS) {
-        await page.goto(`/?hero=still#/${id}`);
-        const picture = page.locator(`#chain-still svg[data-backdrop="${id}"]`);
-        await expect(picture).toBeVisible();
-        await expect(picture.locator('path').first()).toBeAttached();
-        await expect(page.locator('#chain-still polygon')).toHaveCount(0);
-        pictures.add(await picture.locator('path').first().getAttribute('d').then(String));
-        await expect(page.locator('#world-line')).toHaveText(/^Behind this page: /);
-    }
-    expect(pictures.size).toBe(TOOL_IDS.length);
-    await page.getByRole('link', { name: 'Plain Bitcoin' }).first().click();
-    await expect(page.locator('#chain-still path')).toHaveCount(8);
-    await expect(page.locator('#chain-still svg[data-backdrop]')).toHaveCount(0);
-});
-
-test("a tool's picture is drawn from its own numbers and follows them as they change", async ({ page }) => {
-    const lit = () => page.locator('#chain-still path[fill="#f7931a"]').first().getAttribute('d').then(String);
-    await page.goto('/?hero=still#/convert');
-    await expect(page.locator('#chain-still svg[data-backdrop="convert"]')).toBeVisible();
-    await page.locator('#convert-sats').fill('250');
-    await expect(page.locator('#world-line')).toHaveText(WORLD.convert('1 sat'));
-    const small = await lit();
-    expect(small.match(/M/g)).toHaveLength(250);
-    await page.locator('#convert-sats').fill('5000000');
-    await expect(page.locator('#world-line')).toHaveText(WORLD.convert('10,000 sats'));
-    expect((await lit()).match(/M/g)).toHaveLength(500);
-    await page.locator('#convert-sats').fill('');
-    await expect(page.locator('#world-line')).toHaveText(WORLD.convertEmpty);
-    await expect(page.locator('#chain-still path[fill="#f7931a"]')).toHaveCount(0);
 });
 
 test('it is built from the newest blocks the page knows: the live tip, or a saved set where nothing is fetched', async ({

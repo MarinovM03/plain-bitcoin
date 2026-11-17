@@ -81,6 +81,42 @@ export function homeCamera(aspect: number): Camera {
     };
 }
 
+/** Where the converter's stack of points stands on the floor: in front of the block being found. */
+export const PILE_BASE: Vec3 = [-0.9, 0, 1.4];
+
+/** How far along the chain each tool's page looks. The converter looks at its stack instead. */
+const FOCUS_OFFSET = { left: 0.6, power: 2.6, dca: 4.6, address: 6.6 } as const;
+
+export type Focus = 'home' | 'convert' | keyof typeof FOCUS_OFFSET;
+
+/**
+ * The same world seen from the page that is open: home takes the wide shot, the converter stands over its stack,
+ * and every other tool steps in closer to its own stretch of the chain.
+ */
+export function focusCamera(focus: Focus, aspect: number): Camera {
+    const home = homeCamera(aspect);
+    if (focus === 'home') return home;
+    const wide = home.aspect >= WIDE_SCREEN;
+    const far = clamp(WIDE_ASPECT / home.aspect, 1, 2.4);
+    if (focus === 'convert') {
+        const target: Vec3 = [PILE_BASE[0], 0.42, PILE_BASE[2]];
+        return {
+            ...home,
+            eye: reachOut(target, EYE_DIRECTION, 3.7 * far),
+            target,
+            shift: wide ? { x: 0.42, y: -0.06 } : { x: 0, y: -0.44 },
+        };
+    }
+    const along = FOCUS_OFFSET[focus];
+    const target: Vec3 = [CHAIN_DIRECTION[0] * along, 0.35, CHAIN_DIRECTION[2] * along];
+    return {
+        ...home,
+        eye: reachOut(target, EYE_DIRECTION, 5.2 * far),
+        target,
+        shift: wide ? { x: 0.4, y: 0 } : { x: 0, y: -0.3 },
+    };
+}
+
 /** Where the camera starts on a first visit: low and close to the block being found, before it pulls back. */
 export function arrivalCamera(aspect: number): Camera {
     const home = homeCamera(aspect);

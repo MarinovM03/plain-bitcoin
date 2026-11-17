@@ -1,12 +1,9 @@
 import type { RouteId } from '../app/routes.ts';
-import { knownPlan, loadPlan } from '../backdrop/index.ts';
-import { planStill } from '../backdrop/still.ts';
-import type { BackdropData } from '../backdrop/types.ts';
 import { hashBits } from '../chain/hash.ts';
 import { advanceChain, type ChainEffect, EMPTY_CHAIN } from '../chain/machine.ts';
 import { chainStill } from '../chain/still.ts';
 import { type ChainBlock, heightFeed, type Tip } from '../data/height.ts';
-import { mountHero, onBackdrop } from '../hero/bus.ts';
+import { mountHero, onPile } from '../hero/bus.ts';
 import { TOKENS } from '../styles/tokens.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
 import { formatWhole } from '../util/format.ts';
@@ -30,14 +27,6 @@ export interface World {
     subscribe(listener: (view: ChainView) => void): () => void;
 }
 
-const STILL_COLOURS = {
-    btc: TOKENS.btc,
-    warm: TOKENS.inkWarm,
-    cool: TOKENS.inkCool,
-    good: TOKENS.good,
-    dim: TOKENS.inkDim,
-} as const;
-
 /**
  * The world's place in the page: fixed behind everything, hidden from assistive tech and from every pointer. The
  * drawn still sits in it from the first paint; the lit scene's canvas covers the still once it runs.
@@ -47,8 +36,7 @@ export function renderWorld(): SafeHtml {
 }
 
 /**
- * Runs the world behind every page: the chain on home, and each tool's own picture, drawn from the numbers the
- * tool hands over. Live blocks come from the shared height feed on the pages that poll it; a page that fetches
+ * Runs the one world behind every page: the chain, seen from wherever the open page stands. Live blocks come from the shared height feed on the pages that poll it; a page that fetches
  * nothing uses a saved set of real blocks instead.
  */
 export function mountWorld(host: HTMLElement, announce: (message: string) => void): World {
@@ -61,7 +49,6 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
     let savedAsked = false;
     let started = false;
     let route: RouteId = 'home';
-    let numbers: BackdropData | null = null;
 
     function formingSince(tip: Tip): number | null {
         const first = chain.blocks[0];
@@ -79,17 +66,6 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
     function renderStill(): void {
         const { clientWidth: width, clientHeight: height } = host;
         if (width < 2 || height < 2) return;
-        if (route !== 'home') {
-            const id = route;
-            const plan = knownPlan(id);
-            if (!plan) {
-                stillLayer.replaceChildren();
-                loadPlan(id).then(renderStill, () => {});
-                return;
-            }
-            stillLayer.innerHTML = planStill(id, plan(numbers, width / height), { width, height }, STILL_COLOURS);
-            return;
-        }
         if (chain.blocks.length === 0) return;
         const since = formingSince(heights.tip);
         stillLayer.innerHTML = chainStill(chain.blocks, {
@@ -148,12 +124,7 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
     }
 
     new ResizeObserver(renderStill).observe(host);
-    onBackdrop((data) => {
-        if (data.id !== route) return;
-        numbers = data;
-        hero.backdrop(data);
-        renderStill();
-    });
+    onPile((next) => hero.pile(route === 'convert' ? next : null));
     heights.subscribe(onTip);
     onTip(heights.tip);
     afterFirstPaint(() => {
@@ -163,13 +134,9 @@ export function mountWorld(host: HTMLElement, announce: (message: string) => voi
 
     return {
         setRoute(next) {
-            if (next !== route) {
-                numbers = null;
-                hero.backdrop(null);
-            }
+            if (next !== route) hero.pile(null);
             route = next;
             hero.open(next);
-            renderStill();
             askSaved();
         },
         subscribe(listener) {

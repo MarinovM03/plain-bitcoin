@@ -1,14 +1,14 @@
 import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
-import { renderConvertDetail, renderConvertInputs, renderConvertMore } from './convert-view.ts';
-import { ADDRESS, CONVERT, FIELDS, LEFT_PAGE, PICTURE, POWER, TOOL_PAGE, TOOLS, WORLD } from './copy.ts';
+import { renderConvert } from './convert-view.ts';
+import { ADDRESS, FIELDS, LEFT_PAGE, PICTURE, POWER, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { moreOptions, noteLine, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs, renderPowerMore } from './power-view.ts';
 
-type CalculatorId = Exclude<ToolId, 'left'>;
+type CalculatorId = Exclude<ToolId, 'left' | 'convert'>;
 
 interface Calculator {
     inputs: SafeHtml;
@@ -33,13 +33,6 @@ function calculator(id: CalculatorId): Calculator {
                 detail: renderPowerDetail(),
                 caption: PICTURE.powerEmpty,
             };
-        case 'convert':
-            return {
-                inputs: renderConvertInputs(),
-                more: [CONVERT.presetsLabel, renderConvertMore()],
-                detail: renderConvertDetail(),
-                caption: PICTURE.convertEmpty,
-            };
         case 'dca':
             return {
                 inputs: renderDcaInputs(),
@@ -57,15 +50,7 @@ function calculator(id: CalculatorId): Calculator {
     }
 }
 
-const WORLD_LINES: Record<ToolId, string> = {
-    left: WORLD.left,
-    power: WORLD.power,
-    convert: WORLD.convertEmpty,
-    dca: WORLD.dcaEmpty,
-    address: WORLD.address,
-};
-
-function head(id: ToolId): SafeHtml {
+export function toolHead(id: ToolId): SafeHtml {
     return html`<header class="tool__head">
     <h1 class="tool__title" tabindex="-1">${TOOLS[id].name}</h1>
     <p class="tool__description">${TOOLS[id].description}</p>
@@ -78,8 +63,8 @@ function head(id: ToolId): SafeHtml {
  */
 function page(id: ToolId, screen: SafeHtml, below: SafeHtml): SafeHtml {
     return html`<article class="tool tool--${id}">
-    <div class="tool__screen">${head(id)}${screen}</div>
-    <div class="tool__below"><p id="world-line" class="world-line">${WORLD_LINES[id]}</p>${below}</div>
+    <div class="tool__screen">${toolHead(id)}${screen}</div>
+    <div class="tool__below">${below}</div>
 </article>`;
 }
 
@@ -147,5 +132,6 @@ function renderLeft(): SafeHtml {
 }
 
 export function renderToolPage(id: ToolId): SafeHtml {
+    if (id === 'convert') return renderConvert(toolHead(id));
     return id === 'left' ? renderLeft() : renderCalculator(id);
 }

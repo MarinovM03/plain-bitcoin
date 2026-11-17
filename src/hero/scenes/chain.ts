@@ -33,6 +33,7 @@ import { CHAIN_DIRECTION, FORMING, SLAB_YAW, slabBase } from '../../chain/view.t
 import { TOKENS } from '../../styles/tokens.ts';
 import type { Actor } from '../actors.ts';
 import { type ChainDraw, createDust, GLOW, type Layer, seeds } from '../kit.ts';
+import { createPile } from '../pile.ts';
 
 const MOTES = 1500;
 const FACE_PIXELS = 256;
@@ -162,14 +163,10 @@ interface Tablet {
     textures: DataTexture[];
 }
 
-interface Tablet {
-    mesh: Mesh;
-    stone: MeshStandardMaterial;
-    face: MeshStandardMaterial;
-    textures: DataTexture[];
-}
-
-/** Home: the last eight real blocks as lit tablets, with the next one forming at the front. */
+/**
+ * The world behind every page: the last eight real blocks as lit tablets, the next one forming at the front, and
+ * the converter's stack of points on the floor before it.
+ */
 export function create(): Layer {
     const scene = new Scene();
     const ink = new Color(TOKENS.void);
@@ -276,7 +273,8 @@ export function create(): Layer {
         axis: CHAIN_DIRECTION,
         across: [-CHAIN_DIRECTION[2], 0, CHAIN_DIRECTION[0]],
     });
-    scene.add(dust.points);
+    const pile = createPile();
+    scene.add(dust.points, pile.points);
 
     function tabletFor(actor: Actor): Tablet {
         const known = tablets.get(actor.key);
@@ -377,13 +375,13 @@ export function create(): Layer {
             for (const { mesh } of tablets.values()) mesh.visible = true;
             forming.visible = true;
             motes.visible = true;
+            pile.points.visible = true;
         },
         textures: () => [...tablets.values()].flatMap((tablet) => tablet.textures),
         shadows(on) {
             key.castShadow = on;
         },
         update(tick) {
-            if (!tick.chain) return;
             const fovY = arrange(tick.chain, Math.max(1, tick.width), Math.max(1, tick.height));
             const pixels = tick.pixels / Math.tan(fovY / 2);
             const mote = moteMaterial.uniforms;
@@ -392,6 +390,7 @@ export function create(): Layer {
             if (mote.uPixels) mote.uPixels.value = pixels;
             if (mote.uGhost) mote.uGhost.value = tick.chain.ghost;
             dust.update(tick, pixels, 1, fog);
+            pile.update(tick, pixels);
         },
         dispose() {
             for (const tablet of tablets.values()) drop(tablet);
@@ -406,6 +405,7 @@ export function create(): Layer {
             moteMaterial.dispose();
             key.shadow.map?.dispose();
             dust.dispose();
+            pile.dispose();
         },
     };
 }

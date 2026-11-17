@@ -72,7 +72,7 @@ describe('renderHome', () => {
 
 describe('renderToolPage', () => {
     it('gives every calculator its name, inputs, answer, picture, share and source in that order', () => {
-        for (const id of TOOL_IDS.filter((tool) => tool !== 'left')) {
+        for (const id of TOOL_IDS.filter((tool) => tool !== 'left' && tool !== 'convert')) {
             const markup = renderToolPage(id).value;
             const order = [
                 'class="tool__title"',
@@ -101,7 +101,7 @@ describe('renderToolPage', () => {
         for (const id of TOOL_IDS) {
             const markup = renderToolPage(id).value;
             for (const gone of ['scene', 'data-plate', 'canvas', 'hero']) expect(markup).not.toContain(gone);
-            expect(markup).toContain('class="picture__callout"');
+            if (id !== 'convert') expect(markup).toContain('class="picture__callout"');
         }
     });
 

@@ -196,10 +196,4 @@ test('every field and preset is reachable by keyboard', async ({ page, isMobile 
     }
     expect(order.slice(0, 4)).toEqual(['convert-sats', 'convert-btc', 'convert-fiat', 'convert-currency']);
     expect(order.slice(4, 7)).toEqual([SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
-    expect(order[7]).toBe(CONVERT.presetsLabel);
-    expect(order.slice(8)).toEqual(
-        Object.entries(CONVERT.presets).map(([preset, label]) => label + (CONVERT.presetHints[preset] ?? '')),
-    );
-    await page.keyboard.press('Enter');
-    await expect(page.locator('#tool-result')).toHaveText('10,000 BTC = $767,770,000.00');
 });

@@ -138,29 +138,12 @@ export const PICTURE = {
     power: (log: boolean) =>
         `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
-    convert: (price: string) => `Round amounts of bitcoin at ${price}. The orange row is yours.`,
-    convertEmpty: 'Round amounts of bitcoin at the price now. Type an amount to add your own row.',
     dca: 'Orange: worth at each buy, ending today. White: money put in. Dashed steel: one lump sum on day one.',
     dcaEmpty: 'The chart draws once there is an answer.',
     address: 'Each cell is one character, coloured by its part once the checksum proves the type.',
     addressBad: 'Each cell is one character. The orange one cannot be part of this address.',
     addressLoose: 'Each cell is one character. The checksum cells do not lock into place.',
     addressEmpty: 'Each character will stand in its own cell once you paste an address.',
-} as const;
-
-/** One plain line per tool, saying what the moving picture behind its page is made of. */
-export const WORLD = {
-    left: 'Behind this page: 2,100 dots, one for every 10,000 BTC. Lit dots are mined; orange rings are still to come.',
-    power: 'Behind this page: a row of notes for each year, the start year on top. They shrink as the same money buys less.',
-    convert: (perPoint: string) => `Behind this page: your amount as points. Each point is ${perPoint}.`,
-    convertEmpty: 'Behind this page: your amount as points, once you type one.',
-    dca: (perCoin: number) =>
-        perCoin === 1
-            ? 'Behind this page: one coin for every buy, dropped in the order they were made.'
-            : `Behind this page: one coin for every ${perCoin} buys, dropped in the order they were made.`,
-    dcaEmpty: 'Behind this page: one coin for every buy, once there is an answer.',
-    address:
-        'Behind this page: one square for each character. The light reads across them; green means the checksum adds up.',
 } as const;
 
 export const GAUGE = {
@@ -282,21 +265,19 @@ export const POWER = {
 export const CONVERT = {
     fields: { sats: 'Sats', btc: 'Bitcoin (BTC)', usd: 'Dollars (USD)', eur: 'Euros (EUR)', gbp: 'Pounds (GBP)' },
     currencyLabel: 'Money',
+    othersLabel: 'The same amount in other units',
     noEuro: 'There is no euro price offline. It shows once a live price answers.',
-    presetsLabel: 'Quick amounts',
-    presets: {
-        sat: '1 sat',
-        thousand: '1,000 sats',
-        hundredThousand: '100k sats',
-        cent: '0.01 BTC',
-        coin: '1 BTC',
-        pizza: '10,000 BTC',
-    },
-    presetHints: { sat: 'Smallest', pizza: 'Pizza Day' } as Partial<Record<string, string>>,
+    scrub: 'Drag from 1 sat to 1 BTC',
+    scrubLow: '1 sat',
+    scrubHigh: '1 BTC',
+    point: (perPoint: string) => `One point in the stack is ${perPoint}.`,
+    pointRounded: (perPoint: string, points: string) =>
+        `One point in the stack is ${perPoint}. ${points} points, rounded.`,
+    pointEmpty: 'Type an amount and it stacks up as points.',
     unitsLine: '1 BTC = 100,000,000 sats',
     perSat: (fiat: string) => `1 sat ≈ ${fiat}`,
     labelLive: (clock: string) => `live price, ${clock}`,
-    empty: 'Type an amount in any field.',
+    empty: 'Type an amount, or drag the line.',
     tooBig: 'That is more than 21,000,000 BTC, the most there will ever be.',
     tooSmall: 'That is less than 1 sat, the smallest amount bitcoin can send.',
     invalid: 'Only plain numbers, like 100,000 or 0.01.',

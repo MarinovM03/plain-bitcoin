@@ -1,15 +1,6 @@
-import { keptByYear } from '../../backdrop/power.ts';
 import { POWER_SERIES, powerData } from '../../data/power.ts';
 import { mountPicture } from '../../gauges/mount.ts';
-import { backdrop } from '../../hero/bus.ts';
-import {
-    latestMonth,
-    type PowerOutcome,
-    type PowerResult,
-    purchasingPower,
-    sortedMonths,
-    worstStart,
-} from '../../model/power.ts';
+import { type PowerOutcome, type PowerResult, purchasingPower, sortedMonths, worstStart } from '../../model/power.ts';
 import { barScale, sparkline } from '../../model/scale.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
@@ -58,7 +49,6 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const worstMonths = new Map<Fiat, Month | null>();
     let text: PowerText | null = null;
     let settleTimer = 0;
-    let drawnWorld = '';
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -164,18 +154,10 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         return POWER.empty;
     }
 
-    function showWorld(start: string, fiat: Fiat): void {
-        if (fiat + start === drawnWorld) return;
-        drawnWorld = fiat + start;
-        const { cpi } = powerData(fiat);
-        backdrop({ id: 'power', kept: keptByYear(cpi, start, latestMonth(cpi)) });
-    }
-
     function update(): void {
         const fiat = currency();
         const start = readMonthField(monthFieldset) ?? POWER_DEFAULT_START;
         markPresets(start, fiat);
-        showWorld(monthValue(start), fiat);
         const outcome = purchasingPower(parseAmount(amountInput.value) ?? 0, monthValue(start), powerData(fiat));
         if (!outcome.ok) {
             showMessage(messageFor(outcome, fiat));

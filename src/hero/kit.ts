@@ -2,21 +2,17 @@ import {
     BufferAttribute,
     BufferGeometry,
     Color,
-    InstancedBufferAttribute,
-    InstancedBufferGeometry,
-    Mesh,
-    PerspectiveCamera,
-    PlaneGeometry,
+    type PerspectiveCamera,
     Points,
     type Scene,
     ShaderMaterial,
     type Texture,
 } from 'three';
-import { type BackdropData, type Mark, TONES } from '../backdrop/types.ts';
 import { FACE_CELLS, HASH_BITS, hashBits } from '../chain/hash.ts';
 import type { Camera } from '../chain/view.ts';
 import { TOKENS } from '../styles/tokens.ts';
 import type { Actor, ActorPose } from './actors.ts';
+import type { Pile } from './bus.ts';
 
 export interface ChainDraw {
     camera: Camera;
@@ -31,6 +27,8 @@ export interface ChainDraw {
 /** What a scene is told each frame. It is never asked anything back. */
 export interface Tick {
     seconds: number;
+    /** Seconds since the last frame; 0 for a single still frame. */
+    delta: number;
     width: number;
     height: number;
     /** Height of the drawing buffer in pixels. */
@@ -39,8 +37,8 @@ export interface Tick {
     still: boolean;
     /** The newest block's hash: the squares in the air are its 256 bits. */
     hash: string | null;
-    chain: ChainDraw | null;
-    data: BackdropData | null;
+    chain: ChainDraw;
+    pile: Pile | null;
 }
 
 export interface Layer {
@@ -57,17 +55,6 @@ export interface Layer {
 
 /** Linear-light Bitcoin orange, pushed past white so only it reaches the bloom. */
 export const GLOW = new Color(TOKENS.btc).multiplyScalar(2.4);
-
-const TONE_COLOURS: Record<(typeof TONES)[number], Color> = {
-    btc: new Color(TOKENS.btc).multiplyScalar(1.7),
-    warm: new Color(TOKENS.inkWarm).multiplyScalar(0.85),
-    cool: new Color(TOKENS.inkCool),
-    good: new Color(TOKENS.good).multiplyScalar(1.2),
-    dim: new Color(TOKENS.inkDim).multiplyScalar(0.7),
-};
-
-/** Every tool scene is seen from the same place: straight on, ten units back. */
-export const VIEW = { fov: 32, distance: 10, half: Math.tan((16 * Math.PI) / 180) * 10 } as const;
 
 // A fixed, seeded scatter: dust is texture, so every visit and every still frame shows the same cloud.
 export function seeds(count: number, salt: number): Float32Array {
@@ -229,169 +216,4 @@ export function createDust(place: {
             material.dispose();
         },
     };
-}
-
-const MARK_VERTEX = (motion: string) => /* glsl */ `
-attribute vec4 aPlan;
-attribute vec4 aNow;
-attribute vec2 aWas;
-uniform float uTime;
-uniform float uSince;
-uniform float uStagger;
-uniform float uAspect;
-uniform float uUnit;
-uniform vec4 uA;
-uniform vec3 uTones[${TONES.length}];
-varying vec2 vUv;
-varying vec4 vTint;
-varying vec2 vShape;
-
-void main() {
-    float order = aNow.w;
-    float seed = fract(sin(float(gl_InstanceID) * 12.9898 + 4.1414) * 43758.5453);
-    float ease = smoothstep(0.0, 1.0, clamp((uSince - order * uStagger) / 0.45, 0.0, 1.0));
-    float level = mix(aWas.x, aNow.x, ease);
-    vec3 colour = mix(uTones[int(aWas.y + 0.5)], uTones[int(aNow.y + 0.5)], ease);
-    float shape = aNow.z;
-    vec3 at = vec3(aPlan.xy * uUnit, 0.0);
-    vec2 size = aPlan.zw * uUnit;
-    vec3 right = vec3(1.0, 0.0, 0.0);
-    vec3 up = vec3(0.0, 1.0, 0.0);
-    float alpha = level;
-    float glow = 1.0;
-    ${motion}
-    vec3 world = at + right * (position.x * size.x) + up * (position.y * size.y);
-    gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
-    vUv = position.xy;
-    vTint = vec4(colour * glow, alpha);
-    vShape = vec2(mod(shape, 2.0), step(1.5, shape) * step(shape, 3.5));
-}
-`;
-
-const MARK_FRAGMENT = /* glsl */ `
-varying vec2 vUv;
-varying vec4 vTint;
-varying vec2 vShape;
-
-void main() {
-    vec2 q = abs(vUv);
-    float reach = mix(max(q.x, q.y), length(vUv), vShape.x) * 2.0;
-    float soft = fwidth(reach) * 1.2 + 0.001;
-    float body = 1.0 - smoothstep(1.0 - soft, 1.0, reach);
-    float ring = smoothstep(0.6 - soft, 0.6, reach);
-    float alpha = body * mix(1.0, ring, vShape.y) * vTint.a;
-    if (alpha < 0.004) discard;
-    gl_FragColor = vec4(vTint.rgb, alpha);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-}
-`;
-
-export interface Marks {
-    readonly mesh: Mesh;
-    /** Shows a new plan; every mark eases from what it was, in the order it stands in the plan. */
-    show(plan: readonly Mark[], seconds: number): void;
-    update(tick: Tick, aspect: number, extra: readonly [number, number, number, number]): void;
-    dispose(): void;
-}
-
-/**
- * A tool's picture: flat marks, one small quad each, drawn in a single call. `motion` is the scene's own GLSL: it
- * may move `at`, `size`, `right`, `up`, `alpha`, `glow`, `colour` and `shape` for each mark.
- */
-export function createMarks(capacity: number, motion: string, stagger: number): Marks {
-    const quad = new PlaneGeometry(1, 1);
-    const geometry = new InstancedBufferGeometry();
-    geometry.index = quad.index;
-    geometry.setAttribute('position', quad.getAttribute('position'));
-    const plans = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
-    const now = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
-    const was = new InstancedBufferAttribute(new Float32Array(capacity * 2), 2);
-    geometry.setAttribute('aPlan', plans);
-    geometry.setAttribute('aNow', now);
-    geometry.setAttribute('aWas', was);
-    geometry.instanceCount = 0;
-    const material = new ShaderMaterial({
-        vertexShader: MARK_VERTEX(motion),
-        fragmentShader: MARK_FRAGMENT,
-        uniforms: {
-            uTime: { value: 0 },
-            uSince: { value: 99 },
-            uStagger: { value: stagger },
-            uAspect: { value: 1 },
-            uUnit: { value: VIEW.half },
-            uA: { value: [0, 0, 0, 0] },
-            uTones: { value: TONES.map((tone) => TONE_COLOURS[tone]) },
-        },
-        transparent: true,
-        depthWrite: false,
-        depthTest: false,
-    });
-    const mesh = new Mesh(geometry, material);
-    mesh.frustumCulled = false;
-    mesh.renderOrder = 2;
-    let changedAt = Number.NEGATIVE_INFINITY;
-    let shown = 0;
-
-    return {
-        mesh,
-        show(plan, seconds) {
-            const count = Math.min(capacity, plan.length);
-            for (let index = 0; index < capacity; index += 1) {
-                const mark = index < count ? plan[index] : undefined;
-                const kept = index < shown;
-                was.setXY(
-                    index,
-                    kept ? now.getX(index) : 0,
-                    kept ? now.getY(index) : mark ? TONES.indexOf(mark.tone) : 0,
-                );
-                if (mark) {
-                    plans.setXYZW(index, mark.x, mark.y, mark.w, mark.h);
-                    now.setXYZW(index, mark.level, TONES.indexOf(mark.tone), mark.shape, index / Math.max(1, count));
-                } else {
-                    now.setX(index, 0);
-                }
-            }
-            // Marks that have left still fade out, so the draw covers whichever plan was longer.
-            geometry.instanceCount = Math.max(count, shown);
-            shown = count;
-            plans.needsUpdate = true;
-            now.needsUpdate = true;
-            was.needsUpdate = true;
-            changedAt = seconds;
-        },
-        update(tick, aspect, extra) {
-            set(material, 'uTime', tick.seconds);
-            set(material, 'uSince', tick.still ? 99 : tick.seconds - changedAt);
-            set(material, 'uAspect', aspect);
-            set(material, 'uA', extra);
-        },
-        dispose() {
-            quad.dispose();
-            geometry.dispose();
-            material.dispose();
-        },
-    };
-}
-
-export function toolCamera(): PerspectiveCamera {
-    const camera = new PerspectiveCamera(VIEW.fov, 1, 0.1, 80);
-    camera.position.set(0, 0, VIEW.distance);
-    camera.lookAt(0, 0, 0);
-    return camera;
-}
-
-/** A tool scene's camera never travels: it only breathes, a few hundredths of a unit, so the picture is alive. */
-export function aimToolCamera(camera: PerspectiveCamera, tick: Tick): number {
-    const aspect = tick.width / Math.max(1, tick.height);
-    const drift = tick.still ? 0 : 1;
-    camera.aspect = aspect;
-    camera.position.set(
-        Math.sin(tick.seconds * 0.11) * 0.18 * drift,
-        Math.sin(tick.seconds * 0.07 + 1.3) * 0.08 * drift,
-        VIEW.distance,
-    );
-    camera.lookAt(0, 0, 0);
-    camera.updateProjectionMatrix();
-    return aspect;
 }
