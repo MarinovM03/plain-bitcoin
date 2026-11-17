@@ -1,7 +1,9 @@
 /// <reference types="vitest/config" />
 import { defineConfig, loadEnv, type Plugin } from 'vite';
+import type { RouteId } from './src/app/routes.ts';
 import { TOKENS } from './src/styles/tokens.ts';
-import { OG_IMAGE, SHARE, SITE_DESCRIPTION, SITE_NAME } from './src/ui/copy.ts';
+import { TOOL_IDS } from './src/tools/index.ts';
+import { OG_IMAGE, OG_PAGES, pageTitle, SHARE, SITE_DESCRIPTION, SITE_NAME, TOOLS } from './src/ui/copy.ts';
 import { renderHome } from './src/ui/home.ts';
 import { escapeHtml } from './src/ui/html.ts';
 import { renderAnnouncer, renderFooter, renderHeader, renderNoscript } from './src/ui/shell.ts';
@@ -92,40 +94,85 @@ function meta(attribute: 'name' | 'property', key: string, value: string): strin
     return `<meta ${attribute}="${key}" content="${escapeHtml(value)}" />`;
 }
 
-function shell(siteUrl: string): Plugin {
-    const image = `${siteUrl}${OG_IMAGE.path}`;
-    const head = [
-        `<title>${escapeHtml(SITE_NAME)}</title>`,
-        meta('name', 'description', SITE_DESCRIPTION),
-        `<link rel="canonical" href="${escapeHtml(siteUrl)}" />`,
+interface PageMeta {
+    title: string;
+    description: string;
+    url: string;
+    image: string;
+    alt: string;
+}
+
+function pageMeta(siteUrl: string, route: RouteId): PageMeta {
+    if (route === 'home') {
+        return {
+            title: SITE_NAME,
+            description: SITE_DESCRIPTION,
+            url: siteUrl,
+            image: `${siteUrl}${OG_IMAGE.path}`,
+            alt: OG_IMAGE.alt,
+        };
+    }
+    return {
+        title: pageTitle(TOOLS[route].name),
+        description: OG_PAGES[route].line,
+        url: `${siteUrl}${route}`,
+        image: `${siteUrl}og/${route}.png`,
+        alt: OG_PAGES[route].alt,
+    };
+}
+
+function head(page: PageMeta): string {
+    return [
+        `<title>${escapeHtml(page.title)}</title>`,
+        meta('name', 'description', page.description),
+        `<link rel="canonical" href="${escapeHtml(page.url)}" />`,
         meta('name', 'theme-color', TOKENS.void),
         meta('property', 'og:type', 'website'),
         meta('property', 'og:site_name', SITE_NAME),
-        meta('property', 'og:title', SITE_NAME),
-        meta('property', 'og:description', SITE_DESCRIPTION),
-        meta('property', 'og:url', siteUrl),
-        meta('property', 'og:image', image),
+        meta('property', 'og:title', page.title),
+        meta('property', 'og:description', page.description),
+        meta('property', 'og:url', page.url),
+        meta('property', 'og:image', page.image),
         meta('property', 'og:image:width', String(OG_IMAGE.width)),
         meta('property', 'og:image:height', String(OG_IMAGE.height)),
-        meta('property', 'og:image:alt', OG_IMAGE.alt),
+        meta('property', 'og:image:alt', page.alt),
         meta('name', 'twitter:card', 'summary_large_image'),
         meta('name', 'twitter:site', SHARE.handle),
-        meta('name', 'twitter:title', SITE_NAME),
-        meta('name', 'twitter:description', SITE_DESCRIPTION),
-        meta('name', 'twitter:image', image),
-        meta('name', 'twitter:image:alt', OG_IMAGE.alt),
+        meta('name', 'twitter:title', page.title),
+        meta('name', 'twitter:description', page.description),
+        meta('name', 'twitter:image', page.image),
+        meta('name', 'twitter:image:alt', page.alt),
     ].join('\n');
-    const body = [
-        renderHeader(),
-        `<main id="main">${renderHome()}${renderNoscript()}</main>`,
-        renderFooter(),
-        renderAnnouncer(),
-    ].join('\n');
+}
+
+/**
+ * Home is prerendered into index.html. Every other page gets its own copy with its own title and link preview and
+ * an empty main, so X shows that page's card; the app draws the page itself.
+ */
+function shell(siteUrl: string): Plugin {
+    const homeHead = head(pageMeta(siteUrl, 'home'));
+    const homeMain = `<main id="main">${renderHome()}${renderNoscript()}</main>`;
+    const body = [renderHeader(), homeMain, renderFooter(), renderAnnouncer()].join('\n');
     return {
         name: 'plain-bitcoin:shell',
+        enforce: 'post',
         transformIndexHtml: {
             order: 'pre',
-            handler: (html) => html.replace('<!--pb:head-->', head).replace('<!--pb:body-->', body),
+            handler: (html) => html.replace('<!--pb:head-->', homeHead).replace('<!--pb:body-->', body),
+        },
+        generateBundle(_options, bundle) {
+            const index = bundle['index.html'];
+            if (index?.type !== 'asset') return;
+            const html = String(index.source);
+            for (const route of TOOL_IDS) {
+                this.emitFile({
+                    type: 'asset',
+                    fileName: `${route}/index.html`,
+                    source: html
+                        .replace(homeHead, head(pageMeta(siteUrl, route)))
+                        .replace(homeMain, `<main id="main">${renderNoscript()}</main>`),
+                });
+            }
         },
     };
 }

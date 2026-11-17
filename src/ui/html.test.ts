@@ -33,8 +33,8 @@ describe('plain names', () => {
 
     it('keeps the bar to the name, a way back to every machine and the live facts, with no menu', () => {
         const markup = renderHeader().value;
-        expect(markup).toContain('href="#/" data-nav="home"');
-        expect(markup).toContain('class="topbar__all" href="#/"');
+        expect(markup).toContain('href="/" data-nav="home"');
+        expect(markup).toContain('class="topbar__all" href="/"');
         expect(markup).toContain('href="https://x.com/PlainBTC"');
         expect(markup).not.toContain('<details');
     });
@@ -44,8 +44,8 @@ describe('renderHome', () => {
     it('links every machine once as a tile with its name, line and one live fact, the miner first', () => {
         const markup = renderHome().value;
         const hrefs = [...markup.matchAll(/class="tile__link" href="([^"]+)"/g)].map((match) => match[1]);
-        expect(hrefs[0]).toBe('#/miner');
-        expect([...hrefs].sort()).toEqual(TOOL_IDS.map((id) => `#/${id}`).sort());
+        expect(hrefs[0]).toBe('/miner');
+        expect([...hrefs].sort()).toEqual(TOOL_IDS.map((id) => `/${id}`).sort());
         for (const id of TOOL_IDS) {
             expect(markup).toContain(escapeHtml(TOOLS[id].name));
             expect(markup).toContain(escapeHtml(TOOLS[id].description));
@@ -118,13 +118,14 @@ describe('renderToolPage', () => {
             expect(markup).not.toContain('<canvas');
             for (const [tag] of markup.matchAll(/<div [^>]*data-machine[^>]*>/g))
                 expect(tag).toContain('aria-hidden="true"');
-            if (id !== 'convert') expect(markup).toContain('class="picture__callout"');
+            if (id !== 'convert' && id !== 'left') expect(markup).toContain('class="picture__callout"');
         }
     });
 
-    it('puts the picture, a counting figure and an empty numbers panel on the bitcoin-left page', () => {
+    it('puts the 21 million block, a counting figure, the zoom and an empty numbers panel on the bitcoin-left page', () => {
         const markup = renderToolPage('left').value;
-        expect(markup).toContain('id="picture-plot"');
+        expect(markup).toContain('data-machine="wall" aria-hidden="true"');
+        expect(markup).toContain('id="left-zoom"');
         expect(markup).toContain(`<span class="result__empty">${LEFT_PAGE.figureEmpty}</span>`);
         expect(markup).toContain('id="numbers-panel"');
     });
