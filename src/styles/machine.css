@@ -157,6 +157,66 @@
     }
 }
 
+.info {
+    margin-top: 0.25rem;
+}
+
+.info__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--tap);
+    color: var(--ink);
+    font-size: var(--step-small);
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+}
+
+.info__toggle::-webkit-details-marker {
+    display: none;
+}
+
+.info__mark {
+    display: grid;
+    place-items: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    border: 1.5px solid var(--btc);
+    border-radius: 50%;
+    color: var(--btc);
+    font: 700 0.8125rem / 1 var(--font-display);
+    transition:
+        background var(--duration) var(--ease),
+        color var(--duration) var(--ease);
+}
+
+.info[open] .info__mark {
+    background: var(--btc);
+    color: var(--void);
+}
+
+.info__list {
+    display: grid;
+    gap: 0.5rem;
+    max-width: 34rem;
+    margin-top: 0.25rem;
+    padding: 0.875rem 1rem 0.875rem 2rem;
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    background: var(--plate);
+    color: var(--ink-dim);
+    font-size: var(--step-small);
+    list-style: decimal;
+    animation: rise calc(var(--duration) * 2) var(--ease);
+}
+
+@media (hover: hover) {
+    .info__toggle:hover .info__mark {
+        background: color-mix(in srgb, var(--btc) 20%, transparent);
+    }
+}
+
 .miner-stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

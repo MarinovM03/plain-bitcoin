@@ -125,7 +125,7 @@
 }
 
 .play .result__figure {
-    font-size: clamp(3rem, 1.7rem + 6.2vw, 6.25rem);
+    font-size: clamp(2.5rem, 1.4rem + 4.4vw, 4.75rem);
     line-height: 1;
     letter-spacing: -0.05em;
 }
@@ -300,36 +300,6 @@
     font-family: var(--font-mono);
     font-size: var(--step-small);
     font-variant-numeric: tabular-nums;
-}
-
-/* Sharing on the two pages without boxes: plain words to press, the postcard first and in orange. */
-:is(.play, .home) .share-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 1.5rem;
-    max-width: none;
-}
-
-:is(.play, .home) .button {
-    padding: 0;
-    border: 0;
-    background: none;
-    font-size: 1rem;
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, currentcolor 40%, transparent);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.3em;
-    text-shadow: inherit;
-}
-
-:is(.play, .home) .button--primary {
-    color: var(--btc);
-}
-
-:is(.play, .home) .button:disabled,
-:is(.play, .home) .button[aria-disabled="true"] {
-    color: var(--ink-dim);
-    text-decoration: none;
 }
 
 @media (min-width: 64rem) {
