@@ -6,6 +6,7 @@ import { priceFeed } from '../data/price.ts';
 import { attach, type MachineId, type View } from '../hero/bus.ts';
 import { targetZeroBits } from '../model/header.ts';
 import { createMiner, leadingZeroBits } from '../model/sha256.ts';
+import { scaleLines, stackLines } from '../model/stack.ts';
 import { MAX_SUPPLY, SATS_PER_BTC, supplyAt } from '../model/supply.ts';
 import type { ToolId } from '../tools/index.ts';
 import { DEPTHS } from '../tools/miner/protocol.ts';
@@ -117,10 +118,10 @@ function hashOnTile(slot: HTMLElement, view: View<'miner'>, onCount: (count: num
             nonce = (nonce + 1) >>> 0;
         }
         count += HASHES_PER_TICK;
-        view.set({ needed, best, real: null, tally, dive: false });
+        view.set({ needed, best, real: null, tally, dive: 0 });
         onCount(count);
     }, HASH_TICK_MS);
-    view.set({ needed, best, real: null, tally: null, dive: false });
+    view.set({ needed, best, real: null, tally: null, dive: 0 });
     return () => {
         observer.disconnect();
         window.clearInterval(timer);
@@ -153,7 +154,7 @@ export function mountHome(root: HTMLElement): () => void {
     const satsSlot = slot('sats');
     const sats = satsSlot ? attach(satsSlot, 'sats', { sats: 0 }) : null;
     const meltSlot = slot('melt');
-    const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1 }) : null;
+    const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1, symbol: '$' }) : null;
     const halvingSlot = slot('halving');
     const halving = halvingSlot ? attach(halvingSlot, 'halving', { height: heights.tip.height }) : null;
     const queueSlot = slot('queue');
@@ -161,10 +162,10 @@ export function mountHome(root: HTMLElement): () => void {
         ? attach(queueSlot, 'queue', { floors: [], fills: [], counts: [], rate: null, slab: null, confirmed: false })
         : null;
     const stackSlot = slot('stack');
-    const stack = stackSlot ? attach(stackSlot, 'stack', { buys: [] }) : null;
+    const stack = stackSlot ? attach(stackSlot, 'stack', { value: [], invested: [] }) : null;
     const minerSlot = slot('miner');
     const miner = minerSlot
-        ? attach(minerSlot, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: false })
+        ? attach(minerSlot, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: 0 })
         : null;
     for (const view of [wall, halving, queue, sats, melt, stack, miner]) if (view) views.push(view as View<MachineId>);
 
@@ -211,12 +212,11 @@ export function mountHome(root: HTMLElement): () => void {
                 const outcome = meltOf(HOME.facts.power.amount, HOME.facts.power.year, data.cpi);
                 if (outcome.ok) {
                     setFact('power', formatMoney(outcome.result.buysNow, 'USD'));
-                    melt?.set({ kept: outcome.result.kept });
+                    melt?.set({ kept: outcome.result.kept, symbol: '$' });
                 }
                 const months = sortedMonths(data.closes).slice(-STACK_MONTHS);
-                const bought = months.map((month) => 1 / (data.closes[month] ?? Number.POSITIVE_INFINITY));
-                const most = Math.max(...bought);
-                if (most > 0) stack?.set({ buys: bought.map((value) => value / most) });
+                const closes = months.map((month) => data.closes[month] ?? 0);
+                stack?.set(scaleLines(stackLines(closes, HOME.facts.dca.amount)));
             })
             .catch(() => {});
     });

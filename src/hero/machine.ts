@@ -27,6 +27,12 @@ export interface Machine<I> {
 
 export type MachineFactory<I> = (input: I, page: boolean) => Machine<I>;
 
+/** How far back a camera must stand to keep a sphere of this radius inside the box, at any shape of box. */
+export function fitDistance(radius: number, fovDegrees: number, aspect: number): number {
+    const half = Math.tan((fovDegrees * Math.PI) / 360);
+    return radius / half / Math.min(1, aspect);
+}
+
 /** Moves `value` toward `target` at a rate that does not depend on the frame rate. */
 export function approach(value: number, target: number, rate: number, delta: number): number {
     return value + (target - value) * (1 - Math.exp(-rate * delta));

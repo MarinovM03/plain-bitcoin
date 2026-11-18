@@ -8,8 +8,8 @@ export interface MinerInput {
     readonly real: number | null;
     /** How many fresh hashes landed at each depth since the last hand-over. */
     readonly tally: readonly number[] | null;
-    /** Turns the camera down the shaft to the target ring. */
-    readonly dive: boolean;
+    /** How far the camera has gone down the shaft, 0 at the top to 1 at the target ring. */
+    readonly dive: number;
 }
 
 export interface SatsInput {
@@ -44,11 +44,14 @@ export interface QueueInput {
 export interface MeltInput {
     /** Share of its buying power the money still has, 0 to 1. */
     readonly kept: number;
+    /** The sign printed on the notes. */
+    readonly symbol: '$' | '£';
 }
 
+/** Two lines of one plan, oldest first, on one axis from 0 to 1: what it is worth and what went in. */
 export interface StackInput {
-    /** One bar per buy or per mark, oldest first, scaled so the tallest is 1. */
-    readonly buys: readonly number[];
+    readonly value: readonly number[];
+    readonly invested: readonly number[];
 }
 
 export interface MachineInputs {
