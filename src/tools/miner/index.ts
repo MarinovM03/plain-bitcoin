@@ -62,11 +62,11 @@ export function mountMiner(root: HTMLElement, siteUrl: string): () => void {
     let nextNonce = 0;
     let rate = 0;
     let realZeros: number | null = null;
-    let dive = false;
+    let dive = 0;
     let disposed = false;
     let fallback = 0;
 
-    const view = attach(stage, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: false }, { page: true });
+    const view = attach(stage, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: 0 }, { page: true });
     const push = (tally: readonly number[] | null) =>
         view.set({ needed: needed || 79, best: bestZeros, real: realZeros, tally, dive });
 
@@ -197,19 +197,25 @@ export function mountMiner(root: HTMLElement, siteUrl: string): () => void {
     };
     document.addEventListener('visibilitychange', hidden);
 
-    const steps = new IntersectionObserver(
-        (entries) => {
-            for (const entry of entries) {
-                const id = (entry.target as HTMLElement).dataset.step;
-                if (id !== 'target' && id !== 'network') continue;
-                if (entry.isIntersecting) dive = true;
-                else if (id === 'target' && entry.boundingClientRect.top > 0) dive = false;
-                push(null);
-            }
-        },
-        { rootMargin: '-35% 0px -35% 0px' },
-    );
-    for (const item of root.querySelectorAll('.step')) steps.observe(item);
+    // The camera follows the reading: it starts down the well as the steps come up and reaches the target ring
+    // when the "Hit the target" step is in the middle of the screen.
+    const stepsList = find(root, '.steps');
+    const targetStep = find(root, '[data-step="target"]');
+    let scrollFrame = 0;
+    const follow = () => {
+        scrollFrame = 0;
+        const middle = window.innerHeight / 2;
+        const start = stepsList.getBoundingClientRect().top - window.innerHeight * 0.6;
+        const end = targetStep.getBoundingClientRect().top - middle;
+        const next = end <= 0 ? 1 : start >= 0 ? 0 : Math.min(1, Math.max(0, -start / (end - start)));
+        if (Math.abs(next - dive) < 0.002) return;
+        dive = next;
+        push(null);
+    };
+    const onScroll = () => {
+        if (scrollFrame === 0) scrollFrame = requestAnimationFrame(follow);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
 
     const stopTip = heights.subscribe(onTip);
     onTip(heights.tip);
@@ -224,7 +230,8 @@ export function mountMiner(root: HTMLElement, siteUrl: string): () => void {
         stop();
         worker?.terminate();
         worker = null;
-        steps.disconnect();
+        window.removeEventListener('scroll', onScroll);
+        cancelAnimationFrame(scrollFrame);
         stopTip();
         document.removeEventListener('visibilitychange', hidden);
         share.dispose();

@@ -54,6 +54,10 @@ export function renderMiner(): SafeHtml {
             <div class="miner-answer__actions">
                 <button id="miner-run" class="button button--primary" type="button" aria-pressed="false" disabled>${MINER.start}</button>
             </div>
+            <details class="info">
+                <summary class="info__toggle"><span class="info__mark" aria-hidden="true">i</span>${MINER.info.summary}</summary>
+                <ul class="info__list">${MINER.info.points.map((point) => html`<li>${point}</li>`)}</ul>
+            </details>
         </section>
         <p class="machine__lead">${MINER.lead}</p>
         <dl class="miner-stats rise">${STAT_IDS.map(stat)}</dl>

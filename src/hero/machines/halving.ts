@@ -92,7 +92,11 @@ export function createHalving(first: HalvingInput, page: boolean): Machine<Halvi
 
         const tilt = 0.55 + frame.pointer.y * 0.2;
         const swing = frame.turn + frame.pointer.x * 0.3 + (frame.still ? 0 : Math.sin(frame.seconds * 0.18) * 0.35);
-        const distance = (page ? 4.4 : 4.9) * (frame.aspect < 1 ? 1.35 / Math.max(0.55, frame.aspect) : 1);
+        // The outer ring, seen tilted, is about as tall as it is wide times the sine of the tilt.
+        const outer = radiusOf(ERAS - 1) + 0.12;
+        const half = Math.tan((camera.fov * Math.PI) / 360);
+        const distance =
+            Math.max((outer * Math.sin(tilt) + 0.35) / half, outer / (half * frame.aspect)) * (page ? 1.06 : 1);
         camera.position.set(
             Math.sin(swing) * distance * Math.cos(tilt),
             -Math.sin(tilt) * distance,

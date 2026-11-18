@@ -12,13 +12,16 @@ import {
 } from 'three';
 import type { WallInput } from '../bus.ts';
 import { disposeTree, ORANGE, WHITE } from '../glow.ts';
-import { approach, type Frame, type Machine } from '../machine.ts';
+import { approach, type Frame, fitDistance, type Machine } from '../machine.ts';
 
 /** 300 wide, 280 deep, 250 layers high: one cell for each of the 21,000,000 bitcoin. */
 const CELLS = new Vector3(300, 250, 280);
 const PER_LAYER = 300 * 280;
 const SIZE = new Vector3(3, 2.5, 2.8).multiplyScalar(0.62);
 const LOOP_SECONDS = 24;
+/** How close the camera comes to the row being mined, in scene units: a few dozen coins across. */
+const CLOSEST = 0.32;
+const CENTRE = new Vector3(0, -0.1, 0);
 
 const VERTEX = /* glsl */ `
 varying vec3 vCell;
@@ -56,7 +59,7 @@ void main() {
     if (uLayer > 0.5) {
         float index = cell.z * uCells.x + cell.x;
         if (index >= uPartial) discard;
-        color = mix(uLit, uNew, 0.28) * (0.8 + 0.2 * grain(cell)) * shade * 1.15;
+        color = uLit * (1.15 + 0.25 * grain(cell)) * shade + uNew * 0.06;
     }
     gl_FragColor = vec4(color * (0.35 + 0.65 * gap), 1.0);
     #include <colorspace_fragment>
@@ -88,7 +91,7 @@ function ease(t: number): number {
  * from the bottom; the top layer is the one being mined now, lit up to the newest block. The empty frame above is
  * what is still to come.
  */
-export function createWall(first: WallInput, page: boolean): Machine<WallInput> {
+export function createWall(first: WallInput, _page: boolean): Machine<WallInput> {
     const scene = new Scene();
     const camera = new PerspectiveCamera(32, 1, 0.01, 60);
     const box = new BoxGeometry(1, 1, 1);
@@ -102,9 +105,8 @@ export function createWall(first: WallInput, page: boolean): Machine<WallInput> 
     scene.add(body, layer, frame);
 
     const focus = new Vector3();
-    const eye = new Vector3();
-    const far = new Vector3();
-    const near = new Vector3();
+    const aim = new Vector3();
+    const look = new Vector3();
     let input = first;
     let held: number | null = null;
 
@@ -136,14 +138,16 @@ export function createWall(first: WallInput, page: boolean): Machine<WallInput> 
         const auto = ease(phase < 0.5 ? (phase - 0.12) * 3.2 : (0.92 - phase) * 3.2);
         const wanted = input.zoom ?? null;
         held = wanted === null ? null : frame.still || held === null ? wanted : approach(held, wanted, 6, frame.delta);
-        const dive = held === null ? auto : ease(held);
+        const dive = held === null ? auto : held;
         const swing = frame.turn + frame.pointer.x * 0.35 + 0.7 + (frame.still ? 0 : frame.seconds * 0.06);
-        const distance = (frame.aspect < 1 ? 7.2 : 5.6) * (page ? 0.92 : 1);
-        far.set(Math.sin(swing) * distance, 2.6 + frame.pointer.y * 0.6, Math.cos(swing) * distance);
-        near.copy(focus).add(new Vector3(Math.sin(swing) * 0.32, 0.22, Math.cos(swing) * 0.32));
-        eye.copy(far).lerp(near, dive);
-        camera.position.copy(eye);
-        camera.lookAt(new Vector3(0, -0.1, 0).lerp(focus, dive));
+        // The whole block fits the box; then each step of the zoom closes the same share of the distance, so
+        // the dive feels even from the first notch to the last.
+        const fit = fitDistance(1.3, camera.fov, frame.aspect * 1.05);
+        const distance = fit * (CLOSEST / fit) ** dive;
+        aim.copy(CENTRE).lerp(focus, Math.min(1, dive * 1.8));
+        look.set(Math.sin(swing), 0.62 - dive * 0.12 + frame.pointer.y * 0.1, Math.cos(swing)).normalize();
+        camera.position.copy(aim).addScaledVector(look, distance);
+        camera.lookAt(aim);
         camera.aspect = frame.aspect;
         camera.updateProjectionMatrix();
     }

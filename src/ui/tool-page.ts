@@ -92,8 +92,8 @@ function renderCalculator(id: CalculatorId): SafeHtml {
             label: address ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
             empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
         })}
-        ${parts.below ?? ''}
         ${pictureFrame(parts.caption)}
+        ${parts.below ?? ''}
         ${shareSection()}
         <form class="tool__more" novalidate>${moreOptions(...parts.more)}</form>`,
         html`${parts.detail}

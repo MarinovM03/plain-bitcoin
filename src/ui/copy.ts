@@ -46,13 +46,13 @@ export const OG_PAGES: Record<ToolId, { number: string; line: string; alt: strin
         alt: 'Plain Bitcoin postcard: Follow a transaction. Bars for the next blocks by lowest fee.',
     },
     power: {
-        number: 'Then vs now',
+        number: 'Inflation melt',
         line: 'Watch old money burn away to inflation, and see what bitcoin did instead.',
-        alt: 'Plain Bitcoin postcard: Then vs now. Cash in steel beside bitcoin in orange.',
+        alt: 'Plain Bitcoin postcard: Inflation melt. Cash in steel beside bitcoin in orange.',
     },
     convert: {
         number: '100,000,000 sats',
-        line: 'Sats to dollars, euros and pounds, counted out on an abacus.',
+        line: 'Sats to dollars, euros and pounds, and how far you are from one whole bitcoin.',
         alt: 'Plain Bitcoin postcard: Sats converter. A grid of sats.',
     },
     dca: {
@@ -89,7 +89,7 @@ export const HOME = {
         address: { figure: '0 bytes', unit: 'sent until you tap Look up' },
     },
     sats: (count: string) => `${count} sats`,
-    factsSource: 'Height and price: mempool.space. Then vs now: US CPI, Bureau of Labor Statistics.',
+    factsSource: 'Height and price: mempool.space. Inflation melt: US CPI, Bureau of Labor Statistics.',
     cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
@@ -144,8 +144,8 @@ export const TOOLS: Record<ToolId, { name: string; description: string; privacy:
         privacy: 'Reads the latest block height from mempool.space, a public API. No tracking.',
     },
     power: {
-        name: 'Then vs now',
-        description: 'What old money buys today',
+        name: 'Inflation melt',
+        description: 'What old cash buys today, next to bitcoin',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     convert: {
@@ -305,8 +305,8 @@ export const CONVERT = {
     point: (perPoint: string) => `One point in the stack is ${perPoint}.`,
     pointRounded: (perPoint: string, points: string) =>
         `One point in the stack is ${perPoint}. ${points} points, rounded.`,
-    pointEmpty: 'Type an amount and the abacus counts it out in sats.',
-    abacus: 'Each rod is one place value in sats: single sats on the right, whole bitcoin where the beads turn white.',
+    pointEmpty: 'Type an amount and the coin lights up towards one whole bitcoin.',
+    abacus: 'The lit part of the coin is how far your amount has come from 1 sat to 1 whole bitcoin: one notch for every tenfold step. From 1 BTC up, a coin stacks behind it for every bitcoin.',
     unitsLine: '1 BTC = 100,000,000 sats',
     perSat: (fiat: string) => `1 sat ≈ ${fiat}`,
     labelLive: (clock: string) => `live price, ${clock}`,
@@ -705,6 +705,18 @@ export const MINER = {
         nonce: 'Winning nonce',
     },
     hashLabel: 'Hash, newest byte first',
+    info: {
+        summary: 'How this works, in short',
+        points: [
+            'This page reads the 80-byte header of the newest real block from mempool.space.',
+            'Your device changes one number in it, the nonce, and runs the header through SHA-256 twice. A laptop does that up to about a million times a second, in the background.',
+            'Each result is a 256-bit number. The more zero bits it starts with, the rarer it is: every extra zero is twice as hard to get.',
+            'Every spark in the well is one of your hashes, dropped to the ring of its zero count. The orange ring is the depth a real block needs today.',
+            'Check the real block runs the real winning nonce, so you can watch a real block clear the target.',
+            'The miner tile on the home page hashes too: 400 real tries every 0.15 seconds, only while it is on screen.',
+            'Nothing you do here is sent anywhere, and a block cannot be found this way: the odds above say why.',
+        ],
+    },
 } as const;
 
 export const HALVING = {

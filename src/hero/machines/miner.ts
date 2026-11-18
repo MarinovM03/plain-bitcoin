@@ -232,10 +232,11 @@ export function createMiner(first: MinerInput, page: boolean): Machine<MinerInpu
 
     function frame(frame: Frame): void {
         const floor = depthOf(input.needed);
-        const goalY = input.dive ? floor + 3.6 : page ? 3.4 : 3.6;
-        cameraY = frame.still ? goalY : approach(cameraY, goalY, 1.6, frame.delta);
+        const top = page ? 3.6 : 3.9;
+        const goalY = top + (floor + 3.6 - top) * Math.min(1, Math.max(0, input.dive));
+        cameraY = frame.still ? goalY : approach(cameraY, goalY, 6, frame.delta);
         const swing = frame.turn + (page ? 0 : frame.seconds * 0.12) + frame.pointer.x * 0.25;
-        const lean = 0.55 + frame.pointer.y * 0.12;
+        const lean = 0.12 + frame.pointer.y * 0.08;
         camera.position.set(Math.sin(swing) * lean, cameraY, Math.cos(swing) * lean);
         camera.lookAt(0, cameraY - 12, 0);
         camera.aspect = frame.aspect;

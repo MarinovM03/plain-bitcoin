@@ -50,7 +50,8 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     const worstMonths = new Map<Fiat, Month | null>();
     let text: PowerText | null = null;
     let settleTimer = 0;
-    const note = attach(find(root, '[data-machine="melt"]'), 'melt', { kept: 1 }, { page: true });
+    const note = attach(find(root, '[data-machine="melt"]'), 'melt', { kept: 1, symbol: '£' }, { page: true });
+    const sign = (): '$' | '£' => (currency() === 'USD' ? '$' : '£');
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -93,7 +94,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function showMessage(message: string): void {
-        note.set({ kept: 1 });
+        note.set({ kept: 1, symbol: sign() });
         text = null;
         label.textContent = TOOL_PAGE.resultLabel;
         const empty = document.createElement('span');
@@ -167,7 +168,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
             return;
         }
         const { result } = outcome;
-        note.set({ kept: result.equivalentNow > 0 ? result.amount / result.equivalentNow : 1 });
+        note.set({ kept: result.equivalentNow > 0 ? result.amount / result.equivalentNow : 1, symbol: sign() });
         text = powerText(result, fiat);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;

@@ -19,7 +19,9 @@ const SCALES = [1, 0.8, 0.62, 0.5];
 const SLOW_FRAME_SECONDS = 1 / 40;
 const SAMPLE_FRAMES = 90;
 /** How far one full drag across a box turns its scene. */
-const DRAG_TURN = Math.PI * 0.9;
+const DRAG_TURN = Math.PI * 0.6;
+/** A drag turns a scene this far either way at most, so it can be looked around but never lost. */
+const MAX_TURN = 0.75;
 
 interface Slot {
     element: HTMLElement;
@@ -29,6 +31,7 @@ interface Slot {
     pointer: { x: number; y: number };
     target: { x: number; y: number };
     turn: number;
+    turnTarget: number;
     seconds: number;
     visible: boolean;
     dirty: boolean;
@@ -67,12 +70,14 @@ function bindPointer(slot: Slot): () => void {
         const rect = element.getBoundingClientRect();
         slot.target.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         slot.target.y = 1 - ((event.clientY - rect.top) / rect.height) * 2;
-        if (dragFrom !== null) slot.turn = turnFrom + ((event.clientX - dragFrom) / rect.width) * DRAG_TURN;
+        if (dragFrom === null) return;
+        const turn = turnFrom + ((event.clientX - dragFrom) / rect.width) * DRAG_TURN;
+        slot.turnTarget = Math.max(-MAX_TURN, Math.min(MAX_TURN, turn));
     };
     const down = (event: PointerEvent) => {
         if (!slot.page) return;
         dragFrom = event.clientX;
-        turnFrom = slot.turn;
+        turnFrom = slot.turnTarget;
         element.setPointerCapture(event.pointerId);
     };
     const up = () => {
@@ -172,6 +177,7 @@ export function runStage(): Stage | null {
             slot.seconds += step;
             slot.pointer.x += (slot.target.x - slot.pointer.x) * (still ? 1 : 1 - Math.exp(-4 * delta));
             slot.pointer.y += (slot.target.y - slot.pointer.y) * (still ? 1 : 1 - Math.exp(-4 * delta));
+            slot.turn += (slot.turnTarget - slot.turn) * (still ? 1 : 1 - Math.exp(-6 * delta));
             machine.frame({
                 seconds: slot.seconds,
                 delta: step,
@@ -250,6 +256,7 @@ export function runStage(): Stage | null {
                 pointer: { x: 0, y: 0 },
                 target: { x: 0, y: 0 },
                 turn: 0,
+                turnTarget: 0,
                 seconds: 0,
                 visible: false,
                 dirty: true,
@@ -267,7 +274,14 @@ export function runStage(): Stage | null {
                         const machine = (factory as MachineFactory<unknown>)(slot.input, slot.page);
                         // Programs compile in the background, so no frame stops to build them.
                         if (parallel) await renderer.compileAsync(machine.scene, machine.camera).catch(() => {});
-                        else renderer.compile(machine.scene, machine.camera);
+                        else {
+                            // Without parallel compiling, one object at a time between idle moments, so no single
+                            // task builds every program of a scene.
+                            for (const child of [...machine.scene.children]) {
+                                await idle();
+                                renderer.compile(child, machine.camera, machine.scene);
+                            }
+                        }
                         if (!slots.has(slot)) {
                             machine.dispose();
                             return;
@@ -288,7 +302,7 @@ export function runStage(): Stage | null {
                     near.disconnect();
                     queue = queue.then(build);
                 },
-                { rootMargin: '50% 0px' },
+                { rootMargin: '10% 0px' },
             );
             near.observe(element);
             slot.unbind = ((unbind) => () => {
