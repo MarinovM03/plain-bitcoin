@@ -1,7 +1,4 @@
-/*
- * The converter is a toy, not a form: one column of type on the world. Nothing in it has a panel or a border; a
- * field is known by its caret and by the line that grows under it when it has focus.
- */
+/* The converter: one column beside the world, with the same fields as every other tool. */
 .play {
     row-gap: 1.25rem;
 }
@@ -45,83 +42,17 @@
     gap: 1rem;
 }
 
-.play .field__control {
-    min-height: 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
-}
-
-.play .field__control:focus-within {
-    outline: none;
-}
-
-.play .field__control::after {
-    content: "";
-    position: absolute;
-    inset: auto 0 0;
-    height: 2px;
-    background: linear-gradient(to right, var(--ink-dim), transparent);
-    opacity: 0.55;
-    scale: 0.4 1;
-    transform-origin: left;
-    transition:
-        scale calc(var(--duration) * 2) var(--ease),
-        opacity calc(var(--duration) * 2) var(--ease);
-}
-
-.play .field__control:focus-within::after {
-    background: linear-gradient(to right, var(--btc), transparent);
-    opacity: 1;
-    scale: 1 1;
-}
-
-.play .field__input {
-    height: auto;
-    padding: 0 0 0.125rem;
-    border-radius: 0;
-    caret-color: var(--btc);
-    text-shadow: inherit;
-}
-
-/* The amount: the number first, its unit after it in words, as it would be said. */
-.play__amount .field {
-    display: flex;
-    flex-flow: row-reverse wrap;
-    align-items: baseline;
-    justify-content: flex-end;
-    gap: 0 0.75rem;
-}
-
-.play__amount .field__label {
-    float: none;
-    font-family: var(--font-display);
-    font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem);
-    letter-spacing: -0.02em;
-}
-
+/* The amount you type is the biggest field on the page, in the same well as every other field. */
 .play__amount .field__control {
-    width: 100%;
-    max-width: 100%;
+    min-height: 4.5rem;
 }
 
 .play__amount .field__input {
-    font-size: clamp(2.5rem, 1.6rem + 4.2vw, 4.25rem);
-    line-height: 1.1;
+    height: auto;
+    padding-block: 0.375rem;
+    font-size: clamp(2.25rem, 1.6rem + 3vw, 3.5rem);
+    line-height: 1.15;
     letter-spacing: -0.04em;
-}
-
-@supports (field-sizing: content) {
-    .play__amount .field__control {
-        width: auto;
-    }
-
-    .play__amount .field__input {
-        field-sizing: content;
-        width: auto;
-        min-width: 1.5ch;
-        max-width: 100%;
-    }
 }
 
 .play .result__figure {
@@ -138,52 +69,7 @@
 .play__others {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 1.5rem;
-}
-
-.play__others .field__input {
-    font-size: 1.25rem;
-    line-height: 1.6;
-}
-
-/* The money switch is three words; the picked one is lit and underlined. */
-.play .segmented__track {
-    justify-content: flex-start;
-    gap: 1.5rem;
-    padding: 0;
-    border: 0;
-    background: none;
-}
-
-.play .segmented__option {
-    flex: none;
-}
-
-.play .segmented__text {
-    position: relative;
-    min-height: var(--tap);
-    padding-inline: 0;
-    font-size: 1rem;
-}
-
-.play .segmented__text::after {
-    content: "";
-    position: absolute;
-    inset: auto 0 0.5rem;
-    height: 2px;
-    background: var(--btc);
-    scale: 0 1;
-    transform-origin: left;
-    transition: scale calc(var(--duration) * 2) var(--ease);
-}
-
-.play .segmented__input:checked + .segmented__text {
-    background: none;
-    color: var(--ink);
-}
-
-.play .segmented__input:checked + .segmented__text::after {
-    scale: 1 1;
+    gap: 0.625rem;
 }
 
 /* The scrubber: a bare line with a mark at every tenfold step, and the orange point you drag along it. */
@@ -314,8 +200,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .play .field__control::after,
-    .play .segmented__text::after,
     .scrub__range::-webkit-slider-thumb {
         transition: none;
     }
