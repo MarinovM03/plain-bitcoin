@@ -71,7 +71,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     });
 
     const currency = (): Fiat =>
-        form.querySelector<HTMLInputElement>('input[name="dca-currency"]:checked')?.value === 'USD' ? 'USD' : 'GBP';
+        form.querySelector<HTMLInputElement>('input[name="dca-currency"]:checked')?.value === 'GBP' ? 'GBP' : 'USD';
 
     const frequency = (): Frequency => {
         const value = form.querySelector<HTMLInputElement>('input[name="dca-often"]:checked')?.value;

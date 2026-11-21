@@ -30,17 +30,23 @@ const THIN = 0.012;
 const THICK = 0.05;
 const DROP_SECONDS = 2.6;
 
-function label(text: string): CanvasTexture {
+/** What a year bought, short enough to stand over a coin: bitcoin to two places, or thousands of sats. */
+export function boughtLabel(sats: number): string {
+    if (sats >= 1_000_000) return `${(sats / 1e8).toFixed(2)} BTC`;
+    return `${Math.max(1, Math.round(sats / 1000))}k sats`;
+}
+
+function label(text: string, colour: string = TOKENS.inkDim): CanvasTexture {
     const canvas = document.createElement('canvas');
-    canvas.width = 160;
+    canvas.width = 256;
     canvas.height = 64;
     const c = canvas.getContext('2d');
     if (c) {
-        c.fillStyle = TOKENS.inkDim;
+        c.fillStyle = colour;
         c.textAlign = 'center';
         c.textBaseline = 'middle';
         c.font = `500 40px ${TOKENS.fontMono}`;
-        c.fillText(text, 80, 34);
+        c.fillText(text, 128, 34);
     }
     const texture = new CanvasTexture(canvas);
     texture.colorSpace = SRGBColorSpace;
@@ -48,32 +54,36 @@ function label(text: string): CanvasTexture {
 }
 
 /**
- * Every buy as a coin, stacked in one column per year. The same money buys a thicker coin when bitcoin is cheap,
- * so the tall columns are the years when it was. The coins drop in, oldest first, whenever the plan changes.
+ * Every buy as a coin, stacked in one column per year, with the year under it and what the year bought over it.
+ * The same money buys a thicker coin when bitcoin is cheap, so the tall columns are the years when it was. The
+ * coins drop in, oldest first, whenever the plan changes.
  */
 export function createStack(first: StackInput, page: boolean): Machine<StackInput> {
     const scene = new Scene();
     const camera = new PerspectiveCamera(page ? 32 : 30, 1, 0.1, 80);
-    scene.add(new AmbientLight(0xffffff, 0.55));
-    const key = new DirectionalLight(0xffffff, 2.4);
+    scene.add(new AmbientLight(0xffffff, 1.1));
+    const key = new DirectionalLight(0xffffff, 2.2);
     key.position.set(2, 5, 4);
-    const rim = new DirectionalLight(ORANGE, 1.8);
+    const rim = new DirectionalLight(0xffffff, 0.9);
     rim.position.set(-4, 2, -3);
     scene.add(key, rim);
 
     const coins = new InstancedMesh(
         new CylinderGeometry(RADIUS, RADIUS, 1, 36),
-        new MeshStandardMaterial({ color: 0xffffff, metalness: 0.75, roughness: 0.3 }),
+        new MeshStandardMaterial({ color: 0xffffff, metalness: 0.2, roughness: 0.38 }),
         MOST_COINS,
     );
     scene.add(coins);
-    const labelGeometry = new PlaneGeometry(0.5, 0.2);
+    const labelGeometry = new PlaneGeometry(0.64, 0.16);
     const labels: Mesh[] = [];
+    const tops: Mesh[] = [];
     for (let i = 0; i < MOST_COLUMNS; i += 1) {
         const mesh = new Mesh(labelGeometry, new MeshBasicMaterial({ transparent: true, depthWrite: false }));
         mesh.rotation.x = -Math.PI / 2.6;
         labels.push(mesh);
-        scene.add(mesh);
+        const top = new Mesh(labelGeometry, new MeshBasicMaterial({ transparent: true, depthWrite: false }));
+        tops.push(top);
+        scene.add(mesh, top);
     }
 
     const matrix = new Matrix4();
@@ -82,28 +92,35 @@ export function createStack(first: StackInput, page: boolean): Machine<StackInpu
     const size = new Vector3();
     const place = new Vector3();
     const tint = new Color();
-    const pale = new Color('#f2cf8c');
+    const gold = new Color('#ffb547');
     let input = first;
     let since = 0;
     let tallest = 1;
     let shownYears = '';
+    let shownTops = '';
+
+    function paint(mesh: Mesh | undefined, text: string, colour?: string): void {
+        const material = mesh?.material as MeshBasicMaterial | undefined;
+        if (!material) return;
+        material.map?.dispose();
+        material.map = label(text, colour);
+        material.needsUpdate = true;
+    }
 
     function set(next: StackInput): void {
         input = next;
         since = 0;
-        const years = next.columns
-            .slice(-MOST_COLUMNS)
-            .map((column) => column.year)
-            .join(',');
-        if (years === shownYears) return;
-        shownYears = years;
-        next.columns.slice(-MOST_COLUMNS).forEach((column, i) => {
-            const material = labels[i]?.material as MeshBasicMaterial | undefined;
-            if (!material) return;
-            material.map?.dispose();
-            material.map = label(column.year);
-            material.needsUpdate = true;
-        });
+        const columns = next.columns.slice(-MOST_COLUMNS);
+        const years = columns.map((column) => column.year).join(',');
+        if (years !== shownYears) {
+            shownYears = years;
+            for (const [i, column] of columns.entries()) paint(labels[i], column.year);
+        }
+        const bought = columns.map((column) => boughtLabel(column.sats)).join(',');
+        if (bought !== shownTops) {
+            shownTops = bought;
+            for (const [i, column] of columns.entries()) paint(tops[i], boughtLabel(column.sats), TOKENS.ink);
+        }
     }
     set(first);
 
@@ -132,7 +149,7 @@ export function createStack(first: StackInput, page: boolean): Machine<StackInpu
                 size.set(landed > 0 ? 1 : 0, thick, landed > 0 ? 1 : 0);
                 matrix.compose(place, turn, size);
                 coins.setMatrixAt(index, matrix);
-                coins.setColorAt(index, tint.copy(pale).lerp(ORANGE, 0.25 + share * 0.75));
+                coins.setColorAt(index, tint.copy(order % 2 ? gold : ORANGE));
                 y += thick;
                 index += 1;
                 order += 1;
@@ -143,10 +160,20 @@ export function createStack(first: StackInput, page: boolean): Machine<StackInpu
                 tag.visible = true;
                 tag.position.set(x, 0.005, z + 0.42);
             }
+            const top = tops[c];
+            if (top) {
+                const shown = Math.min(1, Math.max(0, since / DROP_SECONDS - 0.4) * 2);
+                top.visible = shown > 0;
+                top.position.set(x, y + 0.16, z);
+                top.quaternion.copy(camera.quaternion);
+                (top.material as MeshBasicMaterial).opacity = shown;
+            }
         });
         for (let i = columns.length; i < MOST_COLUMNS; i += 1) {
             const tag = labels[i];
             if (tag) tag.visible = false;
+            const top = tops[i];
+            if (top) top.visible = false;
         }
         for (; index < MOST_COINS; index += 1) {
             matrix.makeScale(0, 0, 0);
@@ -157,7 +184,7 @@ export function createStack(first: StackInput, page: boolean): Machine<StackInpu
 
         const swing =
             -0.25 + frame.turn * 0.6 + frame.pointer.x * 0.2 + (frame.still ? 0 : Math.sin(frame.seconds * 0.2) * 0.1);
-        const distance = fitBox(width / 2 + RADIUS + 0.2, tallest * 0.55 + 0.3, camera.fov, frame.aspect) * 1.15;
+        const distance = fitBox(width / 2 + RADIUS + 0.32, tallest * 0.55 + 0.4, camera.fov, frame.aspect) * 1.15;
         camera.position.set(
             Math.sin(swing) * distance,
             tallest * 0.5 + 0.9 + frame.pointer.y * 0.3,
@@ -174,7 +201,7 @@ export function createStack(first: StackInput, page: boolean): Machine<StackInpu
         set,
         frame,
         dispose() {
-            for (const tag of labels) (tag.material as MeshBasicMaterial).map?.dispose();
+            for (const tag of [...labels, ...tops]) (tag.material as MeshBasicMaterial).map?.dispose();
             disposeTree(scene);
         },
     };

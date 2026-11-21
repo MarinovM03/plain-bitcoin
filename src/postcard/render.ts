@@ -1,6 +1,7 @@
 import { barScale } from '../model/scale.ts';
 import { issuedBeforeEra, MAX_SUPPLY, SATS_PER_BTC } from '../model/supply.ts';
 import { TOKENS } from '../styles/tokens.ts';
+import { DCA } from '../ui/copy.ts';
 import { formatWhole } from '../util/format.ts';
 import { GRID_DOTS, satsScale } from '../util/sats-scale.ts';
 import { type Box, EXPORT_SCALE, font, layoutPostcard, type PostcardLayout, type TextBox } from './layout.ts';
@@ -167,9 +168,15 @@ function drawLines(context: Context, box: Box, signature: Extract<Signature, { k
     context.beginPath();
     context.arc(x(signature.t[length - 1] ?? t1), y(signature.value[length - 1] ?? 0), 7, 0, Math.PI * 2);
     context.fill();
-    small(context, 'worth', box.x, box.y + 14, TOKENS.btc);
-    small(context, 'put in', box.x + 78, box.y + 14, TOKENS.ink);
-    small(context, 'lump sum', box.x + 162, box.y + 14, TOKENS.inkCool);
+    let keyX = box.x;
+    for (const [key, colour] of [
+        ['value', TOKENS.btc],
+        ['invested', TOKENS.ink],
+        ['lump', TOKENS.inkCool],
+    ] as const) {
+        small(context, DCA.cardKey[key], keyX, box.y + 14, colour);
+        keyX += context.measureText(DCA.cardKey[key]).width + 28;
+    }
 }
 
 /** The address as the page draws it: its type, then one cell per character the postcard is allowed to show. */

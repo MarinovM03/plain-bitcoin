@@ -14,10 +14,11 @@ import {
     MeshStandardMaterial,
     PerspectiveCamera,
     Scene,
+    Vector3,
 } from 'three';
 import type { QueueInput } from '../bus.ts';
 import { disposeTree, GlowPoints, ORANGE, seeds, WHITE } from '../glow.ts';
-import { approach, type Frame, fitBox, type Machine } from '../machine.ts';
+import { approach, type Frame, fitPoints, type Machine } from '../machine.ts';
 
 const WAITING = 7;
 const MINED = 4;
@@ -101,6 +102,12 @@ export function createQueue(first: QueueInput, page: boolean): Machine<QueueInpu
     const tint = new Color();
     const fills = new Float32Array(WAITING);
     const bead = { y: 0, x: 0, grow: 0, ready: false };
+    const corners = Array.from({ length: 8 }, () => new Vector3());
+    const near = Array.from({ length: 8 }, () => new Vector3());
+    const aim = new Vector3();
+    const centre = new Vector3();
+    const direction = new Vector3();
+    let zoom = 0;
     let input = first;
     let slide = 0;
     let height = first.height;
@@ -206,21 +213,38 @@ export function createQueue(first: QueueInput, page: boolean): Machine<QueueInpu
 
         const left = waitingX(Math.max(count, 3) - 1) - SIZE / 2;
         const right = minedX(Math.max(input.mined.length, 1) - 1) + SIZE / 2;
-        const middle = (left + right) / 2;
+        const half = SIZE / 2 + 0.05;
+        corners.forEach((corner, i) => {
+            corner.set(i & 1 ? right : left, i & 2 ? SIZE * 1.5 : 0, i & 4 ? half : -half);
+        });
+        centre.set((left + right) / 2, SIZE * 0.55, 0);
+        const wanted = Math.min(1, Math.max(0, input.zoom ?? 0));
+        zoom = frame.still ? wanted : approach(zoom, wanted, 6, frame.delta);
+        // The line is seen from a corner on the page, so the nearest blocks come forward and fill the box.
         const swing =
-            -0.14 +
+            (page ? -0.75 : -0.2) +
             frame.turn * 0.7 +
             frame.pointer.x * 0.2 +
-            (frame.still ? 0 : Math.sin(frame.seconds * 0.15) * 0.08);
-        const distance = fitBox((right - left) / 2 + 0.3, SIZE * 0.9, camera.fov, frame.aspect) * 1.12;
-        camera.position.set(
-            middle + Math.sin(swing) * distance,
-            1.9 + frame.pointer.y * 0.4,
-            Math.cos(swing) * distance,
-        );
-        camera.lookAt(middle, SIZE * 0.45, 0);
+            (frame.still ? 0 : Math.sin(frame.seconds * 0.15) * 0.06);
+        const rise = (page ? 0.55 : 0.36) + frame.pointer.y * 0.12;
         camera.aspect = frame.aspect;
         camera.updateProjectionMatrix();
+        direction.set(Math.sin(swing) * Math.cos(rise), Math.sin(rise), Math.cos(swing) * Math.cos(rise));
+        const fit = fitPoints(camera, corners, centre, direction, page ? 0.94 : 0.9);
+        const focusX = input.rate === null ? waitingX(0) + shift : bead.x;
+        const focusY = input.rate === null ? SIZE * 0.5 : bead.y;
+        aim.set(centre.x + (focusX - centre.x) * zoom, centre.y + (focusY - centre.y) * zoom, 0);
+        let distance = fit;
+        if (zoom > 0.001) {
+            // Close up is the focused block and a little of its neighbours, never so close that the block is cut.
+            near.forEach((corner, i) => {
+                corner.set(focusX + (i & 1 ? 1 : -1) * PITCH, i & 2 ? SIZE * 1.1 : 0, i & 4 ? half : -half);
+            });
+            const close = fitPoints(camera, near, aim, direction, 0.9);
+            distance = fit * (Math.min(fit, close) / fit) ** zoom;
+        }
+        camera.position.copy(aim).addScaledVector(direction, distance);
+        camera.lookAt(aim);
         dots.flush((camera.projectionMatrix.elements[5] ?? 1) * frame.pixels * 0.5);
     }
 

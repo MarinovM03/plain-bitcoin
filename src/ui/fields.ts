@@ -8,8 +8,8 @@ export interface Choice {
 }
 
 export const CURRENCY_CHOICES = [
-    { value: 'GBP', label: FIELDS.pounds },
     { value: 'USD', label: FIELDS.dollars },
+    { value: 'GBP', label: FIELDS.pounds },
 ] as const;
 
 export function amountField(options: {

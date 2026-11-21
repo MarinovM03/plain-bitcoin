@@ -154,7 +154,7 @@ export function mountHome(root: HTMLElement): () => void {
     const satsSlot = slot('sats');
     const sats = satsSlot ? attach(satsSlot, 'sats', { sats: 0, money: 0, symbol: '$' }) : null;
     const meltSlot = slot('melt');
-    const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1, symbol: '$' }) : null;
+    const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1, amount: HOME.facts.power.amount, symbol: '$' }) : null;
     const halvingSlot = slot('halving');
     const halving = halvingSlot ? attach(halvingSlot, 'halving', { height: heights.tip.height }) : null;
     const queueSlot = slot('queue');
@@ -225,7 +225,7 @@ export function mountHome(root: HTMLElement): () => void {
                 const outcome = meltOf(HOME.facts.power.amount, HOME.facts.power.year, data.cpi);
                 if (outcome.ok) {
                     setFact('power', formatMoney(outcome.result.buysNow, 'USD'));
-                    melt?.set({ kept: outcome.result.kept, symbol: '$' });
+                    melt?.set({ kept: outcome.result.kept, amount: HOME.facts.power.amount, symbol: '$' });
                 }
                 const months = sortedMonths(data.closes).slice(-STACK_MONTHS);
                 const buys = months.map((month) => ({

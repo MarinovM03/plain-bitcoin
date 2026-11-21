@@ -13,7 +13,7 @@ export type PowerPreset = (typeof POWER_PRESETS)[number];
 export function renderPowerInputs(min: Month, max: Month): SafeHtml {
     return html`<div class="field-row">
     ${amountField({ id: 'power-amount', label: FIELDS.amount, decimals: 2, placeholder: FIELDS.examples.power, value: '1,000' })}
-    ${segmentedControl({ name: 'power-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'GBP' })}
+    ${segmentedControl({ name: 'power-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'USD' })}
 </div>
 ${monthField({ id: 'power-when', legend: FIELDS.when, min, max, value: POWER_DEFAULT_START })}`;
 }

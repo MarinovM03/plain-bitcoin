@@ -75,7 +75,7 @@ function dcaData(length: number, scale = 1): SceneData {
 }
 
 describe('dca gauge', () => {
-    it('draws three series in three inks, ending on the answer, with a legend in plain words', () => {
+    it('draws three series in three inks, ending on the answer', () => {
         const gauge = dcaLayout(dcaData(300), VIEW);
         sane(gauge);
         const lines = gauge.marks.filter((mark) => mark.tag === 'polyline');
@@ -86,7 +86,6 @@ describe('dca gauge', () => {
         ]);
         for (const line of lines) expect(String(line.attrs.points).split(' ').length).toBeGreaterThan(50);
         expect(text(gauge, 'end')).toBe('£9,999');
-        expect(text(gauge, 'legend-value')).toBe('A little at a time');
         expect(gauge.alt).toBe('Line chart.');
     });
 

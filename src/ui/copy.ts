@@ -47,8 +47,8 @@ export const OG_PAGES: Record<ToolId, { number: string; line: string; alt: strin
     },
     power: {
         number: 'Inflation melt',
-        line: 'Watch old money burn away to inflation, and see what bitcoin did instead.',
-        alt: 'Plain Bitcoin postcard: Inflation melt. Cash in steel beside bitcoin in orange.',
+        line: 'Watch old cash shrink to inflation, and see what bitcoin did instead.',
+        alt: 'Plain Bitcoin postcard: Inflation melt. Cash in blue beside bitcoin in orange.',
     },
     convert: {
         number: '100,000,000 sats',
@@ -175,9 +175,12 @@ export const TOOL_PAGE = {
 
 export const PICTURE = {
     power: (log: boolean) =>
-        `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
+        `Blue: the money kept as cash. Orange: the same money put into bitcoin. Each column is its value today${log ? ', on a log scale' : ''}.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
-    dca: 'Orange: worth at each buy, ending today. White: money put in. Dashed steel: one lump sum on day one.',
+    dca: 'Each line runs from the first buy to today. The orange dot is your answer.',
+    powerTitle: "Cash next to bitcoin, in today's money",
+    dcaTitle: 'What your plan is worth, day by day',
+    onCard: 'On your postcard',
     dcaEmpty: 'The chart draws once there is an answer.',
     address: 'Each cell is one character, coloured by its part once the checksum proves the type.',
     addressBad: 'Each cell is one character. The orange one cannot be part of this address.',
@@ -193,9 +196,6 @@ export const GAUGE = {
     },
     convert: {
         yours: 'Yours',
-    },
-    dca: {
-        short: { value: 'Worth', invested: 'Put in', lump: 'Lump sum' },
     },
     address: {
         stamp: (kind: string, valid: boolean) => `${kind}${valid ? ' · checksum valid' : ''}`,
@@ -253,7 +253,7 @@ function months(count: number): string {
 }
 
 export const POWER = {
-    drag: 'Drag back through the years and watch the note burn',
+    drag: 'Drag back through the years and watch the cash shrink',
     presetsLabel: 'Try a start',
     presets: { y2015: '2015', fiveYears: 'Five years ago', oneYear: 'A year ago', worst: 'The worst month to start' },
     empty: 'Type an amount to see the answer.',
@@ -367,7 +367,12 @@ export const DCA = {
     chartLabel: 'Worth over time',
     chartAlt: (worth: string, invested: string, lump: string) =>
         `Line chart. Buying a little at a time ends worth ${worth} for ${invested} put in; one lump sum ends worth ${lump}.`,
-    legend: { value: 'A little at a time', invested: 'Put in', lump: 'One lump sum' },
+    key: {
+        value: 'What your bitcoin is worth',
+        invested: 'Cash you put in',
+        lump: 'The same cash, all on day one',
+    },
+    cardKey: { value: 'your bitcoin', invested: 'cash put in', lump: 'all on day one' },
     formula: "Each buy = amount ÷ that day's close. Worth = bitcoin held × close.",
     sourceLabel: 'Bitcoin: ',
     source: 'Coin Metrics reference price',
@@ -765,12 +770,16 @@ export const TX = {
     confirmed: (height: string, count: string) => `Confirmed in block ${height}. ${count} confirmations so far.`,
     confirmedOne: (height: string) => `Confirmed in block ${height}, just now.`,
     detail: (fee: string, vsize: string) => `It pays ${fee} sats for ${vsize} virtual bytes.`,
+    zoom: 'Zoom from the whole line to your block',
+    zoomAll: 'The next blocks on the left, the newest mined blocks on the right.',
+    zoomClose: (tx: boolean) =>
+        tx ? 'Close up on the block your transaction is in.' : 'Close up on the next block to be mined.',
     lineHeading: 'The next blocks',
     lineLabel: (index: string, floor: string, count: string) =>
         `Block +${index}: from ${floor} sat/vB, ${count} transactions`,
     linePending: 'Reading the waiting line…',
     explain:
-        'Miners fill each block with the transactions that pay the most per byte. Each slab of the scene is one block the waiting line would fill right now; the nearest goes first. Your transaction is the bright bead, placed by its fee rate.',
+        'Miners fill each block with the transactions that pay the most per byte. Left of the orange line, each glass block is one the waiting line would fill right now, the nearest first, each dot about 25 transactions. Right of it are the real blocks just mined. Your transaction is the bright bead, placed by its fee rate.',
     source: (clock: string) =>
         `Waiting line from mempool.space, read at ${clock}. Updated every 30 seconds while this page is open.`,
 } as const;

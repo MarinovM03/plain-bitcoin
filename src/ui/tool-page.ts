@@ -4,7 +4,7 @@ import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
 import { renderConvert } from './convert-view.ts';
 import { ADDRESS, FIELDS, PICTURE, POWER, TOOL_PAGE, TOOLS } from './copy.ts';
-import { renderDcaDetail, renderDcaInputs, renderDcaMore } from './dca-view.ts';
+import { renderDcaDetail, renderDcaInputs, renderDcaKey, renderDcaMore } from './dca-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { renderLeft } from './left-view.ts';
 import { moreOptions, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
@@ -17,6 +17,7 @@ interface Calculator {
     more: [string, SafeHtml];
     detail: SafeHtml;
     caption: string;
+    head?: { title: string; key?: SafeHtml };
     below?: SafeHtml;
 }
 
@@ -35,6 +36,7 @@ function calculator(id: CalculatorId): Calculator {
                 more: [POWER.presetsLabel, renderPowerMore()],
                 detail: renderPowerDetail(),
                 caption: PICTURE.powerEmpty,
+                head: { title: PICTURE.powerTitle },
                 below: renderPowerYears(EARLIEST_MONTH, thisMonth()),
             };
         case 'dca':
@@ -43,6 +45,7 @@ function calculator(id: CalculatorId): Calculator {
                 more: [FIELDS.more, renderDcaMore(EARLIEST_MONTH, thisMonth())],
                 detail: renderDcaDetail(),
                 caption: PICTURE.dcaEmpty,
+                head: { title: PICTURE.dcaTitle, key: renderDcaKey() },
             };
         case 'address':
             return {
@@ -90,7 +93,7 @@ function renderCalculator(id: CalculatorId): SafeHtml {
             label: address ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
             empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
         })}
-        ${pictureFrame(parts.caption)}
+        ${pictureFrame(parts.caption, parts.head)}
         ${parts.below ?? ''}
         ${shareSection()}
         <form class="tool__more" novalidate>${moreOptions(...parts.more)}</form>`,

@@ -1,4 +1,4 @@
-import { SHARE, TOOL_PAGE } from './copy.ts';
+import { PICTURE, SHARE, TOOL_PAGE } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
 export const EMPTY_FIGURE = '—';
@@ -13,9 +13,20 @@ export function resultBlock(options: { id: string; label: string; empty: string 
 </section>`;
 }
 
-/** A tool's picture: a flat drawing of the answer on an opaque plate, a caption in words, and a callout for a band. */
-export function pictureFrame(caption: string): SafeHtml {
-    return html`<div class="picture">
+/**
+ * A tool's picture: a flat drawing of the answer on an opaque plate, a caption in words, and a callout for a band.
+ * A titled picture is the one the postcard carries, and says so.
+ */
+export function pictureFrame(caption: string, head?: { title: string; key?: SafeHtml }): SafeHtml {
+    const top = head
+        ? html`<div class="picture__head">
+        <h2 class="picture__title">${head.title}</h2>
+        <p class="picture__tag">${PICTURE.onCard}</p>
+        ${head.key ?? ''}
+    </div>`
+        : '';
+    return html`<div class="picture${head ? ' picture--titled' : ''}">
+    ${top}
     <div id="picture-plot" class="picture__plot"></div>
     <div class="picture__foot">
         <p id="picture-caption" class="picture__caption">${caption}</p>

@@ -1,5 +1,4 @@
 import { sampleIndices } from '../model/scale.ts';
-import { DCA, GAUGE } from '../ui/copy.ts';
 import { formatMoney } from '../util/format.ts';
 import { circle, finite, gauge, label, labelSize, line, polyline, safeView } from './marks.ts';
 import type { Gauge, Mark, SceneData, Viewport } from './types.ts';
@@ -44,7 +43,7 @@ export function dcaPlotBox(raw: Viewport): PlotBox {
     const size = labelSize(view);
     const mini = view.mini;
     return {
-        top: mini ? 4 : size * 3.6,
+        top: mini ? 4 : size * 2.2,
         base: mini ? view.height - 4 : view.height - size * 2.1,
         left: mini ? 2 : 4,
         right: view.width - (mini ? 4 : 8),
@@ -73,25 +72,6 @@ const LINE_CLASS: Record<SeriesKey, string> = {
     value: 'dca-chart__line dca-chart__line--value',
 };
 
-function legend(view: Viewport, size: number): Mark[] {
-    const narrow = view.width < 430;
-    const words = narrow ? GAUGE.dca.short : DCA.legend;
-    const order: SeriesKey[] = ['value', 'invested', 'lump'];
-    const marks: Mark[] = [];
-    let x = 2;
-    const y = size * 1.15;
-    for (const key of order) {
-        marks.push(
-            line(`key-${key}`, x, y - size * 0.32, x + 14, y - size * 0.32, `dca-chart__key dca-chart__key--${key}`),
-        );
-        marks.push(
-            label(`legend-${key}`, x + 19, y, words[key], `g-label dca-chart__legend dca-chart__legend--${key}`),
-        );
-        x += 19 + words[key].length * size * 0.6 + size * 1.3;
-    }
-    return marks;
-}
-
 /**
  * Buys accumulating along time: orange for what the stack was worth at each buy, a thin white line for the money
  * put in and a dashed steel line for one lump sum on the first day. The last orange point is the answer.
@@ -114,7 +94,6 @@ export function dcaLayout(data: SceneData, raw: Viewport): Gauge {
     const y = (value: number) => base - (Math.max(0, finite(value)) / frame.max) * (base - top);
     const marks: Mark[] = [];
     if (!mini) {
-        marks.push(...legend(view, size));
         const step = niceStep(frame.max);
         for (let value = step, k = 0; value < frame.max * 0.98; value += step, k += 1) {
             marks.push(
@@ -154,7 +133,7 @@ export function dcaLayout(data: SceneData, raw: Viewport): Gauge {
         marks.push(circle('end-dot', endX, endY, mini ? 2 : 3.5, 'g-dot--btc'));
         if (!mini)
             marks.push(
-                label('end', endX, Math.max(size * 2.6, endY - 9), data.worth, 'g-label g-label--btc g-end', 'end'),
+                label('end', endX, Math.max(size * 1.2, endY - 9), data.worth, 'g-label g-label--btc g-end', 'end'),
             );
     }
     return gauge(view, {

@@ -18,7 +18,7 @@ const SENTENCE_ROWS: ReadonlySet<string> = new Set(['buys', 'fall', 'lump']);
 export function renderDcaInputs(): SafeHtml {
     return html`<div class="field-row">
     ${amountField({ id: 'dca-amount', label: FIELDS.eachBuy, decimals: 2, placeholder: FIELDS.examples.dca, value: '50' })}
-    ${segmentedControl({ name: 'dca-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'GBP' })}
+    ${segmentedControl({ name: 'dca-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'USD' })}
 </div>
 ${segmentedControl({
     name: 'dca-often',
@@ -42,6 +42,14 @@ export function renderDcaMore(min: Month, max: Month): SafeHtml {
     <div class="presets__list">${presets}</div>
 </fieldset>
 ${amountField({ id: 'dca-fee', label: DCA.fee, decimals: 2, placeholder: '0' })}`;
+}
+
+/** The chart's key, in words a first-time reader can follow, with the same strokes the lines use. */
+export function renderDcaKey(): SafeHtml {
+    const items = (['value', 'invested', 'lump'] as const).map(
+        (key) => html`<li class="picture__key-item picture__key-item--${key}">${DCA.key[key]}</li>`,
+    );
+    return html`<ul class="picture__key">${items}</ul>`;
 }
 
 export function renderDcaDetail(): SafeHtml {
