@@ -59,11 +59,13 @@ export function mountPicture(root: ParentNode): Picture {
             frame.dataset.picture = latest.id;
             frame.dataset.rev = String(rev);
         }
-        void paint();
+        // A picture that cannot load leaves its caption, which says the same in words.
+        paint().catch(() => {});
     }
 
     const resizes = new ResizeObserver(() => {
-        if (latest && drawn && (plot.clientWidth !== drawn.width || plot.clientHeight !== drawn.height)) void paint();
+        if (latest && drawn && (plot.clientWidth !== drawn.width || plot.clientHeight !== drawn.height))
+            paint().catch(() => {});
     });
     resizes.observe(plot);
 

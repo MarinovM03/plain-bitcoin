@@ -85,9 +85,12 @@ function show({ route, initial, notFound }: RouteChange, view: number): void {
     if (route === 'home') cleanups.push(mountHome(main));
     if (route === 'left') cleanups.push(mountCounter(main, announce));
     if (route !== 'home') {
-        MOUNTS[route]().then((mount) => {
-            whileCurrent(view, route, () => mount(main, SITE));
-        });
+        // A load cut short (the page left, or the network gone) leaves the prerendered page as it is.
+        MOUNTS[route]()
+            .then((mount) => {
+                whileCurrent(view, route, () => mount(main, SITE));
+            })
+            .catch(() => {});
     }
 
     if (initial && notFound) announce(ROUTE.notFound);
