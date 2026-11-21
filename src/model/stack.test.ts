@@ -1,24 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { scaleLines, stackLines } from './stack.ts';
+import { yearColumns } from './stack.ts';
 
-describe('stack lines', () => {
-    it('buys the same amount at each price and values everything at the latest one', () => {
-        const lines = stackLines([100, 50, 200], 10);
-        expect(lines.invested).toEqual([10, 20, 30]);
-        expect(lines.value[0]).toBe(10);
-        expect(lines.value[1]).toBeCloseTo(0.3 * 50);
-        expect(lines.value[2]).toBeCloseTo(0.35 * 200);
+describe('year columns', () => {
+    it('puts each buy in its year, scaled by the biggest single buy', () => {
+        const columns = yearColumns([
+            { day: '2020-03-01', sats: 200 },
+            { day: '2020-09-01', sats: 400 },
+            { day: '2021-01-05', sats: 100 },
+        ]);
+        expect(columns.map((column) => column.year)).toEqual(['2020', '2021']);
+        expect(columns[0]?.coins).toEqual([0.5, 1]);
+        expect(columns[0]?.sats).toBe(600);
+        expect(columns[1]?.coins).toEqual([0.25]);
     });
 
-    it('skips bad prices and refuses an empty or impossible plan', () => {
-        expect(stackLines([0, Number.NaN, 100], 10).invested).toEqual([10]);
-        expect(stackLines([], 10).value).toEqual([]);
-        expect(stackLines([100], 0).value).toEqual([]);
-    });
-
-    it('puts both lines on one axis', () => {
-        const scaled = scaleLines(stackLines([100, 50, 200], 10));
-        expect(scaled.value[2]).toBe(1);
-        expect(scaled.invested[2]).toBeCloseTo(30 / 70);
+    it('skips empty or malformed buys', () => {
+        expect(
+            yearColumns([
+                { day: 'x', sats: 5 },
+                { day: '2020-01', sats: 0 },
+            ]),
+        ).toEqual([]);
+        expect(yearColumns([{ day: '2022-01', sats: 10 }])[0]?.coins).toEqual([1]);
     });
 });

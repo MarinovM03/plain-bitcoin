@@ -3,7 +3,7 @@ import type { DcaMarks } from '../../gauges/types.ts';
 import { attach } from '../../hero/bus.ts';
 import { MAX_SATS } from '../../model/convert.ts';
 import { type DailyCloses, type DcaOutcome, dca, FREQUENCIES, type Frequency } from '../../model/dca.ts';
-import { scaleLines } from '../../model/stack.ts';
+import { yearColumns } from '../../model/stack.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type DcaText, dcaText } from '../../postcard/words.ts';
@@ -103,12 +103,12 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         }, SETTLE_MS);
     }
 
-    const stack = attach(find(root, '[data-machine="stack"]'), 'stack', { value: [], invested: [] }, { page: true });
+    const stack = attach(find(root, '[data-machine="stack"]'), 'stack', { columns: [] }, { page: true });
 
     function showWorld(buys: number): void {
         if (buys === drawnBuys) return;
         drawnBuys = buys;
-        if (buys === 0) stack.set({ value: [], invested: [] });
+        if (buys === 0) stack.set({ columns: [] });
     }
 
     function showMessage(message: string): void {
@@ -138,7 +138,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
 
     // The chart, the answer and the postcard read the same marks: the last one is the figure above.
     function renderChart(words: DcaText, marks: DcaMarks, fiat: Fiat): void {
-        stack.set(scaleLines({ value: [...marks.value], invested: [...marks.invested] }));
         picture.set({ id: 'dca', fiat, worth: words.rows.worth, alt: words.chartAlt, ...marks }, PICTURE.dca);
     }
 
@@ -188,6 +187,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         }
         const marks = dcaMarks(outcome.result);
         showWorld(outcome.result.buys);
+        stack.set({ columns: yearColumns(outcome.result.bought) });
         text = dcaText(outcome.result, fiat, marks);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;

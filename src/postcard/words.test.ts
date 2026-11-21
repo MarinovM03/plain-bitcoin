@@ -211,6 +211,7 @@ const DCA_RESULT: DcaResult = {
     },
     lumpSum: { sats: 333_000_000, price: 5_360.1, valueNow: 194_680 },
     points: [],
+    bought: [],
 };
 
 describe('dcaText', () => {

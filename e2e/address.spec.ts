@@ -50,6 +50,7 @@ async function horizontalOverflow(page: Page): Promise<number> {
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/address');
+    await expect(page.locator('main')).toHaveAttribute('data-ready', 'address');
     await expect(page.locator('#tool-result')).toHaveText(ADDRESS.empty);
 });
 

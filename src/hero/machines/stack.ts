@@ -1,120 +1,171 @@
 import {
-    BufferAttribute,
-    BufferGeometry,
+    AmbientLight,
+    CanvasTexture,
     Color,
-    DoubleSide,
+    CylinderGeometry,
+    DirectionalLight,
+    InstancedMesh,
+    Matrix4,
     Mesh,
     MeshBasicMaterial,
+    MeshStandardMaterial,
     PerspectiveCamera,
+    PlaneGeometry,
+    Quaternion,
     Scene,
+    SRGBColorSpace,
+    Vector3,
 } from 'three';
 import { TOKENS } from '../../styles/tokens.ts';
 import type { StackInput } from '../bus.ts';
-import { disposeTree, GlowPoints, ORANGE, WHITE } from '../glow.ts';
-import { type Frame, fitDistance, type Machine } from '../machine.ts';
+import { disposeTree, ORANGE } from '../glow.ts';
+import { type Frame, fitBox, type Machine } from '../machine.ts';
 
-const SAMPLES = 240;
-const WIDTH = 4.4;
-const TALL = 1.9;
-const DRAW_SECONDS = 2.4;
+const MOST_COINS = 900;
+const MOST_COLUMNS = 14;
+const RADIUS = 0.22;
+const GAP = 0.56;
+/** A coin is at least this thick, so a dear week still shows; the biggest buy is this much thicker. */
+const THIN = 0.012;
+const THICK = 0.05;
+const DROP_SECONDS = 2.6;
 
-/** Reads a series at a share of its length, 0 to 1, between its points. */
-function at(series: readonly number[], t: number): number {
-    if (series.length === 0) return 0;
-    const x = t * (series.length - 1);
-    const i = Math.floor(x);
-    const a = series[i] ?? 0;
-    const b = series[Math.min(series.length - 1, i + 1)] ?? a;
-    return a + (b - a) * (x - i);
+function label(text: string): CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 160;
+    canvas.height = 64;
+    const c = canvas.getContext('2d');
+    if (c) {
+        c.fillStyle = TOKENS.inkDim;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.font = `500 40px ${TOKENS.fontMono}`;
+        c.fillText(text, 80, 34);
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    return texture;
 }
 
 /**
- * The stack as its own chart, standing in space: the glowing orange line and the area under it are what the
- * buys are worth, the white line is the money put in. It draws itself left to right whenever the numbers change.
+ * Every buy as a coin, stacked in one column per year. The same money buys a thicker coin when bitcoin is cheap,
+ * so the tall columns are the years when it was. The coins drop in, oldest first, whenever the plan changes.
  */
 export function createStack(first: StackInput, page: boolean): Machine<StackInput> {
     const scene = new Scene();
-    const camera = new PerspectiveCamera(page ? 34 : 30, 1, 0.1, 60);
+    const camera = new PerspectiveCamera(page ? 32 : 30, 1, 0.1, 80);
+    scene.add(new AmbientLight(0xffffff, 0.55));
+    const key = new DirectionalLight(0xffffff, 2.4);
+    key.position.set(2, 5, 4);
+    const rim = new DirectionalLight(ORANGE, 1.8);
+    rim.position.set(-4, 2, -3);
+    scene.add(key, rim);
 
-    const area = new BufferGeometry();
-    const position = new Float32Array(SAMPLES * 2 * 3);
-    const color = new Float32Array(SAMPLES * 2 * 3);
-    const index: number[] = [];
-    for (let i = 0; i < SAMPLES - 1; i += 1) {
-        const a = i * 2;
-        index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
-    }
-    area.setAttribute('position', new BufferAttribute(position, 3));
-    area.setAttribute('color', new BufferAttribute(color, 3));
-    area.setIndex(index);
-    scene.add(
-        new Mesh(
-            area,
-            new MeshBasicMaterial({
-                vertexColors: true,
-                transparent: true,
-                opacity: 0.85,
-                side: DoubleSide,
-                depthWrite: false,
-            }),
-        ),
+    const coins = new InstancedMesh(
+        new CylinderGeometry(RADIUS, RADIUS, 1, 36),
+        new MeshStandardMaterial({ color: 0xffffff, metalness: 0.75, roughness: 0.3 }),
+        MOST_COINS,
     );
-    const lines = new GlowPoints(SAMPLES * 2 + 1);
-    scene.add(lines.points);
+    scene.add(coins);
+    const labelGeometry = new PlaneGeometry(0.5, 0.2);
+    const labels: Mesh[] = [];
+    for (let i = 0; i < MOST_COLUMNS; i += 1) {
+        const mesh = new Mesh(labelGeometry, new MeshBasicMaterial({ transparent: true, depthWrite: false }));
+        mesh.rotation.x = -Math.PI / 2.6;
+        labels.push(mesh);
+        scene.add(mesh);
+    }
 
+    const matrix = new Matrix4();
+    const turn = new Quaternion();
+    const axis = new Vector3(0, 1, 0);
+    const size = new Vector3();
+    const place = new Vector3();
+    const tint = new Color();
+    const pale = new Color('#f2cf8c');
     let input = first;
-    let drawn = 0;
-    const deep = new Color(TOKENS.void);
-    const glow = new Color();
+    let since = 0;
+    let tallest = 1;
+    let shownYears = '';
 
     function set(next: StackInput): void {
         input = next;
-        drawn = 0;
+        since = 0;
+        const years = next.columns
+            .slice(-MOST_COLUMNS)
+            .map((column) => column.year)
+            .join(',');
+        if (years === shownYears) return;
+        shownYears = years;
+        next.columns.slice(-MOST_COLUMNS).forEach((column, i) => {
+            const material = labels[i]?.material as MeshBasicMaterial | undefined;
+            if (!material) return;
+            material.map?.dispose();
+            material.map = label(column.year);
+            material.needsUpdate = true;
+        });
     }
+    set(first);
 
     function frame(frame: Frame): void {
-        drawn = frame.still ? 1 : Math.min(1, drawn + frame.delta / DRAW_SECONDS);
-        const has = input.value.length > 1;
-        for (let i = 0; i < SAMPLES; i += 1) {
-            const t = i / (SAMPLES - 1);
-            const x = -WIDTH / 2 + t * WIDTH;
-            const shown = has && t <= drawn;
-            const value = shown ? at(input.value, t) * TALL : 0;
-            position.set([x, value, 0], i * 6);
-            position.set([x, 0, 0], i * 6 + 3);
-            glow.copy(ORANGE).multiplyScalar(0.8);
-            color.set([glow.r, glow.g, glow.b], i * 6);
-            color.set([deep.r, deep.g, deep.b], i * 6 + 3);
-            if (shown) {
-                lines.put(i, x, value, 0.01, 0.075, ORANGE, 1);
-                lines.put(SAMPLES + i, x, at(input.invested, t) * TALL, 0.02, 0.035, WHITE, 0.7);
-            } else {
-                lines.hide(i);
-                lines.hide(SAMPLES + i);
+        since = frame.still ? DROP_SECONDS : since + frame.delta;
+        const columns = input.columns.slice(-MOST_COLUMNS);
+        const total = Math.max(
+            1,
+            columns.reduce((sum, column) => sum + column.coins.length, 0),
+        );
+        const width = (columns.length - 1) * GAP;
+        let index = 0;
+        let order = 0;
+        tallest = 0.4;
+        columns.forEach((column, c) => {
+            const x = c * GAP - width / 2;
+            const z = -Math.abs(x) * 0.12;
+            let y = 0;
+            for (const share of column.coins) {
+                if (index >= MOST_COINS) break;
+                const thick = THIN + Math.max(0, share) * THICK;
+                const landed = Math.min(1, Math.max(0, (since / DROP_SECONDS) * 1.6 - (order / total) * 0.6));
+                const fall = (1 - landed) ** 2 * 2.2;
+                place.set(x + Math.sin(order * 2.3) * 0.012, y + thick / 2 + fall, z + Math.cos(order * 1.7) * 0.012);
+                turn.setFromAxisAngle(axis, order * 0.7);
+                size.set(landed > 0 ? 1 : 0, thick, landed > 0 ? 1 : 0);
+                matrix.compose(place, turn, size);
+                coins.setMatrixAt(index, matrix);
+                coins.setColorAt(index, tint.copy(pale).lerp(ORANGE, 0.25 + share * 0.75));
+                y += thick;
+                index += 1;
+                order += 1;
             }
+            tallest = Math.max(tallest, y);
+            const tag = labels[c];
+            if (tag) {
+                tag.visible = true;
+                tag.position.set(x, 0.005, z + 0.42);
+            }
+        });
+        for (let i = columns.length; i < MOST_COLUMNS; i += 1) {
+            const tag = labels[i];
+            if (tag) tag.visible = false;
         }
-        (area.getAttribute('position') as BufferAttribute).needsUpdate = true;
-        (area.getAttribute('color') as BufferAttribute).needsUpdate = true;
-        const head = SAMPLES * 2;
-        if (has) {
-            const pulse = frame.still ? 1 : 0.85 + Math.sin(frame.seconds * 3) * 0.15;
-            lines.put(head, -WIDTH / 2 + drawn * WIDTH, at(input.value, drawn) * TALL, 0.03, 0.22 * pulse, ORANGE, 1);
-        } else {
-            lines.hide(head);
+        for (; index < MOST_COINS; index += 1) {
+            matrix.makeScale(0, 0, 0);
+            coins.setMatrixAt(index, matrix);
         }
+        coins.instanceMatrix.needsUpdate = true;
+        if (coins.instanceColor) coins.instanceColor.needsUpdate = true;
 
         const swing =
-            -0.32 + frame.turn * 0.6 + frame.pointer.x * 0.2 + (frame.still ? 0 : Math.sin(frame.seconds * 0.2) * 0.1);
-        const distance = fitDistance(WIDTH * 0.5, camera.fov, frame.aspect) * 0.78;
+            -0.25 + frame.turn * 0.6 + frame.pointer.x * 0.2 + (frame.still ? 0 : Math.sin(frame.seconds * 0.2) * 0.1);
+        const distance = fitBox(width / 2 + RADIUS + 0.2, tallest * 0.55 + 0.3, camera.fov, frame.aspect) * 1.15;
         camera.position.set(
             Math.sin(swing) * distance,
-            TALL * 0.55 + 0.6 + frame.pointer.y * 0.3,
+            tallest * 0.5 + 0.9 + frame.pointer.y * 0.3,
             Math.cos(swing) * distance,
         );
-        camera.lookAt(0, TALL * 0.42, 0);
+        camera.lookAt(0, tallest * 0.42, 0);
         camera.aspect = frame.aspect;
         camera.updateProjectionMatrix();
-        lines.flush((camera.projectionMatrix.elements[5] ?? 1) * frame.pixels * 0.5);
     }
 
     return {
@@ -123,7 +174,7 @@ export function createStack(first: StackInput, page: boolean): Machine<StackInpu
         set,
         frame,
         dispose() {
-            lines.dispose();
+            for (const tag of labels) (tag.material as MeshBasicMaterial).map?.dispose();
             disposeTree(scene);
         },
     };

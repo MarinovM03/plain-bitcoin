@@ -14,6 +14,9 @@ export interface MinerInput {
 
 export interface SatsInput {
     readonly sats: number;
+    /** The same amount in money, or null when there is no price for the chosen currency. */
+    readonly money: number | null;
+    readonly symbol: '$' | '€' | '£';
 }
 
 export interface WallInput {
@@ -39,6 +42,12 @@ export interface QueueInput {
     /** Which projected block it reaches, 1 for the next; null when it pays less than all of them. */
     readonly slab: number | null;
     readonly confirmed: boolean;
+    /** How many blocks back from the newest the confirmed transaction sits, 0 for the newest. */
+    readonly confirmedDepth: number | null;
+    /** How full each of the newest mined blocks is, newest first, 0 to 1 of the weight limit. */
+    readonly mined: readonly number[];
+    /** The newest block's height: when it grows the line slides across. */
+    readonly height: number;
 }
 
 export interface MeltInput {
@@ -48,10 +57,21 @@ export interface MeltInput {
     readonly symbol: '$' | '£';
 }
 
-/** Two lines of one plan, oldest first, on one axis from 0 to 1: what it is worth and what went in. */
+/** One column per year of a buying plan: each coin is one buy, as a share of the biggest single buy. */
 export interface StackInput {
-    readonly value: readonly number[];
-    readonly invested: readonly number[];
+    readonly columns: readonly { readonly year: string; readonly coins: readonly number[] }[];
+}
+
+export type AddressRole = 'hrp' | 'separator' | 'version' | 'program' | 'checksum' | 'prefix' | 'body' | 'unknown';
+
+/** An address's characters, the part each one is, and how the check came out. */
+export interface AddressInput {
+    readonly chars: string;
+    readonly roles: readonly AddressRole[];
+    readonly state: 'empty' | 'valid' | 'invalid';
+    /** The place of a likely typo, when the checker can tell. */
+    readonly suspect: number | null;
+    readonly checksumBad: boolean;
 }
 
 export interface MachineInputs {
@@ -62,6 +82,7 @@ export interface MachineInputs {
     queue: QueueInput;
     melt: MeltInput;
     stack: StackInput;
+    address: AddressInput;
 }
 
 export type MachineId = keyof MachineInputs;

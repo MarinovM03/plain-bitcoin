@@ -1,23 +1,25 @@
 import { hrefFor } from '../app/routes.ts';
 import { savedHeader } from '../data/header.ts';
 import { heightFeed, type Tip } from '../data/height.ts';
-import { fetchLine } from '../data/mempool.ts';
+import { fetchLine, minedFills } from '../data/mempool.ts';
 import { priceFeed } from '../data/price.ts';
-import { attach, type MachineId, type View } from '../hero/bus.ts';
+import { attach, type MachineId, type QueueInput, type View } from '../hero/bus.ts';
 import { targetZeroBits } from '../model/header.ts';
 import { createMiner, leadingZeroBits } from '../model/sha256.ts';
-import { scaleLines, stackLines } from '../model/stack.ts';
+import { yearColumns } from '../model/stack.ts';
 import { MAX_SUPPLY, SATS_PER_BTC, supplyAt } from '../model/supply.ts';
+import type { WaitingLine } from '../model/tx.ts';
 import type { ToolId } from '../tools/index.ts';
 import { DEPTHS } from '../tools/miner/protocol.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
 import { formatAmount, formatMinutes, formatMoney, formatWhole } from '../util/format.ts';
 import { prefersReducedMotion } from '../util/motion.ts';
+import { SAMPLE_PARTS } from './address-view.ts';
 import { HOME, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 import { rollText } from './roll.ts';
 
-const TILES: readonly { id: ToolId; machine: MachineId | null; size: 'hero' | 'wide' | 'small' }[] = [
+const TILES: readonly { id: ToolId; machine: MachineId; size: 'hero' | 'wide' | 'small' }[] = [
     { id: 'miner', machine: 'miner', size: 'hero' },
     { id: 'left', machine: 'wall', size: 'small' },
     { id: 'halving', machine: 'halving', size: 'small' },
@@ -25,7 +27,7 @@ const TILES: readonly { id: ToolId; machine: MachineId | null; size: 'hero' | 'w
     { id: 'convert', machine: 'sats', size: 'small' },
     { id: 'power', machine: 'melt', size: 'small' },
     { id: 'dca', machine: 'stack', size: 'small' },
-    { id: 'address', machine: null, size: 'small' },
+    { id: 'address', machine: 'address', size: 'small' },
 ];
 
 const FACT_UNITS: Record<ToolId, string> = {
@@ -44,9 +46,7 @@ const HASH_TICK_MS = 150;
 const HASHES_PER_TICK = 400;
 
 function renderTile({ id, machine, size }: (typeof TILES)[number]): SafeHtml {
-    const scene = machine
-        ? html`<div class="tile__scene" data-machine="${machine}" aria-hidden="true"></div>`
-        : html`<div class="tile__scene tile__scene--type" aria-hidden="true"><span>bc1q</span><span>…</span><span>x0wlh</span></div>`;
+    const scene = html`<div class="tile__scene" data-machine="${machine}" aria-hidden="true"></div>`;
     const badge = id === 'miner' ? html`<span class="tile__badge">${HOME.fresh}</span>` : '';
     return html`<li class="tile tile--${size}">
         <a class="tile__link" href="${hrefFor(id)}" data-tool="${id}">
@@ -152,22 +152,33 @@ export function mountHome(root: HTMLElement): () => void {
         ? attach(wallSlot, 'wall', { issued: supplyAt(heights.tip.height).issued / MAX_SUPPLY })
         : null;
     const satsSlot = slot('sats');
-    const sats = satsSlot ? attach(satsSlot, 'sats', { sats: 0 }) : null;
+    const sats = satsSlot ? attach(satsSlot, 'sats', { sats: 0, money: 0, symbol: '$' }) : null;
     const meltSlot = slot('melt');
     const melt = meltSlot ? attach(meltSlot, 'melt', { kept: 1, symbol: '$' }) : null;
     const halvingSlot = slot('halving');
     const halving = halvingSlot ? attach(halvingSlot, 'halving', { height: heights.tip.height }) : null;
     const queueSlot = slot('queue');
-    const queue = queueSlot
-        ? attach(queueSlot, 'queue', { floors: [], fills: [], counts: [], rate: null, slab: null, confirmed: false })
-        : null;
+    let waiting: WaitingLine = { floors: [], fills: [], counts: [] };
+    const queueInput = (): QueueInput => ({
+        ...waiting,
+        rate: null,
+        slab: null,
+        confirmed: false,
+        confirmedDepth: null,
+        mined: minedFills(heights.tip),
+        height: heights.tip.height,
+    });
+    const queue = queueSlot ? attach(queueSlot, 'queue', queueInput()) : null;
+    const addressSlot = slot('address');
+    const address = addressSlot ? attach(addressSlot, 'address', SAMPLE_PARTS) : null;
     const stackSlot = slot('stack');
-    const stack = stackSlot ? attach(stackSlot, 'stack', { value: [], invested: [] }) : null;
+    const stack = stackSlot ? attach(stackSlot, 'stack', { columns: [] }) : null;
     const minerSlot = slot('miner');
     const miner = minerSlot
         ? attach(minerSlot, 'miner', { needed: 79, best: -1, real: null, tally: null, dive: 0 })
         : null;
-    for (const view of [wall, halving, queue, sats, melt, stack, miner]) if (view) views.push(view as View<MachineId>);
+    for (const view of [wall, halving, queue, sats, melt, stack, miner, address])
+        if (view) views.push(view as View<MachineId>);
 
     if (minerSlot && miner) {
         stops.push(
@@ -185,6 +196,7 @@ export function mountHome(root: HTMLElement): () => void {
         setFact('left', formatWhole(Math.floor(supply.left / SATS_PER_BTC)));
         wall?.set({ issued: supply.issued / MAX_SUPPLY });
         halving?.set({ height: tip.height });
+        queue?.set(queueInput());
         setFact('halving', formatWhole(supply.blocksToHalving));
     }
 
@@ -193,14 +205,15 @@ export function mountHome(root: HTMLElement): () => void {
         const satsFor = (dollars: number) => Math.round((dollars * SATS_PER_BTC) / usd);
         setFact('convert', formatWhole(satsFor(1)));
         setFact('dca', formatWhole(satsFor(HOME.facts.dca.amount)));
-        sats?.set({ sats: satsFor(1) });
+        sats?.set({ sats: satsFor(1), money: 1, symbol: '$' });
     }
 
     afterFirstPaint(() => {
         fetchLine((url, init) => window.fetch(url, init))
             .then((line) => {
                 if (disposed) return;
-                queue?.set({ ...line, rate: null, slab: null, confirmed: false });
+                waiting = line;
+                queue?.set(queueInput());
                 const floor = line.floors[0];
                 if (floor !== undefined) setFact('tx', floor.toLocaleString('en-GB', { maximumFractionDigits: 1 }));
             })
@@ -215,8 +228,11 @@ export function mountHome(root: HTMLElement): () => void {
                     melt?.set({ kept: outcome.result.kept, symbol: '$' });
                 }
                 const months = sortedMonths(data.closes).slice(-STACK_MONTHS);
-                const closes = months.map((month) => data.closes[month] ?? 0);
-                stack?.set(scaleLines(stackLines(closes, HOME.facts.dca.amount)));
+                const buys = months.map((month) => ({
+                    day: month,
+                    sats: (HOME.facts.dca.amount / (data.closes[month] ?? Number.POSITIVE_INFINITY)) * SATS_PER_BTC,
+                }));
+                stack?.set({ columns: yearColumns(buys) });
             })
             .catch(() => {});
     });

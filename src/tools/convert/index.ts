@@ -8,6 +8,7 @@ import {
     pasteFits,
     SATS_PER_BTC,
     satsText,
+    satsToFiat,
     type Unit,
 } from '../../model/convert.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
@@ -36,6 +37,7 @@ import {
 } from '../../util/format.ts';
 
 const SETTLE_MS = 700;
+const SYMBOLS: Record<FiatUnit, '$' | '€' | '£'> = { usd: '$', eur: '€', gbp: '£' };
 const MEMPOOL = 'https://mempool.space/';
 const SCRUB_DECADES = Math.log10(SATS_PER_BTC);
 
@@ -86,8 +88,13 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     const unitOf = (current: ConvertSlot): Unit => (current === 'fiat' ? currency : current);
     let text: ConvertText | null = null;
     let settleTimer = 0;
-    let drawnSats = -1;
-    const abacus = attach(find(root, '[data-machine="sats"]'), 'sats', { sats: 0 }, { page: true });
+    let drawnKey = '';
+    const counter = attach(
+        find(root, '[data-machine="sats"]'),
+        'sats',
+        { sats: 0, money: 0, symbol: '$' },
+        { page: true },
+    );
     const share = bindShareBar(root, {
         postcard: () => text?.postcard ?? null,
         site,
@@ -105,11 +112,14 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
     }
 
     function showWorld(sats: number): void {
-        if (sats === drawnSats) return;
-        drawnSats = sats;
-        abacus.set({ sats });
+        const price = quote.value[currency];
+        const money = price === null ? null : satsToFiat(sats, price);
+        const key = `${sats}|${currency}|${money}`;
+        if (key === drawnKey) return;
+        drawnKey = key;
+        counter.set({ sats, money, symbol: SYMBOLS[currency] });
         scrub.style.setProperty('--at', String(satsToScrub(sats) / SCRUB_STEPS));
-        point.textContent = sats > 0 ? CONVERT.abacus : CONVERT.pointEmpty;
+        point.textContent = sats > 0 ? CONVERT.counter : CONVERT.pointEmpty;
     }
 
     function showNote(message: string | null): void {
@@ -236,7 +246,7 @@ export function mountConvert(root: HTMLElement, siteUrl: string): () => void {
         document.removeEventListener('visibilitychange', sync);
         prices.setActive(owner, false);
         window.clearTimeout(settleTimer);
-        abacus.detach();
+        counter.detach();
         share.dispose();
     };
 }

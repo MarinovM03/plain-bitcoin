@@ -62,8 +62,11 @@ function renderRoute(route: RouteId): SafeHtml {
     }
 }
 
-function whileCurrent(view: number, mount: () => () => void): void {
-    if (view === viewCount) cleanups.push(mount());
+/** `main[data-ready]` names the page once its own code is running, so a check can wait for it. */
+function whileCurrent(view: number, route: RouteId, mount: () => () => void): void {
+    if (view !== viewCount) return;
+    cleanups.push(mount());
+    main.dataset.ready = route;
 }
 
 function show({ route, initial, notFound }: RouteChange, view: number): void {
@@ -83,7 +86,7 @@ function show({ route, initial, notFound }: RouteChange, view: number): void {
     if (route === 'left') cleanups.push(mountCounter(main, announce));
     if (route !== 'home') {
         MOUNTS[route]().then((mount) => {
-            whileCurrent(view, () => mount(main, SITE));
+            whileCurrent(view, route, () => mount(main, SITE));
         });
     }
 
@@ -98,6 +101,7 @@ function show({ route, initial, notFound }: RouteChange, view: number): void {
 startRouter((change) => {
     for (const cleanup of cleanups) cleanup();
     cleanups = [];
+    delete main.dataset.ready;
     const view = ++viewCount;
     window.clearTimeout(leaving);
     const old = change.initial || prefersReducedMotion() ? null : main.firstElementChild;

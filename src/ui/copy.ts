@@ -305,8 +305,9 @@ export const CONVERT = {
     point: (perPoint: string) => `One point in the stack is ${perPoint}.`,
     pointRounded: (perPoint: string, points: string) =>
         `One point in the stack is ${perPoint}. ${points} points, rounded.`,
-    pointEmpty: 'Type an amount and the coin lights up towards one whole bitcoin.',
-    abacus: 'The lit part of the coin is how far your amount has come from 1 sat to 1 whole bitcoin: one notch for every tenfold step. From 1 BTC up, a coin stacks behind it for every bitcoin.',
+    pointEmpty: 'Type an amount and the counter rolls to it.',
+    counter:
+        'The top row is the amount in bitcoin, written out in full: whole coins on the orange drums, then the eight digits after the point, which are sats. The row under it is the same amount in money.',
     unitsLine: '1 BTC = 100,000,000 sats',
     perSat: (fiat: string) => `1 sat ≈ ${fiat}`,
     labelLive: (clock: string) => `live price, ${clock}`,
@@ -557,7 +558,7 @@ export const LEFT_PAGE = {
     zoomAll: 'All 21,000,000 bitcoin, one cell each.',
     zoomCoins: 'Down at the layer being mined now. Each cell is one whole bitcoin.',
     explain:
-        'Every bitcoin there will ever be is one cell of this block, stacked in 250 layers of 84,000. Issued coins glow and fill it from the bottom. The bright top layer is the one being mined now, lit up to the newest block; the empty frame above is what is still to come.',
+        'Every bitcoin there will ever be is one cell of this block, stacked in 250 layers of 84,000. Issued coins are orange and fill it from the bottom. On the top layer, the one being mined now, the grey cells are the coins of that layer still to come; the empty frame above is every layer after it.',
 } as const;
 
 export const POSTCARD = {

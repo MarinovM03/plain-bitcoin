@@ -1,10 +1,15 @@
 import {
+    AdditiveBlending,
     AmbientLight,
     BoxGeometry,
     Color,
     DirectionalLight,
+    EdgesGeometry,
     InstancedMesh,
+    LineBasicMaterial,
+    LineSegments,
     Matrix4,
+    Mesh,
     MeshBasicMaterial,
     MeshStandardMaterial,
     PerspectiveCamera,
@@ -12,79 +17,130 @@ import {
 } from 'three';
 import type { QueueInput } from '../bus.ts';
 import { disposeTree, GlowPoints, ORANGE, seeds, WHITE } from '../glow.ts';
-import { approach, type Frame, type Machine } from '../machine.ts';
+import { approach, type Frame, fitBox, type Machine } from '../machine.ts';
 
-const SLABS = 8;
-const GAP = 0.9;
-const WIDTH = 1.6;
-const DEPTH = 0.5;
-const TALL = 1.2;
+const WAITING = 7;
+const MINED = 4;
+const SIZE = 0.82;
+const PITCH = 1.08;
 /** One dot for this many waiting transactions. */
 export const TXS_PER_DOT = 25;
-const DOTS_PER_SLAB = 160;
-const SIDE = -WIDTH / 2 - 0.2;
+const DOTS = 150;
+const SLIDE_SECONDS = 1.4;
+
+/** Waiting blocks stand left of the line, nearest first; mined blocks stand right of it, newest first. */
+const waitingX = (index: number) => -(index + 0.5) * PITCH - 0.15;
+const minedX = (index: number) => (index + 0.5) * PITCH + 0.15;
 
 /**
- * The waiting line: each slab is one block the mempool would fill right now, nearest first, as tall as it is full
- * and as hot as its lowest fee. Dots are waiting transactions. The bead is the followed transaction, at the slab
- * its fee rate reaches; once confirmed it moves to the front and turns white.
+ * The waiting line laid out as mempool.space draws it. Left of the glowing line: the blocks the waiting
+ * transactions would fill right now, as full as they are, the orange top hotter the higher their lowest fee.
+ * Right of it: the real blocks just mined. The followed transaction is the bead in the block its fee reaches;
+ * when a new block is found the whole line slides across.
  */
 export function createQueue(first: QueueInput, page: boolean): Machine<QueueInput> {
     const scene = new Scene();
-    const camera = new PerspectiveCamera(page ? 36 : 32, 1, 0.1, 60);
-    scene.add(new AmbientLight(0xffffff, 0.4));
-    const key = new DirectionalLight(0xffffff, 2);
-    key.position.set(3, 5, 4);
+    const camera = new PerspectiveCamera(page ? 34 : 30, 1, 0.1, 80);
+    scene.add(new AmbientLight(0xffffff, 0.5));
+    const key = new DirectionalLight(0xffffff, 2.2);
+    key.position.set(2, 5, 4);
     scene.add(key);
 
-    const slabs = new InstancedMesh(
-        new BoxGeometry(1, 1, 1),
-        new MeshStandardMaterial({
-            color: '#9aa7b6',
-            metalness: 0.1,
-            roughness: 0.35,
+    const cube = new BoxGeometry(1, 1, 1);
+    cube.translate(0, 0.5, 0);
+    const glass = new InstancedMesh(
+        cube,
+        new MeshBasicMaterial({
+            color: '#8fa3b8',
             transparent: true,
-            opacity: 0.16,
+            opacity: 0.08,
+            depthWrite: false,
+            blending: AdditiveBlending,
+        }),
+        WAITING,
+    );
+    const fill = new InstancedMesh(
+        cube,
+        new MeshStandardMaterial({
+            color: '#4a5260',
+            transparent: true,
+            opacity: 0.55,
+            roughness: 0.4,
             depthWrite: false,
         }),
-        SLABS,
+        WAITING,
     );
-    const caps = new InstancedMesh(
-        new BoxGeometry(1, 1, 1),
-        new MeshBasicMaterial({ color: 0xffffff, toneMapped: false }),
-        SLABS,
+    const caps = new InstancedMesh(cube, new MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), WAITING);
+    const mined = new InstancedMesh(
+        cube,
+        new MeshStandardMaterial({ color: '#6b7380', metalness: 0.35, roughness: 0.4 }),
+        MINED,
     );
-    scene.add(slabs, caps);
-    const dots = new GlowPoints(SLABS * DOTS_PER_SLAB + 1);
+    const outline = new LineSegments(
+        new EdgesGeometry(new BoxGeometry(SIZE, SIZE, SIZE)),
+        new LineBasicMaterial({ color: WHITE, transparent: true, opacity: 0.3 }),
+    );
+    scene.add(glass, fill, caps, mined);
+    const outlines: LineSegments[] = [];
+    for (let i = 0; i < WAITING + MINED; i += 1) {
+        const line = outline.clone();
+        outlines.push(line);
+        scene.add(line);
+    }
+    const divider = new Mesh(
+        new BoxGeometry(0.03, SIZE * 1.5, 0.03),
+        new MeshBasicMaterial({ color: ORANGE.clone().multiplyScalar(1.6), toneMapped: false }),
+    );
+    divider.position.y = SIZE * 0.75;
+    scene.add(divider);
+
+    const dots = new GlowPoints(WAITING * DOTS + 1);
     scene.add(dots.points);
-    const scatter = seeds(SLABS * DOTS_PER_SLAB * 3, 29);
+    const scatter = seeds(WAITING * DOTS * 3, 29);
     const matrix = new Matrix4();
     const tint = new Color();
-    const heights = new Float32Array(SLABS);
-    const bead = { x: 0, y: 0, z: 0, grow: 0, ready: false };
+    const fills = new Float32Array(WAITING);
+    const bead = { y: 0, x: 0, grow: 0, ready: false };
     let input = first;
-
-    const zOf = (index: number) => -index * GAP;
+    let slide = 0;
+    let height = first.height;
 
     function heat(floor: number): number {
         const top = Math.max(2, ...input.floors);
         return Math.min(1, Math.log(1 + floor) / Math.log(1 + top));
     }
 
+    function set(next: QueueInput): void {
+        if (next.height > height && height > 0) slide = 1;
+        height = next.height;
+        input = next;
+    }
+
     function frame(frame: Frame): void {
-        const count = Math.min(SLABS, input.floors.length);
+        slide = frame.still ? 0 : Math.max(0, slide - frame.delta / SLIDE_SECONDS);
+        const shift = (1 - (1 - slide) ** 3) * PITCH * (slide > 0 ? 1 : 0);
+        const count = Math.min(WAITING, input.floors.length);
         let dot = 0;
-        for (let i = 0; i < SLABS; i += 1) {
-            const goal = i < count ? Math.max(0.04, Math.min(1, input.fills[i] ?? 0)) * TALL : 0.0001;
-            heights[i] = frame.still ? goal : approach(heights[i] ?? 0, goal, 3, frame.delta);
-            const h = heights[i] ?? 0;
-            matrix.makeScale(i < count ? WIDTH : 0, h, DEPTH).setPosition(0, h / 2, zOf(i));
-            slabs.setMatrixAt(i, matrix);
-            matrix.makeScale(i < count ? WIDTH : 0, 0.022, DEPTH).setPosition(0, h, zOf(i));
+        for (let i = 0; i < WAITING; i += 1) {
+            const on = i < count;
+            const x = waitingX(i) + shift;
+            const goal = on ? Math.max(0.05, Math.min(1, input.fills[i] ?? 0)) : 0;
+            fills[i] = frame.still ? goal : approach(fills[i] ?? 0, goal, 3, frame.delta);
+            const h = (fills[i] ?? 0) * SIZE;
+            matrix.makeScale(on ? SIZE : 0, SIZE, on ? SIZE : 0).setPosition(x, 0, 0);
+            glass.setMatrixAt(i, matrix);
+            matrix.makeScale(on ? SIZE * 0.96 : 0, Math.max(0.001, h), on ? SIZE * 0.96 : 0).setPosition(x, 0, 0);
+            fill.setMatrixAt(i, matrix);
+            matrix.makeScale(on ? SIZE * 0.96 : 0, 0.02, on ? SIZE * 0.96 : 0).setPosition(x, h, 0);
             caps.setMatrixAt(i, matrix);
-            caps.setColorAt(i, tint.copy(ORANGE).multiplyScalar(0.55 + heat(input.floors[i] ?? 0) * 1.6));
-            const shown = i < count ? Math.min(DOTS_PER_SLAB, Math.ceil((input.counts[i] ?? 0) / TXS_PER_DOT)) : 0;
-            for (let d = 0; d < DOTS_PER_SLAB; d += 1, dot += 1) {
+            caps.setColorAt(i, tint.copy(ORANGE).multiplyScalar(0.45 + heat(input.floors[i] ?? 0) * 1.4));
+            const line = outlines[i];
+            if (line) {
+                line.visible = on;
+                line.position.set(x, SIZE / 2, 0);
+            }
+            const shown = on ? Math.min(DOTS, Math.ceil((input.counts[i] ?? 0) / TXS_PER_DOT)) : 0;
+            for (let d = 0; d < DOTS; d += 1, dot += 1) {
                 if (d >= shown) {
                     dots.hide(dot);
                     continue;
@@ -92,66 +148,77 @@ export function createQueue(first: QueueInput, page: boolean): Machine<QueueInpu
                 const a = scatter[dot * 3] ?? 0;
                 const b = scatter[dot * 3 + 1] ?? 0;
                 const c = scatter[dot * 3 + 2] ?? 0;
-                const drift = frame.still ? 0 : Math.sin(frame.seconds * (0.6 + c) + a * 9) * 0.02;
+                const drift = frame.still ? 0 : Math.sin(frame.seconds * (0.5 + c) + a * 9) * 0.015;
                 dots.put(
                     dot,
-                    (a - 0.5) * WIDTH * 0.92,
-                    b * h + drift,
-                    zOf(i) + (c - 0.5) * DEPTH * 0.8,
-                    0.035,
+                    x + (a - 0.5) * SIZE * 0.85,
+                    b * h * 0.95 + drift,
+                    (c - 0.5) * SIZE * 0.85,
+                    0.028,
                     WHITE,
-                    0.5,
+                    0.55,
                 );
             }
         }
-        slabs.instanceMatrix.needsUpdate = true;
-        caps.instanceMatrix.needsUpdate = true;
+        for (let i = 0; i < MINED; i += 1) {
+            const on = i < input.mined.length;
+            const x = minedX(i) + shift;
+            const h = SIZE * Math.max(0.2, Math.min(1, input.mined[i] ?? 0));
+            matrix.makeScale(on ? SIZE : 0, h, on ? SIZE : 0).setPosition(x, 0, 0);
+            mined.setMatrixAt(i, matrix);
+            const line = outlines[WAITING + i];
+            if (line) {
+                line.visible = on;
+                line.position.set(x, SIZE / 2, 0);
+            }
+        }
+        for (const mesh of [glass, fill, caps, mined]) mesh.instanceMatrix.needsUpdate = true;
         if (caps.instanceColor) caps.instanceColor.needsUpdate = true;
 
         const target = (() => {
             if (input.rate === null) return null;
-            // The bead floats just outside its slab on the camera's side, so no slab or cap ever hides it.
-            if (input.confirmed) return { x: SIDE, y: 0.3, z: GAP * 1.2 };
-            const index = input.slab === null ? Math.max(count, 1) : input.slab - 1;
+            if (input.confirmed) return { x: minedX(Math.max(0, input.confirmedDepth ?? 0)) + shift, y: SIZE + 0.18 };
+            const index = input.slab === null ? count : input.slab - 1;
             const floor = input.floors[index] ?? 0;
             const top = Math.max(floor + 1, input.floors[index - 1] ?? floor * 2 + 1);
             const within = Math.min(1, Math.max(0, (input.rate - floor) / (top - floor)));
-            return { x: SIDE, y: (heights[index] ?? 0.3) * (0.15 + within * 0.75) + 0.08, z: zOf(index) };
+            const h = (fills[Math.min(index, WAITING - 1)] ?? 0.3) * SIZE;
+            return { x: waitingX(Math.min(index, WAITING)) + shift, y: h * (0.2 + within * 0.75) };
         })();
+        const beadIndex = WAITING * DOTS;
         if (target) {
             if (!bead.ready || frame.still) {
                 bead.x = target.x;
                 bead.y = target.y;
-                bead.z = target.z;
                 bead.grow = frame.still ? 1 : 0;
                 bead.ready = true;
             }
             bead.grow = Math.min(1, bead.grow + frame.delta * 2.5);
             bead.x = approach(bead.x, target.x, 3, frame.delta);
             bead.y = approach(bead.y, target.y, 3, frame.delta);
-            bead.z = approach(bead.z, target.z, 2, frame.delta);
             const pulse = frame.still ? 1 : 0.85 + Math.sin(frame.seconds * 4) * 0.15;
-            const size = 0.45 * pulse * (1 - (1 - bead.grow) ** 3);
-            dots.put(SLABS * DOTS_PER_SLAB, bead.x, bead.y, bead.z, size, input.confirmed ? WHITE : ORANGE, 1);
+            const sizeNow = 0.42 * pulse * (1 - (1 - bead.grow) ** 3);
+            dots.put(beadIndex, bead.x, bead.y, SIZE / 2 + 0.06, sizeNow, input.confirmed ? WHITE : ORANGE, 1);
         } else {
             bead.ready = false;
-            dots.hide(SLABS * DOTS_PER_SLAB);
+            dots.hide(beadIndex);
         }
 
+        const left = waitingX(Math.max(count, 3) - 1) - SIZE / 2;
+        const right = minedX(Math.max(input.mined.length, 1) - 1) + SIZE / 2;
+        const middle = (left + right) / 2;
         const swing =
-            -0.62 + frame.turn + frame.pointer.x * 0.25 + (frame.still ? 0 : Math.sin(frame.seconds * 0.15) * 0.12);
-        // Framed on the line's own outline as the camera sees it, not a bounding sphere, so it fills the box.
-        const half = Math.tan((camera.fov * Math.PI) / 360);
-        const length = Math.max(count, 1) * GAP;
-        const across = length * Math.abs(Math.sin(swing)) + WIDTH * Math.abs(Math.cos(swing));
-        const distance = Math.max(1.7 / half, (across * 0.58) / (half * frame.aspect)) + 1;
-        const middle = -((Math.max(count, 1) - 1) * GAP) / 2;
+            -0.14 +
+            frame.turn * 0.7 +
+            frame.pointer.x * 0.2 +
+            (frame.still ? 0 : Math.sin(frame.seconds * 0.15) * 0.08);
+        const distance = fitBox((right - left) / 2 + 0.3, SIZE * 0.9, camera.fov, frame.aspect) * 1.12;
         camera.position.set(
-            Math.sin(swing) * distance,
-            2.6 + frame.pointer.y * 0.5,
-            middle + Math.cos(swing) * distance,
+            middle + Math.sin(swing) * distance,
+            1.9 + frame.pointer.y * 0.4,
+            Math.cos(swing) * distance,
         );
-        camera.lookAt(0, 0.35, middle);
+        camera.lookAt(middle, SIZE * 0.45, 0);
         camera.aspect = frame.aspect;
         camera.updateProjectionMatrix();
         dots.flush((camera.projectionMatrix.elements[5] ?? 1) * frame.pixels * 0.5);
@@ -160,9 +227,7 @@ export function createQueue(first: QueueInput, page: boolean): Machine<QueueInpu
     return {
         scene,
         camera,
-        set(next) {
-            input = next;
-        },
+        set,
         frame,
         dispose() {
             dots.dispose();

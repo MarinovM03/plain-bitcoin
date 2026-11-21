@@ -1,6 +1,7 @@
 import {
     AdditiveBlending,
     BoxGeometry,
+    Color,
     EdgesGeometry,
     LineBasicMaterial,
     LineSegments,
@@ -43,7 +44,8 @@ uniform vec3 uCells;
 uniform vec3 uLit;
 uniform vec3 uNew;
 uniform float uPartial;
-uniform float uLayer;
+uniform float uTop;
+uniform vec3 uEmpty;
 float grain(vec3 cell) { return fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 void main() {
     vec3 n = normalize(vNormal);
@@ -56,17 +58,18 @@ void main() {
     float gap = mix(border.x * border.y, 1.0, smoothstep(0.12, 0.45, pixel));
     float shade = abs(n.y) > 0.5 ? 1.0 : abs(n.x) > 0.5 ? 0.62 : 0.78;
     vec3 color = uLit * (0.6 + 0.4 * grain(cell)) * shade;
-    if (uLayer > 0.5) {
+    // The layer being mined is part of the same block, on the same grid: coins issued so far are bright, the
+    // places still to fill are dark.
+    if (cell.y > uTop - 0.5) {
         float index = cell.z * uCells.x + cell.x;
-        if (index >= uPartial) discard;
-        color = uLit * (1.15 + 0.25 * grain(cell)) * shade + uNew * 0.06;
+        color = index < uPartial ? uLit * (1.15 + 0.25 * grain(cell)) * shade + uNew * 0.06 : uEmpty * shade;
     }
     gl_FragColor = vec4(color * (0.35 + 0.65 * gap), 1.0);
     #include <colorspace_fragment>
 }
 `;
 
-function material(layer: boolean): ShaderMaterial {
+function material(): ShaderMaterial {
     return new ShaderMaterial({
         vertexShader: VERTEX,
         fragmentShader: FRAGMENT,
@@ -76,7 +79,8 @@ function material(layer: boolean): ShaderMaterial {
             uLit: { value: ORANGE },
             uNew: { value: WHITE },
             uPartial: { value: 0 },
-            uLayer: { value: layer ? 1 : 0 },
+            uTop: { value: -1 },
+            uEmpty: { value: new Color('#3b4049') },
         },
     });
 }
@@ -96,13 +100,12 @@ export function createWall(first: WallInput, _page: boolean): Machine<WallInput>
     const camera = new PerspectiveCamera(32, 1, 0.01, 60);
     const box = new BoxGeometry(1, 1, 1);
     box.translate(0, 0.5, 0);
-    const body = new Mesh(box, material(false));
-    const layer = new Mesh(box, material(true));
+    const body = new Mesh(box, material());
     const frame = new LineSegments(
         new EdgesGeometry(new BoxGeometry(SIZE.x, SIZE.y, SIZE.z)),
         new LineBasicMaterial({ color: WHITE, transparent: true, opacity: 0.35, blending: AdditiveBlending }),
     );
-    scene.add(body, layer, frame);
+    scene.add(body, frame);
 
     const focus = new Vector3();
     const aim = new Vector3();
@@ -116,13 +119,12 @@ export function createWall(first: WallInput, _page: boolean): Machine<WallInput>
         const partial = coins - full * PER_LAYER;
         const layerHeight = SIZE.y / CELLS.y;
         const bottom = -SIZE.y / 2;
-        body.scale.set(SIZE.x, Math.max(1e-4, full * layerHeight), SIZE.z);
+        const layers = full + (partial > 0 ? 1 : 0);
+        body.scale.set(SIZE.x, Math.max(1e-4, layers * layerHeight), SIZE.z);
         body.position.y = bottom;
-        layer.scale.set(SIZE.x, layerHeight, SIZE.z);
-        layer.position.y = bottom + full * layerHeight;
-        layer.visible = partial > 0;
-        const uniforms = (layer.material as ShaderMaterial).uniforms;
+        const uniforms = (body.material as ShaderMaterial).uniforms;
         if (uniforms.uPartial) uniforms.uPartial.value = partial;
+        if (uniforms.uTop) uniforms.uTop.value = partial > 0 ? full : CELLS.y + 1;
         const row = Math.floor(partial / CELLS.x);
         const column = partial % CELLS.x;
         focus.set(

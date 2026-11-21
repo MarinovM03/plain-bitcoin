@@ -1,5 +1,5 @@
 import { heightFeed } from '../../data/height.ts';
-import { fetchLine, fetchRecentTxid, fetchTx, NotFound } from '../../data/mempool.ts';
+import { fetchLine, fetchRecentTxid, fetchTx, minedFills, NotFound } from '../../data/mempool.ts';
 import { attach } from '../../hero/bus.ts';
 import { blocksAway, confirmations, feeRate, isTxid, type TxFacts, type WaitingLine } from '../../model/tx.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
@@ -11,6 +11,15 @@ import { find } from '../../util/dom.ts';
 import { formatUtcClock, formatWhole } from '../../util/format.ts';
 
 const REFRESH_MS = 30_000;
+const EMPTY_LINE = {
+    floors: [],
+    fills: [],
+    counts: [],
+    rate: null,
+    slab: null,
+    confirmed: false,
+    confirmedDepth: null,
+} as const;
 
 const fetcher = (url: string, init?: RequestInit) => window.fetch(url, init);
 
@@ -42,7 +51,7 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
     const view = attach(
         find(root, '[data-machine="queue"]'),
         'queue',
-        { floors: [], fills: [], counts: [], rate: null, slab: null, confirmed: false },
+        { ...EMPTY_LINE, mined: minedFills(heights.tip), height: heights.tip.height },
         { page: true },
     );
 
@@ -82,6 +91,9 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
             rate: tx ? feeRate(tx) : null,
             slab: slab(),
             confirmed: tx?.confirmed === true,
+            confirmedDepth: tx?.blockHeight == null ? null : heights.tip.height - tx.blockHeight,
+            mined: minedFills(heights.tip),
+            height: heights.tip.height,
         });
     }
 
@@ -180,7 +192,10 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
         void refreshLine();
         if (tx && !tx.confirmed) void follow(tx.txid, true);
     }, REFRESH_MS);
-    const stopTip = heights.subscribe(() => renderTx());
+    const stopTip = heights.subscribe(() => {
+        renderTx();
+        push();
+    });
     void refreshLine();
 
     return () => {

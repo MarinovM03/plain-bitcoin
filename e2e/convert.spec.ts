@@ -46,7 +46,7 @@ test('converts 100,000 sats at the live price, asking only the price API', async
     await expect(page.getByLabel(FIELDS.dollars, { exact: true })).toBeChecked();
     await expect(page.locator('#status-usd')).toHaveText('$76,777');
     await expect(page.locator('#status')).not.toContainText('£');
-    await expect(page.locator('#convert-point')).toHaveText(CONVERT.abacus);
+    await expect(page.locator('#convert-point')).toHaveText(CONVERT.counter);
     await expect(page.locator('[data-machine="sats"]')).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('#status-source')).toHaveText(/^mempool\.space \d\d:\d\d UTC$/);
     await expect(page.locator('#convert-ref-sat')).toHaveText('1 sat ≈ $0.00077');
