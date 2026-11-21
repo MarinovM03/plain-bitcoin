@@ -12,7 +12,7 @@ import {
 } from 'three';
 import { TOKENS } from '../../styles/tokens.ts';
 import type { AddressInput, AddressRole } from '../bus.ts';
-import { disposeTree, GlowPoints, ORANGE, WHITE } from '../glow.ts';
+import { disposeTree } from '../glow.ts';
 import { approach, type Frame, fitBox, type Machine } from '../machine.ts';
 
 const MOST = 90;
@@ -36,9 +36,9 @@ const INK: Record<AddressRole, string> = {
 
 /**
  * An address as a row of tiles, one per character, each showing its character in the colour of its part: the
- * prefix orange, the version blue, the data white, the checksum warm. A new address deals its tiles in; a light
- * runs across as the checksum is worked out and, on a good address, the checksum tiles lock in. A likely typo
- * steps out of the row.
+ * prefix orange, the version blue, the data white, the checksum warm. A new address deals its tiles in; a wave
+ * runs across as the checksum is worked out and, on a good address, the checksum tiles press home. A likely typo
+ * turns orange and steps out of the row.
  */
 export function createAddress(first: AddressInput, page: boolean): Machine<AddressInput> {
     const scene = new Scene();
@@ -49,8 +49,8 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
     scene.add(key);
 
     const cache = new Map<string, MeshStandardMaterial>();
-    function face(char: string, role: AddressRole): MeshStandardMaterial {
-        const id = `${role}:${char}`;
+    function face(char: string, role: AddressRole, alert: boolean): MeshStandardMaterial {
+        const id = `${alert ? 'alert' : role}:${char}`;
         const known = cache.get(id);
         if (known) return known;
         const canvas = document.createElement('canvas');
@@ -58,10 +58,10 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
         canvas.height = 96;
         const c = canvas.getContext('2d');
         if (c) {
-            c.fillStyle = '#16191e';
+            c.fillStyle = alert ? TOKENS.btc : '#16191e';
             c.fillRect(0, 0, 64, 96);
-            c.fillStyle = INK[role];
-            c.fillRect(0, 88, 64, 8);
+            c.fillStyle = alert ? TOKENS.void : INK[role];
+            if (!alert) c.fillRect(0, 88, 64, 8);
             c.textAlign = 'center';
             c.textBaseline = 'middle';
             c.font = `500 58px ${TOKENS.fontMono}`;
@@ -85,8 +85,6 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
         tiles.push(tile);
         row.add(tile);
     }
-    const glow = new GlowPoints(MOST);
-    scene.add(glow.points);
 
     let input = first;
     let clock = 0;
@@ -109,12 +107,12 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
             tile.visible = i < chars.length;
             if (!tile.visible) return;
             const materials = tile.material as MeshStandardMaterial[];
-            materials[4] = face(char, role);
+            materials[4] = face(char, role, input.suspect === i);
         });
     }
 
     function set(next: AddressInput): void {
-        const changed = next.chars !== input.chars || next.state !== input.state;
+        const changed = next.chars !== input.chars || next.state !== input.state || next.suspect !== input.suspect;
         input = next;
         if (!changed) return;
         dress();
@@ -139,19 +137,12 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
             const turn = Math.min(1, Math.max(0, (dealt / DEAL_SECONDS) * 1.8 - (i / Math.max(1, count)) * 0.8));
             const suspect = input.suspect === i;
             pops[i] = frame.still ? (suspect ? 1 : 0) : approach(pops[i] ?? 0, suspect ? 1 : 0, 6, frame.delta);
-            const near = Math.max(0, 1 - Math.abs(i - head) / 2.5) * (settled ? 0 : 1);
+            const wave = input.state === 'empty' || settled ? 0 : Math.max(0, 1 - Math.abs(i - head) / 2.5);
             const pop = pops[i] ?? 0;
-            tile.position.set(x, y + near * 0.03 + pop * 0.06, near * 0.04 + pop * 0.22);
+            const home = valid && settled && input.roles[i] === 'checksum' ? -0.03 : 0;
+            tile.position.set(x, y + wave * 0.04 + pop * 0.06, wave * 0.05 + pop * 0.22 + home);
             tile.rotation.set(-pop * 0.25, (1 - turn) * Math.PI, pop * 0.12);
-
-            const role = input.roles[i] ?? 'unknown';
-            const lockedIn = valid && settled && role === 'checksum';
-            if (suspect) glow.put(i, x, y + 0.06, 0.32, 0.36, ORANGE, 0.9);
-            else if (lockedIn) glow.put(i, x, y, 0.06, 0.16, WHITE, 0.5);
-            else if (near > 0 && input.state !== 'empty') glow.put(i, x, y, 0.06, 0.2 * near, ORANGE, near);
-            else glow.hide(i);
         }
-        for (let i = count; i < MOST; i += 1) glow.hide(i);
 
         const rows = Math.max(1, Math.ceil(count / PER_ROW));
         const across = Math.min(PER_ROW, Math.max(count, 12)) * STEP;
@@ -162,7 +153,6 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
         camera.lookAt(0, 0, 0);
         camera.aspect = frame.aspect;
         camera.updateProjectionMatrix();
-        glow.flush((camera.projectionMatrix.elements[5] ?? 1) * frame.pixels * 0.5);
     }
 
     return {
@@ -175,7 +165,6 @@ export function createAddress(first: AddressInput, page: boolean): Machine<Addre
                 material.map?.dispose();
                 material.dispose();
             }
-            glow.dispose();
             disposeTree(scene);
         },
     };
