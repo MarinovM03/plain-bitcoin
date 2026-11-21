@@ -98,25 +98,6 @@
     pointer-events: none;
 }
 
-.tile__scene--type {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25ch;
-    background: var(--plate);
-    color: var(--ink-dim);
-    font-family: var(--font-mono);
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
-}
-
-:root:not([data-scene="live"]) .tile__scene--type {
-    background: var(--plate);
-}
-
-.tile__scene--type span:first-child {
-    color: var(--btc);
-}
-
 .tile__badge {
     position: absolute;
     top: 0.75rem;

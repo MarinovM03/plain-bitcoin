@@ -46,10 +46,6 @@
     gap: 0.75rem;
 }
 
-.machine--plain {
-    grid-template-columns: minmax(0, 1fr);
-}
-
 .machine__head {
     display: grid;
     gap: 0.625rem;
@@ -492,8 +488,9 @@
         height: calc(100svh - var(--chrome, 3.5rem));
     }
 
-    .machine--plain.machine {
-        grid-template-columns: minmax(0, 46rem);
+    /* The plan's chart is the answer on this page, so it gets more room than the other pictures. */
+    .tool--dca .tool__screen > .picture {
+        height: 24rem;
     }
 }
 
