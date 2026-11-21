@@ -61,19 +61,17 @@ export function toolHead(id: ToolId): SafeHtml {
 </header>`;
 }
 
-/**
- * A tool page, in reading order: its plain name, the inputs, the answer, the picture, then sharing and the rest.
- * On a wide screen the picture stands beside the calculator instead of under the answer.
- */
-const SCENES: Partial<Record<ToolId, MachineId>> = { power: 'melt', dca: 'stack' };
+const SCENES: Record<CalculatorId, MachineId> = { power: 'melt', dca: 'stack', address: 'address' };
 
-function page(id: ToolId, screen: SafeHtml, below: SafeHtml): SafeHtml {
-    const machine = SCENES[id];
-    const stage = machine ? html`<div class="machine__stage" data-machine="${machine}" aria-hidden="true"></div>` : '';
-    return html`<article class="tool tool--${id} machine${machine ? '' : ' machine--plain'}">
+/**
+ * A calculator page, in reading order: its plain name, the inputs, the answer, the picture, its scene, then
+ * sharing and the rest. On a wide screen the scene stands beside the calculator.
+ */
+function page(id: CalculatorId, screen: SafeHtml, below: SafeHtml): SafeHtml {
+    return html`<article class="tool tool--${id} machine">
     <div class="machine__body">
         <div class="tool__screen">${toolHead(id)}${screen}</div>
-        ${stage}
+        <div class="machine__stage" data-machine="${SCENES[id]}" aria-hidden="true"></div>
         <div class="tool__below">${below}</div>
     </div>
 </article>`;

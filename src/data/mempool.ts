@@ -1,4 +1,5 @@
 import { isTxid, parseLine, parseRecent, parseTx, type TxFacts, type WaitingLine } from '../model/tx.ts';
+import type { Tip } from './height.ts';
 
 export const MEMPOOL_API = { name: 'mempool.space', origin: 'https://mempool.space' } as const;
 
@@ -45,4 +46,14 @@ export async function fetchTx(fetchImpl: Fetch, txid: string): Promise<TxFacts> 
     const facts = parseTx(await get(fetchImpl, `/api/tx/${txid.trim().toLowerCase()}`));
     if (!facts) throw new Error('Malformed transaction');
     return facts;
+}
+
+/** A block holds at most 4,000,000 weight units. */
+const BLOCK_WEIGHT = 4_000_000;
+
+/** How full the newest mined blocks are, newest first, from the blocks the height feed already read. */
+export function minedFills(tip: Pick<Tip, 'blocks'>): number[] {
+    return tip.blocks
+        .slice(0, 4)
+        .map((block) => (block.weight === null ? 1 : Math.min(1, block.weight / BLOCK_WEIGHT)));
 }

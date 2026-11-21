@@ -12,6 +12,7 @@ const FACTORIES: Record<MachineId, () => Promise<MachineFactory<never>>> = {
     queue: () => import('./machines/queue.ts').then((module) => module.createQueue),
     melt: () => import('./machines/melt.ts').then((module) => module.createMelt),
     stack: () => import('./machines/stack.ts').then((module) => module.createStack),
+    address: () => import('./machines/address.ts').then((module) => module.createAddress),
 };
 
 /** Lower pixel ratios, tried in turn while frames stay slow. */
@@ -184,8 +185,9 @@ export function runStage(): Stage | null {
                 aspect: rect.width / rect.height,
                 pixels: rect.height * renderer.getPixelRatio(),
                 still,
-                pointer: still ? { x: 0, y: 0 } : slot.pointer,
-                turn: slot.turn,
+                // Scenes orbit their camera, so the signs flip here: the object then turns the way the mouse goes.
+                pointer: still ? { x: 0, y: 0 } : { x: -slot.pointer.x, y: -slot.pointer.y },
+                turn: -slot.turn,
                 page: slot.page,
             });
             const left = Math.round(rect.left);

@@ -1,6 +1,7 @@
 import { type ChainStats, explorerUrl, fetchChainStats } from '../../data/address.ts';
 import { mountPicture } from '../../gauges/mount.ts';
 import type { CharRole } from '../../gauges/types.ts';
+import { type AddressInput, attach } from '../../hero/bus.ts';
 import {
     type Address,
     type AddressPart,
@@ -12,7 +13,7 @@ import {
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type AddressText, addressText } from '../../postcard/words.ts';
-import { ADDRESS_SAMPLES } from '../../ui/address-view.ts';
+import { ADDRESS_SAMPLES, SAMPLE_PARTS } from '../../ui/address-view.ts';
 import { ADDRESS, PICTURE } from '../../ui/copy.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { find } from '../../util/dom.ts';
@@ -64,6 +65,9 @@ function partLabel(part: AddressPart, analysis: Address | InvalidAddress): strin
             return ADDRESS.parts.body;
     }
 }
+
+/** Before anything is typed: blank tiles that show only the parts an address is made of. */
+const IDLE: AddressInput = { ...SAMPLE_PARTS, chars: ' '.repeat(SAMPLE_PARTS.roles.length), state: 'empty' };
 
 function charRoles(analysis: Address | InvalidAddress): CharRole[] {
     const roles: CharRole[] = Array.from({ length: analysis.text.length }, () => 'unknown');
@@ -259,6 +263,8 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         source.textContent = next ? ADDRESS.source(ADDRESS.specs[next.encoding]) : ADDRESS.sourceIdle;
     }
 
+    const tiles = attach(find(root, '[data-machine="address"]'), 'address', IDLE, { page: true });
+
     function updateCard(): void {
         text = address ? addressText(address, samples.has(address.text)) : null;
         share.setEnabled(text !== null);
@@ -274,6 +280,13 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
             checksumBad: false,
         } as const;
         if (analysis.kind === 'address') {
+            tiles.set({
+                chars: analysis.text,
+                roles: charRoles(analysis),
+                state: 'valid',
+                suspect: null,
+                checksumBad: false,
+            });
             const kind = ADDRESS.figures[analysis.type];
             big.textContent = kind;
             picture.set(
@@ -283,6 +296,13 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
             return;
         }
         if (analysis.kind === 'invalid') {
+            tiles.set({
+                chars: analysis.text,
+                roles: charRoles(analysis),
+                state: 'invalid',
+                suspect: analysis.suspect,
+                checksumBad: analysis.reason === 'checksum',
+            });
             const kind = analysis.reason === 'checksum' ? ADDRESS.figures.checksum : ADDRESS.figures.invalid;
             big.textContent = kind;
             picture.set(
@@ -302,6 +322,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
         if (analysis.kind === 'lightning') big.textContent = ADDRESS.figures.lightning;
         else if (analysis.kind === 'extended-public') big.textContent = ADDRESS.figures.extendedPublic;
         else big.textContent = EMPTY_FIGURE;
+        tiles.set(IDLE);
         picture.set(empty, PICTURE.addressEmpty);
     }
 
@@ -431,6 +452,7 @@ export function mountAddress(root: HTMLElement, siteUrl: string): () => void {
     analyse().catch(() => {});
 
     return () => {
+        tiles.detach();
         sequence += 1;
         lookup?.abort();
         window.clearTimeout(settleTimer);

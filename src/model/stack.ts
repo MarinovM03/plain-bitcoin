@@ -1,27 +1,30 @@
-export interface StackLines {
-    /** What the buys are worth at each step, in money. */
-    value: number[];
-    /** The money put in by each step. */
-    invested: number[];
+export interface Buy {
+    /** `yyyy-mm-dd` or `yyyy-mm`. */
+    day: string;
+    sats: number;
 }
 
-/** The same amount put into bitcoin at each closing price in turn, oldest first. Bad prices are skipped. */
-export function stackLines(closes: readonly number[], amount: number): StackLines {
-    const prices = closes.filter((price) => Number.isFinite(price) && price > 0);
-    const lines: StackLines = { value: [], invested: [] };
-    if (prices.length === 0 || !(amount > 0)) return lines;
-    let coins = 0;
-    prices.forEach((price, step) => {
-        coins += amount / price;
-        lines.value.push(coins * price);
-        lines.invested.push(amount * (step + 1));
-    });
-    return lines;
+export interface YearColumn {
+    year: string;
+    /** Each buy of the year in order, as a share of the biggest single buy of the whole plan. */
+    coins: number[];
+    sats: number;
 }
 
-/** Scales both lines by the same largest number, so they share one axis from 0 to 1. */
-export function scaleLines(lines: StackLines): StackLines {
-    const top = Math.max(0, ...lines.value, ...lines.invested);
-    const scale = (series: number[]) => (top > 0 ? series.map((value) => value / top) : []);
-    return { value: scale(lines.value), invested: scale(lines.invested) };
+/** One column per calendar year, so a year when bitcoin was cheap stands taller than one when it was dear. */
+export function yearColumns(buys: readonly Buy[]): YearColumn[] {
+    const good = buys.filter((buy) => Number.isFinite(buy.sats) && buy.sats > 0 && /^\d{4}-/.test(buy.day));
+    const biggest = Math.max(0, ...good.map((buy) => buy.sats));
+    const columns: YearColumn[] = [];
+    for (const buy of good) {
+        const year = buy.day.slice(0, 4);
+        let column = columns.at(-1);
+        if (column?.year !== year) {
+            column = { year, coins: [], sats: 0 };
+            columns.push(column);
+        }
+        column.coins.push(buy.sats / biggest);
+        column.sats += buy.sats;
+    }
+    return columns;
 }
