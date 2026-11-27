@@ -168,22 +168,37 @@
 }
 
 .info__mark {
-    display: grid;
-    place-items: center;
+    flex: none;
     width: 1.375rem;
     height: 1.375rem;
-    border: 1.5px solid var(--btc);
-    border-radius: 50%;
-    color: var(--btc);
-    font: 700 0.8125rem / 1 var(--font-display);
-    transition:
-        background var(--duration) var(--ease),
-        color var(--duration) var(--ease);
 }
 
-.info[open] .info__mark {
-    background: var(--btc);
-    color: var(--void);
+.info__ring {
+    fill: transparent;
+    stroke: var(--btc);
+    stroke-width: 1.5;
+    transition: fill var(--duration) var(--ease);
+}
+
+.info__glyph {
+    fill: var(--btc);
+    transition: fill var(--duration) var(--ease);
+}
+
+.info[open] .info__ring {
+    fill: var(--btc);
+}
+
+.info[open] .info__glyph {
+    fill: var(--void);
+}
+
+.info__private {
+    max-width: 34rem;
+    margin-top: 0.5rem;
+    color: var(--ink);
+    font-size: var(--step-small);
+    font-weight: 600;
 }
 
 .info__list {

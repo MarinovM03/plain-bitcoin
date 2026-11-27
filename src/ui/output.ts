@@ -1,3 +1,4 @@
+import type { ToolId } from '../tools/index.ts';
 import { PICTURE, SHARE, TOOL_PAGE } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
@@ -33,6 +34,16 @@ export function pictureFrame(caption: string, head?: { title: string; key?: Safe
         <p class="picture__callout" aria-live="polite" hidden></p>
     </div>
 </div>`;
+}
+
+const INFO_MARK = html`<svg class="info__mark" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle class="info__ring" cx="11" cy="11" r="10"/><circle class="info__glyph" cx="11" cy="6.75" r="1.4"/><rect class="info__glyph" x="9.75" y="9.5" width="2.5" height="7.5" rx="1.25"/></svg>`;
+
+/** The same closed panel on every tool; its lines arrive with the page's own code. */
+export function infoPanel(id: ToolId): SafeHtml {
+    return html`<details class="info">
+    <summary class="info__toggle">${INFO_MARK}${TOOL_PAGE.info}</summary>
+    <div class="info__body" data-info="${id}"></div>
+</details>`;
 }
 
 export function moreOptions(label: string, body: SafeHtml): SafeHtml {

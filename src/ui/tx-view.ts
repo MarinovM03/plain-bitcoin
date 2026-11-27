@@ -1,6 +1,6 @@
 import { TOOLS, TX } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
-import { shareSection, sourceLine } from './output.ts';
+import { infoPanel, shareSection, sourceLine } from './output.ts';
 
 export const TX_ZOOM_STEPS = 100;
 
@@ -38,6 +38,7 @@ export function renderTx(): SafeHtml {
         </div>
         <p class="machine__note">${TX.consent}</p>
         <p class="machine__lead">${TX.explain}</p>
+        ${infoPanel('tx')}
         <div class="machine__share">${shareSection(html`<p id="tx-status" class="visually-hidden" aria-live="polite"></p>`)}</div>
         <section class="steps" aria-labelledby="line-heading">
             <h2 id="line-heading" class="steps__heading">${TX.lineHeading}</h2>
