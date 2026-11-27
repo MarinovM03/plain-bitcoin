@@ -61,9 +61,9 @@ export const OG_PAGES: Record<ToolId, { number: string; line: string; alt: strin
         alt: 'Plain Bitcoin postcard: Sats converter. A grid of sats.',
     },
     dca: {
-        number: 'Stack weekly',
-        line: 'What buying a little bitcoin every week since any date would be worth today.',
-        alt: 'Plain Bitcoin postcard: Stack weekly. Lines for money put in and its value.',
+        number: 'Steady stacking',
+        line: 'What buying a little bitcoin every week or month since any date would be worth today.',
+        alt: 'Plain Bitcoin postcard: Steady stacking. Lines for money put in and its value.',
     },
     stack: {
         number: 'My stack',
@@ -96,6 +96,7 @@ export const HOME = {
         convert: { unit: 'sats for one dollar' },
         dca: { amount: 50, unit: (amount: string) => `sats for ${amount} this week` },
         address: { figure: '0 bytes', unit: 'sent until you tap Look up' },
+        stack: { sats: 1_000_000 },
     },
     sats: (count: string) => `${count} sats`,
     nowLabel: 'Bitcoin right now',
@@ -110,7 +111,8 @@ export const HOME = {
     stack: {
         unset: 'Not set',
         kept: (amount: string) => `${amount}, kept on this device`,
-        moved: (amount: string, move: string) => `${amount}, ${move} since your last visit`,
+        moved: (amount: string, up: boolean, money: string) =>
+            `${amount}, ${up ? 'up' : 'down'} ${money} since your last visit`,
     },
     today: "Share today's card",
     factsSource: 'Height and price: mempool.space. Inflation melt: US CPI, Bureau of Labor Statistics.',
@@ -122,7 +124,9 @@ export const HOME = {
 } as const;
 
 export const NAV = {
-    all: 'All machines',
+    menu: 'Machines',
+    menuLabel: 'Every machine',
+    groups: { now: 'Right now', yours: 'Your bitcoin' },
     home: 'Home',
 } as const;
 
@@ -182,8 +186,8 @@ export const TOOLS: Record<ToolId, { name: string; description: string; privacy:
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     dca: {
-        name: 'Stack weekly',
-        description: 'If you had bought a little every week',
+        name: 'Steady stacking',
+        description: 'Buy a little, every week or month',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
     stack: {
@@ -205,6 +209,7 @@ export const TOOL_PAGE = {
     resultLabel: 'Answer',
     resultEmpty: 'Your answer shows here.',
     sourcePending: 'Source and as-of date show here with each answer.',
+    info: 'How this works, in short',
 } as const;
 
 export const PICTURE = {
@@ -326,7 +331,8 @@ export const STACK = {
     units: { btc: 'BTC', sats: 'sats' },
     keep: 'Keep on this device',
     forget: 'Forget it',
-    notKept: 'Nothing is kept unless you tap Keep. Then it stays in this browser and is never sent anywhere.',
+    notKept:
+        'Kept only if you tap Keep, and only in this browser. The site never sees it: no account, no server, no tracking.',
     kept: (day: string) => `Kept on this device since ${day}. Changes save as you type.`,
     keepFailed: "This browser won't let the site keep it. Private windows often block it.",
     forgotten: 'Forgotten. Nothing is kept on this device now.',
@@ -421,9 +427,9 @@ export const CONVERT = {
 } as const;
 
 export const DCA = {
-    frequencies: { weekly: 'Weekly', fortnightly: 'Fortnightly', monthly: 'Monthly' },
+    frequencies: { weekly: 'Weekly', fortnightly: 'Every two weeks', monthly: 'Monthly' },
     every: { weekly: 'a week', fortnightly: 'every two weeks', monthly: 'a month' },
-    fee: 'Fee per buy (%)',
+    fee: 'Fee per buy, optional (%)',
     presetsLabel: 'Try a start',
     presets: { y2020: 'January 2020', fiveYears: 'Five years ago', oneYear: 'A year ago' },
     empty: 'Type an amount for each buy to see the answer.',
@@ -431,8 +437,8 @@ export const DCA = {
     tooBig: 'That would buy more bitcoin than will ever exist. Try a smaller amount.',
     loadFailed: 'The price history did not load. Check the connection and try again.',
     afterData: (day: string) => `The prices end on ${day}. Pick an earlier start.`,
-    headline: (amount: string, every: string, since: string, worth: string, lump: string) =>
-        `${amount} ${every} since ${since} is worth ${worth} today (one lump sum: ${lump}).`,
+    headline: (amount: string, every: string, since: string, worth: string) =>
+        `${amount} ${every} since ${since} is worth ${worth} today.`,
     detail: (invested: string, buys: string, btc: string) => `${invested} put in over ${buys}, buying ${btc}.`,
     asOf: (day: string) => `today = close, ${day}`,
     numbersHeading: 'The numbers',
@@ -457,8 +463,10 @@ export const DCA = {
     clamped: (day: string) => `Prices start on ${day}, so the first buy is that day.`,
     lumpNote: 'One lump sum puts the same total in at once, on the first buy day.',
     chartLabel: 'Worth over time',
-    chartAlt: (worth: string, invested: string, lump: string) =>
-        `Line chart. Buying a little at a time ends worth ${worth} for ${invested} put in; one lump sum ends worth ${lump}.`,
+    chartAlt: (worth: string, invested: string) =>
+        `Line chart. Buying a little at a time ends worth ${worth} for ${invested} put in.`,
+    chartAltLump: (lump: string) => ` One lump sum ends worth ${lump}.`,
+    compareLump: 'Compare with one lump sum',
     key: {
         value: 'What your bitcoin is worth',
         invested: 'Cash you put in',
@@ -665,7 +673,6 @@ export const ROUTE = {
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
     motion: 'Every scene is drawn from real numbers: block headers, block height, prices and price indexes. Nothing moving on this site is made up.',
-    barcode: "The line under the top bar is the newest block's hash, one mark per bit.",
     toolsLabel: 'All machines',
     follow: 'Follow @PlainBTC on X',
     handle: '@PlainBTC',
@@ -742,18 +749,6 @@ export const MINER = {
         nonce: 'Winning nonce',
     },
     hashLabel: 'Hash, newest byte first',
-    info: {
-        summary: 'How this works, in short',
-        points: [
-            'This page reads the 80-byte header of the newest real block from mempool.space.',
-            'Your device changes one number in it, the nonce, and runs the header through SHA-256 twice. A laptop does that up to about a million times a second, in the background.',
-            'Each result is a 256-bit number. The more zero bits it starts with, the rarer it is: every extra zero is twice as hard to get.',
-            'Every spark in the well is one of your hashes, dropped to the ring of its zero count. The orange ring is the depth a real block needs today.',
-            'Check the real block runs the real winning nonce, so you can watch a real block clear the target.',
-            'The miner tile on the home page hashes too: 400 real tries every 0.15 seconds, only while it is on screen.',
-            'Nothing you do here is sent anywhere, and a block cannot be found this way: the odds above say why.',
-        ],
-    },
 } as const;
 
 export const HALVING = {

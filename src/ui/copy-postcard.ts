@@ -67,8 +67,8 @@ export const POSTCARD = {
     },
     dca: {
         kicker: (day: string) => `${TOOLS.dca.name} · to ${day}`,
-        line: (amount: string, every: string, since: string, worth: string, lump: string) =>
-            `${amount} ${every} since ${since} is worth ${worth} today. One lump sum: ${lump}.`,
+        line: (amount: string, every: string, since: string, worth: string) =>
+            `${amount} ${every} since ${since} is worth ${worth} today.`,
         source: (day: string, fees: string) =>
             `Bitcoin: Coin Metrics daily closes to ${day} · ${fees} · calculated in your browser`,
         fees: (percent: string) => `${percent} fee per buy`,

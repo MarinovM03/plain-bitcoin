@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { SATS_PER_BTC, supplyAt } from '../src/model/supply.ts';
 import { TOOL_IDS } from '../src/tools/index.ts';
 import { FOOTER, HOME, pageTitle, ROUTE, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { PRIVATE } from '../src/ui/copy-info.ts';
 import { formatWhole } from '../src/util/format.ts';
 import { realProblems } from './console.ts';
 import { FAKE_HEIGHT, fakeHeightApi, isApiRequest } from './height-api.ts';
@@ -46,7 +47,7 @@ test('home shows the shell, the headline and every tool as a plain row, in order
     await page.locator('[data-machine="miner"]').scrollIntoViewIfNeeded();
     await expect(page.locator('[data-fact="miner"]')).toHaveAttribute('data-roll', /^\d[\d,]*$/);
     await expect(page.locator('[data-fact="address"]')).toHaveText(HOME.facts.address.figure);
-    await expect(page.locator('.tile__unit')).toHaveCount(TOOL_IDS.length - 1);
+    await expect(page.locator('.tile__unit')).toHaveCount(TOOL_IDS.length);
     await expect(page.locator('.tile__name').first()).toHaveText(TOOLS.miner.name);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
@@ -72,7 +73,12 @@ for (const id of TOOL_IDS) {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
         const machine = id === 'miner' || id === 'halving' || id === 'tx' || id === 'left';
         if (!machine) await expect(page.locator('.tool__description')).toHaveText(TOOLS[id].description);
-        await expect(page.getByText(TOOLS[id].privacy)).toBeVisible();
+        await expect(page.locator('.privacy-line', { hasText: TOOLS[id].privacy })).toBeVisible();
+        const info = page.locator('details.info');
+        await expect(info).toHaveCount(1);
+        await info.locator('summary').click();
+        expect(await info.locator('.info__list li').count()).toBeGreaterThanOrEqual(3);
+        await expect(info.locator('.info__private')).toHaveText(`${PRIVATE} ${TOOLS[id].privacy}`);
         await expect(page.locator('.share-bar button')).toHaveCount(2);
         await expect(page.locator('.share-bar [data-share-post]')).toHaveCount(1);
         for (const button of await page.locator('.share-bar button').all()) {

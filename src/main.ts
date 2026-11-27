@@ -10,7 +10,7 @@ import { renderHalving } from './ui/halving-view.ts';
 import { mountHome, renderHome } from './ui/home.ts';
 import { html, type SafeHtml } from './ui/html.ts';
 import { renderMiner } from './ui/miner-view.ts';
-import { markCurrent, trackChrome } from './ui/shell.ts';
+import { closeMenu, markCurrent, trackChrome } from './ui/shell.ts';
 import { mountStatus } from './ui/status.ts';
 import { renderToolPage } from './ui/tool-page.ts';
 import { renderTx } from './ui/tx-view.ts';
@@ -23,7 +23,7 @@ const main = byId('main');
 const announcer = byId('announcer');
 trackChrome(find(document, '.topbar'));
 startStage(afterFirstPaint);
-const status = mountStatus(byId('status'), document.querySelector<SVGPathElement>('#barcode path'));
+const status = mountStatus(byId('status'));
 const announce = (message: string) => {
     announcer.textContent = message;
 };
@@ -81,12 +81,14 @@ function show({ route, initial, notFound }: RouteChange, view: number): void {
     document.title = pageTitle(route === 'home' ? undefined : TOOLS[route].name);
     document.documentElement.dataset.route = route;
     markCurrent(route);
+    closeMenu();
     status.setRoute(route);
     bindFields(main);
 
     if (route === 'home') cleanups.push(mountHome(main, SITE));
     if (route === 'left') cleanups.push(mountCounter(main, announce));
     if (route !== 'home') {
+        import('./ui/info.ts').then(({ fillInfo }) => fillInfo(main)).catch(() => {});
         // A load cut short (the page left, or the network gone) leaves the prerendered page as it is.
         MOUNTS[route]()
             .then((mount) => {

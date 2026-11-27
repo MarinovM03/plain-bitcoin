@@ -19,10 +19,10 @@ async function openDca(page: Page) {
 
 const money = /\$[\d,]+/.source;
 
-test('answers $50 a week since January 2020 from bundled closes only, with the lump sum', async ({ page }) => {
+test('answers $50 a week since January 2020 from bundled closes only, the lump sum in the table', async ({ page }) => {
     const { problems, external } = await openDca(page);
     await expect(page.locator('#tool-result')).toHaveText(
-        new RegExp(`^\\$50 a week since Jan 2020 is worth ${money} today \\(one lump sum: ${money}\\)\\.$`),
+        new RegExp(`^\\$50 a week since Jan 2020 is worth ${money} today\\.$`),
     );
     await expect(page.locator('#tool-result-detail')).toHaveText(
         new RegExp(`^${money} put in over [\\d,]+ buys, buying [\\d.]+ BTC\\.$`),
@@ -33,7 +33,12 @@ test('answers $50 a week since January 2020 from bundled closes only, with the l
         new RegExp(`^Worth ${money} today: [\\d.]+ BTC bought on 1 Jan 2020$`),
     );
     await expect(page.locator('#dca-notes')).toContainText(DCA.feesNone);
+    await expect(page.locator('#picture-plot .dca-chart__line--lump')).toHaveAttribute('points', '');
+    await expect(page.locator('.picture__key-item--lump')).toBeHidden();
+    await page.locator('#dca-compare').check();
     await expect(page.locator('#picture-plot .dca-chart__line--lump')).toHaveAttribute('points', /^[\d.]+,[\d.]+ /);
+    await expect(page.locator('.picture__key-item--lump')).toBeVisible();
+    await expect(page.locator('#picture-plot .dca-chart')).toHaveAttribute('aria-label', /One lump sum ends worth/);
     await expect(page.locator('#picture-plot .dca-chart')).toHaveAttribute('aria-label', /^Line chart\./);
     await expect(page.locator('#picture-plot .g-end')).toHaveText(
         (await page.locator('#tool-result-figure').textContent()) ?? '',
@@ -50,7 +55,7 @@ test('presets, cadence and currency recompute, and the start month is kept', asy
     await expect(page.locator('[data-preset="fiveYears"]')).toHaveAttribute('aria-pressed', 'true');
     const month = await page.locator('#dca-start-month').inputValue();
     const year = await page.locator('#dca-start-year').inputValue();
-    await page.locator('label', { hasText: DCA.frequencies.monthly }).click();
+    await page.locator('#dca-often').selectOption('monthly');
     await expect(page.locator('#tool-result')).toHaveText(/^\$50 a month since /);
     await expect(page.locator('#dca-buys')).toHaveText(/^6[01] buys, /);
     await page.locator('label', { hasText: '£ GBP' }).click();

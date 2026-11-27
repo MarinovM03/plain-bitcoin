@@ -1,6 +1,6 @@
 import { LEFT_PAGE, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
-import { noteLine, shareSection, sourceLine } from './output.ts';
+import { infoPanel, noteLine, shareSection, sourceLine } from './output.ts';
 
 const CELLS = [
     ['left', LEFT_PAGE.left, ''],
@@ -44,6 +44,7 @@ export function renderLeft(): SafeHtml {
             <p id="left-zoom-line" class="machine__note" aria-live="polite">${LEFT_PAGE.zoomAll}</p>
         </div>
         <p class="machine__lead">${LEFT_PAGE.explain}</p>
+        ${infoPanel('left')}
         <div class="machine__share">${shareSection(html`<p id="left-status" class="visually-hidden" aria-live="polite"></p>`)}</div>
         <section class="details steps" aria-labelledby="numbers-heading">
             <h2 id="numbers-heading" class="steps__heading">${LEFT_PAGE.numbersHeading}</h2>

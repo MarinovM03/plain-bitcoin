@@ -1,7 +1,7 @@
 import type { Frequency } from '../model/dca.ts';
 import type { Month } from '../util/month.ts';
 import { DCA, FIELDS, POWER } from './copy.ts';
-import { amountField, CURRENCY_CHOICES, monthField, segmentedControl } from './fields.ts';
+import { amountField, CURRENCY_CHOICES, monthField, segmentedControl, selectField } from './fields.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine } from './output.ts';
 
@@ -15,11 +15,19 @@ export const DCA_ROWS = ['invested', 'bought', 'worth', 'average', 'buys', 'fall
 
 const SENTENCE_ROWS: ReadonlySet<string> = new Set(['buys', 'fall', 'lump']);
 
-/** The amount, the money and when the buying started: the start decides the answer more than anything else. */
+/** The plan in the order it is told: how much, how often, since when. The start decides the answer most. */
 export function renderDcaInputs(min: Month, max: Month): SafeHtml {
     return html`<div class="field-row">
     ${amountField({ id: 'dca-amount', label: FIELDS.eachBuy, decimals: 2, placeholder: FIELDS.examples.dca, value: '50' })}
-    ${segmentedControl({ name: 'dca-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'USD' })}
+    ${selectField({
+        id: 'dca-often',
+        label: FIELDS.howOften,
+        selected: 'weekly',
+        choices: (Object.keys(DCA.frequencies) as Frequency[]).map((value) => ({
+            value,
+            label: DCA.frequencies[value],
+        })),
+    })}
 </div>
 ${monthField({ id: 'dca-start', legend: FIELDS.starting, min, max, value: DCA_DEFAULT_START })}`;
 }
@@ -33,24 +41,21 @@ export function renderDcaMore(): SafeHtml {
     <legend class="visually-hidden">${DCA.presetsLabel}</legend>
     <div class="presets__list">${presets}</div>
 </fieldset>
-${segmentedControl({
-    name: 'dca-often',
-    legend: FIELDS.howOften,
-    selected: 'weekly',
-    choices: (Object.keys(DCA.frequencies) as Frequency[]).map((value) => ({
-        value,
-        label: DCA.frequencies[value],
-    })),
-})}
+${segmentedControl({ name: 'dca-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'USD' })}
 ${amountField({ id: 'dca-fee', label: DCA.fee, decimals: 2, placeholder: '0' })}`;
 }
 
-/** The chart's key, in words a first-time reader can follow, with the same strokes the lines use. */
+/**
+ * The chart's key, in words a first-time reader can follow, with the same strokes the lines use. One lump sum is a
+ * comparison, not the plan, so its line waits for the switch.
+ */
 export function renderDcaKey(): SafeHtml {
     const items = (['value', 'invested', 'lump'] as const).map(
-        (key) => html`<li class="picture__key-item picture__key-item--${key}">${DCA.key[key]}</li>`,
+        (key) =>
+            html`<li class="picture__key-item picture__key-item--${key}"${key === 'lump' ? html` hidden` : ''}>${DCA.key[key]}</li>`,
     );
-    return html`<ul class="picture__key">${items}</ul>`;
+    return html`<ul class="picture__key">${items}</ul>
+<label class="key-toggle"><input id="dca-compare" class="key-toggle__input" type="checkbox" /><span>${DCA.compareLump}</span></label>`;
 }
 
 export function renderDcaDetail(): SafeHtml {

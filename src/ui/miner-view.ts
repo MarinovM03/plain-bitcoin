@@ -1,6 +1,6 @@
 import { MINER, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
-import { shareSection, sourceLine } from './output.ts';
+import { infoPanel, shareSection, sourceLine } from './output.ts';
 
 const STAT_IDS = ['count', 'rate', 'network', 'odds'] as const;
 const FIELD_IDS = ['version', 'previous', 'merkle', 'time', 'bits', 'nonce'] as const;
@@ -54,10 +54,7 @@ export function renderMiner(): SafeHtml {
             <div class="miner-answer__actions">
                 <button id="miner-run" class="button button--primary" type="button" aria-pressed="false" disabled>${MINER.start}</button>
             </div>
-            <details class="info">
-                <summary class="info__toggle"><span class="info__mark" aria-hidden="true">i</span>${MINER.info.summary}</summary>
-                <ul class="info__list">${MINER.info.points.map((point) => html`<li>${point}</li>`)}</ul>
-            </details>
+            ${infoPanel('miner')}
         </section>
         <p class="machine__lead">${MINER.lead}</p>
         <dl class="miner-stats rise">${STAT_IDS.map(stat)}</dl>

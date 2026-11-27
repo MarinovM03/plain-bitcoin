@@ -7,7 +7,7 @@ import { renderDcaDetail, renderDcaInputs, renderDcaKey, renderDcaMore } from '.
 import { renderFeesDetail, renderFeesInputs, renderFeesMore } from './fees-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { renderLeft } from './left-view.ts';
-import { moreOptions, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
+import { infoPanel, moreOptions, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs, renderPowerMore, renderPowerYears } from './power-view.ts';
 import { renderStackDetail, renderStackInputs, renderStackKeep, renderStackMore } from './stack-view.ts';
 
@@ -110,6 +110,7 @@ function renderCalculator(id: CalculatorId): SafeHtml {
             empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
         })}
         ${parts.afterResult ?? ''}
+        ${infoPanel(id)}
         ${pictureFrame(parts.caption, parts.head)}
         ${parts.below ?? ''}
         ${shareSection()}

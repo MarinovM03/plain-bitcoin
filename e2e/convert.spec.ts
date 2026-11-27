@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { CONVERT, FIELDS, SHARE } from '../src/ui/copy.ts';
+import { CONVERT, FIELDS, SHARE, TOOL_PAGE } from '../src/ui/copy.ts';
 import { realProblems } from './console.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
@@ -199,5 +199,5 @@ test('every field and the scrubber are reachable by keyboard', async ({ page, is
         'convert-currency',
         'convert-scrub',
     ]);
-    expect(order.slice(5, 8)).toEqual([SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
+    expect(order.slice(5, 9)).toEqual([TOOL_PAGE.info, SHARE.print, SHARE.download, `${SHARE.post} ↗`]);
 });

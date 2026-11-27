@@ -46,6 +46,18 @@ export function segmentedControl(options: {
 </fieldset>`;
 }
 
+export function selectField(options: {
+    id: string;
+    label: string;
+    choices: readonly Choice[];
+    selected: string;
+}): SafeHtml {
+    return html`<div class="field">
+    <label class="field__label" for="${options.id}">${options.label}</label>
+    ${selectControl(options.id, options.choices, options.selected)}
+</div>`;
+}
+
 function selectControl(id: string, choices: readonly Choice[], selected: string, extra: SafeHtml | '' = ''): SafeHtml {
     const items = choices.map(
         (choice) =>

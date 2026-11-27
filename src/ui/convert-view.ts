@@ -3,7 +3,7 @@ import type { Currency } from '../util/format.ts';
 import { CONVERT, FIELDS, TOOL_PAGE, TOOLS } from './copy.ts';
 import { amountField, segmentedControl } from './fields.ts';
 import { html, type SafeHtml } from './html.ts';
-import { resultBlock, shareSection, sourceLine } from './output.ts';
+import { infoPanel, resultBlock, shareSection, sourceLine } from './output.ts';
 
 /** The three amounts on the page. The money one holds whichever currency is picked. */
 export const CONVERT_SLOTS = ['sats', 'btc', 'fiat'] as const;
@@ -66,6 +66,7 @@ export function renderConvert(head: SafeHtml): SafeHtml {
         <p id="convert-point" class="play__point">${CONVERT.pointEmpty}</p>
     </form>
     <div class="play__below rise">
+        ${infoPanel('convert')}
         ${shareSection()}
         <p class="convert-ref">${CONVERT.unitsLine}<span class="convert-ref__sep" aria-hidden="true"> · </span><span id="convert-ref-sat"></span></p>
         ${sourceLine(TOOLS.convert.privacy)}

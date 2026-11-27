@@ -1,13 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { TOOL_IDS } from '../src/tools/index.ts';
+import { TOOL_GROUPS, TOOL_IDS } from '../src/tools/index.ts';
 import { FOOTER, NAV, pageTitle, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const BARE_LABELS = ['Left', 'Power', 'Convert', 'DCA', 'Address'];
-
-/** Every machine has a gallery tile, except My stack, whose door is its cell in the strip. */
-const door = (id: string) => (id === 'stack' ? `.now__item[href="/${id}"]` : `.tile__link[href="/${id}"]`);
 
 test.beforeEach(async ({ page }) => {
     await fakeHeightApi(page);
@@ -16,9 +13,8 @@ test.beforeEach(async ({ page }) => {
 
 test('home tiles, page titles and headings use the plain names, never a bare short label', async ({ page }) => {
     await page.goto('/?hero=still');
-    await expect(page.locator(door('stack'))).toBeVisible();
-    for (const id of TOOL_IDS.filter((tool) => tool !== 'stack')) {
-        const tile = page.locator(door(id));
+    for (const id of TOOL_IDS) {
+        const tile = page.locator(`.tile__link[href="/${id}"]`);
         await expect(tile.locator('.tile__name')).toHaveText(TOOLS[id].name);
         await expect(tile.locator('.tile__line')).toHaveText(TOOLS[id].description);
     }
@@ -31,17 +27,32 @@ test('home tiles, page titles and headings use the plain names, never a bare sho
     }
 });
 
-test('the bar marks home, and offers the way back to every machine on every other page', async ({ page }) => {
+test('the Machines menu opens every machine from any page, marks the current one and closes on arrival', async ({
+    page,
+}) => {
     await page.goto('/?hero=still');
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('link', { name: NAV.all })).toBeHidden();
-    for (const id of TOOL_IDS) {
-        await page.locator(door(id)).click();
-        await expect(page).toHaveURL(new RegExp(`/${id}$`));
-        await expect(page.getByRole('link', { name: SITE_NAME })).not.toHaveAttribute('aria-current', 'page');
-        await page.getByRole('link', { name: NAV.all }).click();
-        await expect(page).toHaveURL(/:\d+\/$/);
+    const button = page.getByRole('button', { name: NAV.menu });
+    const menu = page.getByRole('navigation', { name: NAV.menuLabel });
+    await expect(menu).toBeHidden();
+    for (const group of TOOL_GROUPS) {
+        await expect(page.locator(`#gallery-${group.id}`)).toHaveText(NAV.groups[group.id]);
     }
+    for (const id of TOOL_IDS) {
+        await button.click();
+        await expect(menu).toBeVisible();
+        await expect(menu.locator('.menu__name')).toHaveText(
+            TOOL_GROUPS.flatMap((group) => group.tools).map((tool) => TOOLS[tool].name),
+        );
+        await menu.locator(`a[href="/${id}"]`).click();
+        await expect(page).toHaveURL(new RegExp(`/${id}$`));
+        await expect(menu).toBeHidden();
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(TOOLS[id].name);
+        await expect(page.locator(`#machines a[href="/${id}"]`)).toHaveAttribute('aria-current', 'page');
+    }
+    await button.click();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
 });
 
 test('the footer offers a follow link, every tool by name and the privacy line', async ({ page }) => {
@@ -64,7 +75,7 @@ test('only the bar, the canvas and a machine scene are pinned, so a short screen
         [...document.querySelectorAll('body *')]
             .filter((element) => ['sticky', 'fixed'].includes(getComputedStyle(element).position))
             .map((element) => element.className.toString())
-            .filter((name) => !/^(topbar|stage-canvas|machine__stage)/.test(name)),
+            .filter((name) => !/^(topbar|stage-canvas|machine__stage|menu$)/.test(name)),
     );
     expect(pinned).toEqual([]);
 });

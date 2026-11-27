@@ -10,35 +10,46 @@ import { targetZeroBits } from '../model/header.ts';
 import { createMiner, leadingZeroBits } from '../model/sha256.ts';
 import { MAX_SUPPLY, SATS_PER_BTC, supplyAt } from '../model/supply.ts';
 import type { WaitingLine } from '../model/tx.ts';
-import type { ToolId } from '../tools/index.ts';
+import type { GroupId, ToolId } from '../tools/index.ts';
 import { DEPTHS } from '../tools/miner/protocol.ts';
 import { afterFirstPaint } from '../util/dom.ts';
 import { formatAmount, formatMinutes, formatMoney, formatWhole } from '../util/format.ts';
 import { prefersReducedMotion } from '../util/motion.ts';
 import { SAMPLE_PARTS } from './address-view.ts';
-import { HOME, SHARE, TOOLS } from './copy.ts';
+import { HOME, NAV, SHARE, TOOLS } from './copy.ts';
 import type { HomeExtras } from './home-extras.ts';
 import { html, type SafeHtml } from './html.ts';
 import { rollText } from './roll.ts';
 
 /** A machine shows its live scene; a calculator shows its own chart, drawn from the same model as its page. */
-type TileId = Exclude<ToolId, 'stack'>;
+/** `pair` spans two columns only on the widest grid, where it closes the row. */
+type Tile = { id: ToolId; size: 'hero' | 'wide' | 'pair' | 'small' } & ({ machine: MachineId } | { chart: SceneId });
 
-type Tile = { id: TileId; size: 'hero' | 'wide' | 'small' } & ({ machine: MachineId } | { chart: SceneId });
-
-const TILES: readonly Tile[] = [
-    { id: 'miner', machine: 'miner', size: 'hero' },
-    { id: 'left', machine: 'wall', size: 'small' },
-    { id: 'halving', machine: 'halving', size: 'small' },
-    { id: 'tx', machine: 'queue', size: 'small' },
-    { id: 'fees', chart: 'fees', size: 'small' },
-    { id: 'convert', machine: 'sats', size: 'small' },
-    { id: 'power', chart: 'power', size: 'small' },
-    { id: 'dca', chart: 'dca', size: 'small' },
-    { id: 'address', chart: 'address', size: 'small' },
+/** Each group fills its grid evenly at one, two and three columns. */
+const GALLERY: readonly { group: GroupId; tiles: readonly Tile[] }[] = [
+    {
+        group: 'now',
+        tiles: [
+            { id: 'miner', machine: 'miner', size: 'hero' },
+            { id: 'fees', chart: 'fees', size: 'small' },
+            { id: 'tx', machine: 'queue', size: 'small' },
+            { id: 'halving', machine: 'halving', size: 'small' },
+            { id: 'left', machine: 'wall', size: 'pair' },
+        ],
+    },
+    {
+        group: 'yours',
+        tiles: [
+            { id: 'stack', chart: 'stack', size: 'wide' },
+            { id: 'convert', machine: 'sats', size: 'small' },
+            { id: 'dca', chart: 'dca', size: 'small' },
+            { id: 'power', chart: 'power', size: 'small' },
+            { id: 'address', chart: 'address', size: 'small' },
+        ],
+    },
 ];
 
-const FACT_UNITS: Record<TileId, string> = {
+const FACT_UNITS: Record<ToolId, string> = {
     miner: HOME.hashedNone,
     left: HOME.facts.left.unit,
     halving: HOME.facts.halving.unit,
@@ -48,9 +59,11 @@ const FACT_UNITS: Record<TileId, string> = {
     convert: HOME.facts.convert.unit,
     dca: HOME.facts.dca.unit(formatAmount(HOME.facts.dca.amount, 'USD')),
     address: HOME.facts.address.unit,
+    stack: HOME.now.stack.unit,
 };
 
 const PLAN_MONTHS = 72;
+const YEAR_MONTHS = 13;
 const HASH_TICK_MS = 150;
 const HASHES_PER_TICK = 400;
 
@@ -124,7 +137,12 @@ export function renderHome(): SafeHtml {
     </section>
     ${renderNow()}
     <nav class="gallery" aria-label="${HOME.galleryLabel}">
-        <ul class="gallery__grid">${TILES.map(renderTile)}</ul>
+        ${GALLERY.map(
+            ({ group, tiles }) => html`<section class="gallery__group" aria-labelledby="gallery-${group}">
+            <h2 id="gallery-${group}" class="gallery__heading">${NAV.groups[group]}</h2>
+            <ul class="gallery__grid">${tiles.map(renderTile)}</ul>
+        </section>`,
+        )}
     </nav>
     <p class="gallery__source">${HOME.factsSource}</p>
     ${renderCautions()}
@@ -235,6 +253,23 @@ export function mountHome(root: HTMLElement, site: string): () => void {
     let ratesHeight = -1;
     let feeFigure: string | null = null;
     let extras: HomeExtras | null = null;
+    let stackSats: number = HOME.facts.stack.sats;
+    let yearCloses: readonly (readonly [string, number])[] = [];
+
+    /** The stack tile: the kept stack, or the page's own example, valued at each month-end close and today. */
+    function drawStack(): void {
+        if (yearCloses.length === 0) return;
+        const t: number[] = [];
+        const value: number[] = [];
+        for (const [month, close] of yearCloses) {
+            if (!(close > 0)) continue;
+            t.push(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1));
+            value.push((stackSats / SATS_PER_BTC) * close);
+        }
+        t.push(Date.now());
+        value.push((stackSats / SATS_PER_BTC) * prices.quote.value.usd);
+        charts.set({ id: 'stack', fiat: 'USD', worth: '', alt: '', t, value, invested: [], lump: [] });
+    }
     const unit = (id: ToolId) => root.querySelector<HTMLElement>(`[data-unit="${id}"]`);
     const views: View<MachineId>[] = [];
     const stops: (() => void)[] = [];
@@ -367,8 +402,17 @@ export function mountHome(root: HTMLElement, site: string): () => void {
                 extras = mountHomeExtras(
                     root,
                     site,
-                    { tip: () => heights.tip, quote: () => prices.quote, fee: () => feeFigure },
+                    {
+                        tip: () => heights.tip,
+                        quote: () => prices.quote,
+                        fee: () => feeFigure,
+                        held: (sats) => {
+                            stackSats = sats ?? HOME.facts.stack.sats;
+                            drawStack();
+                        },
+                    },
                     setNow,
+                    setFact,
                 );
             })
             .catch(() => {});
@@ -389,6 +433,8 @@ export function mountHome(root: HTMLElement, site: string): () => void {
                 if (kept.ok) setFact('power', formatMoney(kept.result.buysNow, 'USD'));
                 const months = sortedMonths(data.closes);
                 charts.set(monthlyPlan(months.slice(-PLAN_MONTHS), data.closes));
+                yearCloses = months.slice(-YEAR_MONTHS).map((month) => [month, data.closes[month] ?? 0] as const);
+                drawStack();
                 charts.set({ id: 'address', ...SAMPLE_PARTS, state: 'valid', suspect: null, checksumBad: false });
                 // Bitcoin has no close before mid-2010, so the tile's year starts at its first close.
                 const asked = `${HOME.facts.power.year}-01`;

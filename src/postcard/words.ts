@@ -207,7 +207,7 @@ export function dcaText(result: DcaResult, currency: Fiat, marks: DcaMarks): Dca
     const lump = money(result.lumpSum.valueNow);
     const buys = DCA.buys(result.buys);
     const since = monthKeyLabel(result.start.slice(0, 7), 'short');
-    const headline = DCA.headline(amount, DCA.every[result.frequency], since, worth, lump);
+    const headline = DCA.headline(amount, DCA.every[result.frequency], since, worth);
     const fall = fallPercent(result);
     const percent = `${result.feePercent}%`;
     const fees = result.feePercent > 0 ? DCA.feesPaid(percent, money(result.fees)) : DCA.feesNone;
@@ -235,13 +235,13 @@ export function dcaText(result: DcaResult, currency: Fiat, marks: DcaMarks): Dca
             lump: DCA.lump(lump, formatBtcExact(result.lumpSum.sats), shortDay(result.start)),
         },
         notes,
-        chartAlt: DCA.chartAlt(worth, invested, lump),
+        chartAlt: `${DCA.chartAlt(worth, invested)}${marks.lump.length > 0 ? DCA.chartAltLump(lump) : ''}`,
         postcard: card({
             tool: 'dca',
             route: 'dca',
             kicker: POSTCARD.dca.kicker(shortDay(result.end)),
             number: worth,
-            line: POSTCARD.dca.line(amount, DCA.every[result.frequency], since, worth, lump),
+            line: POSTCARD.dca.line(amount, DCA.every[result.frequency], since, worth),
             source: POSTCARD.dca.source(
                 shortDay(result.end),
                 result.feePercent > 0 ? POSTCARD.dca.fees(percent) : POSTCARD.dca.noFees,

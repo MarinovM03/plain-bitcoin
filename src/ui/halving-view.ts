@@ -4,7 +4,7 @@ import { MAX_SUPPLY, supplyAt } from '../model/supply.ts';
 import { formatAge, formatBtcExact, formatDay, formatPpm, formatWhole } from '../util/format.ts';
 import { HALVING, TOOLS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
-import { shareSection, sourceLine } from './output.ts';
+import { infoPanel, shareSection, sourceLine } from './output.ts';
 
 /** The scrubber runs through the eras the clock draws. */
 export const SCRUB_ERAS = 9;
@@ -59,6 +59,7 @@ export function renderHalving(now = Date.now()): SafeHtml {
             <button id="halving-now" class="button" type="button" hidden>${HALVING.scrubNow}</button>
         </div>
         <p class="machine__lead">${HALVING.explain}</p>
+        ${infoPanel('halving')}
         <div class="machine__share">${shareSection(html`<p id="halving-status" class="visually-hidden" aria-live="polite"></p>`)}</div>
         <section class="steps" aria-labelledby="eras-heading">
             <h2 id="eras-heading" class="steps__heading">${HALVING.erasHeading}</h2>

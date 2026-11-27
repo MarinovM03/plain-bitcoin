@@ -260,16 +260,22 @@ const DCA_RESULT: DcaResult = {
 };
 
 describe('dcaText', () => {
-    it('writes the answer and the card as one sentence with the lump sum', () => {
+    it('writes the answer and the card as one sentence about the plan, the lump sum left to the table', () => {
         const text = dcaText(DCA_RESULT, 'GBP', MARKS);
-        expect(text.headline).toBe('£50 a week since Jan 2020 is worth £72,175 today (one lump sum: £194,680).');
+        expect(text.headline).toBe('£50 a week since Jan 2020 is worth £72,175 today.');
         expect(text.postcard.number).toBe(text.rows.worth);
-        expect(text.postcard.line).toBe('£50 a week since Jan 2020 is worth £72,175 today. One lump sum: £194,680.');
+        expect(text.postcard.line).toBe('£50 a week since Jan 2020 is worth £72,175 today.');
+        expect(text.rows.lump).toMatch(/^Worth £194,680 today/);
         expect(text.postcard.source).toBe(
             'Bitcoin: Coin Metrics daily closes to 29 Oct 2026 · fees not included · calculated in your browser',
         );
         expect(text.postcard.signature).toEqual({ kind: 'lines', ...MARKS });
         expect(text.asOf).toBe('today = close, 29 October 2026');
+    });
+
+    it('names the lump sum in the chart description only while its line is drawn', () => {
+        expect(dcaText(DCA_RESULT, 'GBP', MARKS).chartAlt).toContain('One lump sum ends worth £194,680.');
+        expect(dcaText(DCA_RESULT, 'GBP', { ...MARKS, lump: [] }).chartAlt).not.toContain('lump');
     });
 
     it('fills every row in plain words', () => {

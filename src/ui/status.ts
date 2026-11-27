@@ -1,4 +1,3 @@
-import { barcodePath } from '../chain/hash.ts';
 import { estimateTip, heightFeed, type Tip } from '../data/height.ts';
 import { LAST_CLOSE, LAST_CLOSE_SOURCE, PRICE_STALE_MS, type PriceQuote, priceFeed } from '../data/price.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
@@ -82,7 +81,7 @@ export interface StatusLine {
     setRoute(route: string): void;
 }
 
-export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): StatusLine {
+export function mountStatus(root: HTMLElement): StatusLine {
     const prices = priceFeed();
     const heights = heightFeed();
     const owner = {};
@@ -95,7 +94,6 @@ export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): 
     let started = false;
     let ticks = 0;
     let ticker = 0;
-    let shownHash: string | null = null;
 
     function render(): void {
         const now = Date.now();
@@ -106,11 +104,6 @@ export function mountStatus(root: HTMLElement, barcode: SVGPathElement | null): 
         source.textContent = view.source;
         source.href = view.sourceUrl;
         root.dataset.state = view.live ? 'live' : 'estimate';
-        const hash = heights.tip.blocks[0]?.hash ?? null;
-        if (barcode && hash !== shownHash) {
-            barcode.setAttribute('d', barcodePath(hash));
-            shownHash = hash;
-        }
     }
 
     function tick(): void {

@@ -1,12 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, HOME, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, HOME, NAV, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeaderApi, fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const ROUTES = ['', ...TOOL_IDS] as const;
-const TILE_ORDER = ['miner', 'left', 'halving', 'tx', 'fees', 'convert', 'power', 'dca', 'address'] as const;
+const TILE_ORDER = ['miner', 'fees', 'tx', 'halving', 'left', 'stack', 'convert', 'dca', 'power', 'address'] as const;
 const NOW_ORDER = ['block', 'price', 'fees', 'halving', 'left', 'stack'] as const;
 const TAPROOT = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 const SIZES = [
@@ -87,6 +87,7 @@ test('the keyboard reaches every tool from home in reading order and lands on it
     const order: string[] = [];
     const expected = [
         SITE_NAME,
+        NAV.menu,
         'mempool.space',
         `${FOOTER.handle} ↗`,
         HOME.today,

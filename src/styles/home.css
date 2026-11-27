@@ -153,9 +153,25 @@
 }
 
 /*
- * The gallery. Every tile is a link: a window onto its live scene on top, its words on an opaque band below. The
- * miner takes the big square.
+ * The gallery, in the menu's two groups. Every tile is a link: a window onto its live scene on top, its words on an
+ * opaque band below. The miner takes the big square.
  */
+.gallery {
+    display: grid;
+    gap: 2rem;
+}
+
+.gallery__group {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.gallery__heading {
+    color: var(--ink-dim);
+    font-size: var(--step-small);
+    font-weight: 600;
+}
+
 .gallery__grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -303,8 +319,13 @@
         grid-row: span 2;
     }
 
-    .tile--wide {
+    .tile--wide,
+    .tile--pair {
         grid-column: span 2;
+    }
+
+    .tile--pair .tile__scene {
+        aspect-ratio: 21 / 9;
     }
 
     .tile--hero .tile__scene {

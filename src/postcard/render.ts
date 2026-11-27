@@ -124,11 +124,12 @@ function drawCells(context: Context, box: Box, sats: number): void {
 }
 
 function drawLines(context: Context, box: Box, signature: Extract<Signature, { kind: 'lines' }>): void {
+    const lumped = signature.lump.length > 0;
     const length = Math.min(
         signature.t.length,
         signature.value.length,
         signature.invested.length,
-        signature.lump.length,
+        lumped ? signature.lump.length : Number.POSITIVE_INFINITY,
     );
     if (length < 2) return;
     const t0 = signature.t[0] ?? 0;
@@ -142,10 +143,10 @@ function drawLines(context: Context, box: Box, signature: Extract<Signature, { k
     const y = (value: number) => base - (Math.max(0, value) / max) * (base - top);
     const step = Math.max(1, Math.floor(length / 400));
     const series: [readonly number[], string, number, number[]][] = [
-        [signature.lump, TOKENS.inkCool, 3, [10, 8]],
         [signature.invested, TOKENS.ink, 2.5, []],
         [signature.value, TOKENS.btc, 5, []],
     ];
+    if (lumped) series.unshift([signature.lump, TOKENS.inkCool, 3, [10, 8]]);
     context.lineJoin = 'round';
     for (const [values, colour, width, dash] of series) {
         context.strokeStyle = colour;
@@ -169,11 +170,12 @@ function drawLines(context: Context, box: Box, signature: Extract<Signature, { k
     context.arc(x(signature.t[length - 1] ?? t1), y(signature.value[length - 1] ?? 0), 7, 0, Math.PI * 2);
     context.fill();
     let keyX = box.x;
-    for (const [key, colour] of [
+    const keys = [
         ['value', TOKENS.btc],
         ['invested', TOKENS.ink],
         ['lump', TOKENS.inkCool],
-    ] as const) {
+    ] as const;
+    for (const [key, colour] of lumped ? keys : keys.slice(0, 2)) {
         small(context, DCA.cardKey[key], keyX, box.y + 14, colour);
         keyX += context.measureText(DCA.cardKey[key]).width + 28;
     }

@@ -54,6 +54,13 @@ describe('power gauge', () => {
         expect(a.marks.find((mark) => mark.key === 'col1')?.attrs.style).toBe('transform: scaleY(1)');
     });
 
+    it('regrows the columns for a new amount, whose shape alone would not change', () => {
+        const data = { id: 'power', cash: 1000, bitcoin: 3000 } as const;
+        const more = powerLayout({ ...data, cash: 50_000, bitcoin: 150_000 }, VIEW);
+        expect(more.rebuild).not.toBe(powerLayout(data, VIEW).rebuild);
+        expect(more.build).toBe('grow');
+    });
+
     it('survives Infinity and NaN inputs', () => {
         for (const view of SIZES)
             sane(powerLayout({ id: 'power', cash: Number.POSITIVE_INFINITY, bitcoin: Number.NaN }, view));

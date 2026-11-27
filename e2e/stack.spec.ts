@@ -70,8 +70,8 @@ test('a visit an hour or more after the last one says how far the stack moved, h
     const at = await seed(page, 2 * 60 * 60 * 1000, 70_000);
     await page.goto('/?hero=still');
     await expect(page.locator('[data-now="stack"]')).toHaveAttribute('data-roll', '$768');
-    await expect(page.locator('[data-now-unit="stack"]')).toHaveText(HOME.stack.moved('0.01 BTC', '+$67.77'));
-    await page.locator('a[href="/stack"]').first().click();
+    await expect(page.locator('[data-now-unit="stack"]')).toHaveText(HOME.stack.moved('0.01 BTC', true, '$67.77'));
+    await page.locator('.now__item[href="/stack"]').click();
     await expect(page.locator('#tool-result-detail')).toHaveText(
         STACK.sinceVisit('up $67.77 (9.7%)', formatShortDay(at)),
     );
