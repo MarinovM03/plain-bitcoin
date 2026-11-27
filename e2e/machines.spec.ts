@@ -56,6 +56,7 @@ test('a transaction mempool.space does not know says so plainly', async ({ page 
 
 test('Bitcoin left zooms the block from all 21 million to single coins', async ({ page }) => {
     await page.goto('/left?hero=still');
+    await expect(page.locator('main[data-ready="left"]')).toBeAttached();
     const zoom = page.locator('#left-zoom');
     await zoom.fill('100');
     await expect(page.locator('#left-zoom-line')).toHaveText(LEFT_PAGE.zoomCoins);
