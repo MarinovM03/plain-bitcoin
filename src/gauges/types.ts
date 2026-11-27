@@ -1,6 +1,6 @@
 import type { Fiat } from '../util/format.ts';
 
-export type SceneId = 'power' | 'dca' | 'address';
+export type SceneId = 'power' | 'dca' | 'stack' | 'address' | 'fees';
 
 export type CharRole = 'hrp' | 'separator' | 'version' | 'program' | 'checksum' | 'prefix' | 'body' | 'unknown';
 
@@ -20,7 +20,8 @@ export type SceneData =
           cashLabel?: string;
           bitcoinLabel?: string;
       }
-    | ({ id: 'dca'; fiat: Fiat; worth: string; alt: string } & DcaMarks)
+    | ({ id: 'dca' | 'stack'; fiat: Fiat; worth: string; alt: string } & DcaMarks)
+    | { id: 'fees'; rows: readonly { name: string; value: string; sats: number }[] }
     | {
           id: 'address';
           text: string;

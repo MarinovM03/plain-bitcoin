@@ -6,6 +6,9 @@ import { fakePriceApi } from './price-api.ts';
 
 const BARE_LABELS = ['Left', 'Power', 'Convert', 'DCA', 'Address'];
 
+/** Every machine has a gallery tile, except My stack, whose door is its cell in the strip. */
+const door = (id: string) => (id === 'stack' ? `.now__item[href="/${id}"]` : `.tile__link[href="/${id}"]`);
+
 test.beforeEach(async ({ page }) => {
     await fakeHeightApi(page);
     await fakePriceApi(page);
@@ -13,8 +16,9 @@ test.beforeEach(async ({ page }) => {
 
 test('home tiles, page titles and headings use the plain names, never a bare short label', async ({ page }) => {
     await page.goto('/?hero=still');
-    for (const id of TOOL_IDS) {
-        const tile = page.locator(`.tile__link[href="/${id}"]`);
+    await expect(page.locator(door('stack'))).toBeVisible();
+    for (const id of TOOL_IDS.filter((tool) => tool !== 'stack')) {
+        const tile = page.locator(door(id));
         await expect(tile.locator('.tile__name')).toHaveText(TOOLS[id].name);
         await expect(tile.locator('.tile__line')).toHaveText(TOOLS[id].description);
     }
@@ -32,7 +36,7 @@ test('the bar marks home, and offers the way back to every machine on every othe
     await expect(page.getByRole('link', { name: SITE_NAME })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('link', { name: NAV.all })).toBeHidden();
     for (const id of TOOL_IDS) {
-        await page.locator(`.tile__link[href="/${id}"]`).click();
+        await page.locator(door(id)).click();
         await expect(page).toHaveURL(new RegExp(`/${id}$`));
         await expect(page.getByRole('link', { name: SITE_NAME })).not.toHaveAttribute('aria-current', 'page');
         await page.getByRole('link', { name: NAV.all }).click();

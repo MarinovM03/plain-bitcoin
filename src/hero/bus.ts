@@ -52,44 +52,12 @@ export interface QueueInput {
     readonly zoom?: number;
 }
 
-export interface MeltInput {
-    /** Share of its buying power the money still has, 0 to 1. */
-    readonly kept: number;
-    /** The amount of money, in its own currency: one note is drawn for each note it would take. */
-    readonly amount: number;
-    /** The sign printed on the notes. */
-    readonly symbol: '$' | '£';
-}
-
-/**
- * One column per year of a buying plan: each coin is one buy, as a share of the biggest single buy, and `sats` is
- * what the year bought in all.
- */
-export interface StackInput {
-    readonly columns: readonly { readonly year: string; readonly coins: readonly number[]; readonly sats: number }[];
-}
-
-export type AddressRole = 'hrp' | 'separator' | 'version' | 'program' | 'checksum' | 'prefix' | 'body' | 'unknown';
-
-/** An address's characters, the part each one is, and how the check came out. */
-export interface AddressInput {
-    readonly chars: string;
-    readonly roles: readonly AddressRole[];
-    readonly state: 'empty' | 'valid' | 'invalid';
-    /** The place of a likely typo, when the checker can tell. */
-    readonly suspect: number | null;
-    readonly checksumBad: boolean;
-}
-
 export interface MachineInputs {
     miner: MinerInput;
     sats: SatsInput;
     wall: WallInput;
     halving: HalvingInput;
     queue: QueueInput;
-    melt: MeltInput;
-    stack: StackInput;
-    address: AddressInput;
 }
 
 export type MachineId = keyof MachineInputs;

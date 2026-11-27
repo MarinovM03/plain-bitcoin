@@ -1,9 +1,7 @@
 import { mountPicture } from '../../gauges/mount.ts';
 import type { DcaMarks } from '../../gauges/types.ts';
-import { attach } from '../../hero/bus.ts';
 import { MAX_SATS } from '../../model/convert.ts';
 import { type DailyCloses, type DcaOutcome, dca, FREQUENCIES, type Frequency } from '../../model/dca.ts';
-import { yearColumns } from '../../model/stack.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type DcaText, dcaText } from '../../postcard/words.ts';
@@ -58,7 +56,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     const loaded = new Map<Fiat, DailySeries>();
     let text: DcaText | null = null;
     let settleTimer = 0;
-    let drawnBuys = -1;
     let request = 0;
     let disposed = false;
     const share = bindShareBar(root, {
@@ -74,7 +71,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         form.querySelector<HTMLInputElement>('input[name="dca-currency"]:checked')?.value === 'GBP' ? 'GBP' : 'USD';
 
     const frequency = (): Frequency => {
-        const value = form.querySelector<HTMLInputElement>('input[name="dca-often"]:checked')?.value;
+        const value = root.querySelector<HTMLInputElement>('input[name="dca-often"]:checked')?.value;
         return FREQUENCIES.find((option) => option === value) ?? 'weekly';
     };
 
@@ -103,17 +100,8 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
         }, SETTLE_MS);
     }
 
-    const stack = attach(find(root, '[data-machine="stack"]'), 'stack', { columns: [] }, { page: true });
-
-    function showWorld(buys: number): void {
-        if (buys === drawnBuys) return;
-        drawnBuys = buys;
-        if (buys === 0) stack.set({ columns: [] });
-    }
-
     function showMessage(message: string): void {
         text = null;
-        showWorld(0);
         label.textContent = TOOL_PAGE.resultLabel;
         const empty = document.createElement('span');
         empty.className = 'result__empty';
@@ -186,8 +174,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             return;
         }
         const marks = dcaMarks(outcome.result);
-        showWorld(outcome.result.buys);
-        stack.set({ columns: yearColumns(outcome.result.bought) });
         text = dcaText(outcome.result, fiat, marks);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
@@ -234,7 +220,7 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             });
     }
 
-    // The start month and the fee sit in a second form below the answer; both forms feed the same answer.
+    // How often, the start presets and the fee sit in a second form below the answer; both feed the same answer.
     for (const inputs of [form, find<HTMLFormElement>(root, '.tool__more')]) {
         inputs.addEventListener('input', update);
         inputs.addEventListener('change', update);
@@ -250,7 +236,6 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     update();
 
     return () => {
-        stack.detach();
         disposed = true;
         window.clearTimeout(settleTimer);
         share.dispose();

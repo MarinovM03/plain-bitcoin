@@ -1,4 +1,4 @@
-import type { AddressInput, AddressRole } from '../hero/bus.ts';
+import type { CharRole } from '../gauges/types.ts';
 import { ADDRESS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 import { noteLine } from './output.ts';
@@ -12,21 +12,18 @@ export const ADDRESS_SAMPLES: Record<keyof typeof ADDRESS.samples, string> = {
 
 /**
  * The first example address in BIP 173, split into its parts: prefix, separator, version, 32 characters of
- * program and 6 of checksum. Shown before anything is typed, and on the home tile.
+ * program and 6 of checksum. Drawn on the home tile.
  */
-export const SAMPLE_PARTS: AddressInput = {
-    chars: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+export const SAMPLE_PARTS: { text: string; roles: readonly CharRole[] } = {
+    text: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
     roles: [
         'hrp',
         'hrp',
         'separator',
         'version',
-        ...new Array<AddressRole>(32).fill('program'),
-        ...new Array<AddressRole>(6).fill('checksum'),
+        ...new Array<CharRole>(32).fill('program'),
+        ...new Array<CharRole>(6).fill('checksum'),
     ],
-    state: 'valid',
-    suspect: null,
-    checksumBad: false,
 };
 
 export function renderAddressInputs(): SafeHtml {

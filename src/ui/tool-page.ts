@@ -1,14 +1,15 @@
-import type { MachineId } from '../hero/bus.ts';
 import type { ToolId } from '../tools/index.ts';
 import type { Month } from '../util/month.ts';
 import { renderAddressDetail, renderAddressInputs, renderAddressMore } from './address-view.ts';
 import { renderConvert } from './convert-view.ts';
 import { ADDRESS, FIELDS, PICTURE, POWER, TOOL_PAGE, TOOLS } from './copy.ts';
 import { renderDcaDetail, renderDcaInputs, renderDcaKey, renderDcaMore } from './dca-view.ts';
+import { renderFeesDetail, renderFeesInputs, renderFeesMore } from './fees-view.ts';
 import { html, type SafeHtml } from './html.ts';
 import { renderLeft } from './left-view.ts';
 import { moreOptions, pictureFrame, resultBlock, shareSection, sourceLine } from './output.ts';
 import { renderPowerDetail, renderPowerInputs, renderPowerMore, renderPowerYears } from './power-view.ts';
+import { renderStackDetail, renderStackInputs, renderStackKeep, renderStackMore } from './stack-view.ts';
 
 type CalculatorId = Exclude<ToolId, 'miner' | 'halving' | 'tx' | 'left' | 'convert'>;
 
@@ -18,6 +19,7 @@ interface Calculator {
     detail: SafeHtml;
     caption: string;
     head?: { title: string; key?: SafeHtml };
+    afterResult?: SafeHtml;
     below?: SafeHtml;
 }
 
@@ -41,11 +43,28 @@ function calculator(id: CalculatorId): Calculator {
             };
         case 'dca':
             return {
-                inputs: renderDcaInputs(),
-                more: [FIELDS.more, renderDcaMore(EARLIEST_MONTH, thisMonth())],
+                inputs: renderDcaInputs(EARLIEST_MONTH, thisMonth()),
+                more: [FIELDS.more, renderDcaMore()],
                 detail: renderDcaDetail(),
                 caption: PICTURE.dcaEmpty,
                 head: { title: PICTURE.dcaTitle, key: renderDcaKey() },
+            };
+        case 'fees':
+            return {
+                inputs: renderFeesInputs(),
+                more: [FIELDS.more, renderFeesMore()],
+                detail: renderFeesDetail(),
+                caption: PICTURE.feesEmpty,
+                head: { title: PICTURE.feesTitle },
+            };
+        case 'stack':
+            return {
+                inputs: renderStackInputs(),
+                more: [FIELDS.more, renderStackMore()],
+                detail: renderStackDetail(),
+                caption: PICTURE.stackEmpty,
+                head: { title: PICTURE.stackTitle },
+                afterResult: renderStackKeep(),
             };
         case 'address':
             return {
@@ -64,17 +83,14 @@ export function toolHead(id: ToolId): SafeHtml {
 </header>`;
 }
 
-const SCENES: Record<CalculatorId, MachineId> = { power: 'melt', dca: 'stack', address: 'address' };
-
 /**
- * A calculator page, in reading order: its plain name, the inputs, the answer, the picture, its scene, then
- * sharing and the rest. On a wide screen the scene stands beside the calculator.
+ * A calculator page, in reading order: its plain name, the inputs, the answer, the picture, then sharing and the
+ * rest. On a wide screen the picture stands beside the calculator, in the room a scene takes on the machines.
  */
 function page(id: CalculatorId, screen: SafeHtml, below: SafeHtml): SafeHtml {
     return html`<article class="tool tool--${id} machine">
     <div class="machine__body">
         <div class="tool__screen">${toolHead(id)}${screen}</div>
-        <div class="machine__stage" data-machine="${SCENES[id]}" aria-hidden="true"></div>
         <div class="tool__below">${below}</div>
     </div>
 </article>`;
@@ -93,6 +109,7 @@ function renderCalculator(id: CalculatorId): SafeHtml {
             label: address ? ADDRESS.resultLabel : TOOL_PAGE.resultLabel,
             empty: address ? ADDRESS.empty : TOOL_PAGE.resultEmpty,
         })}
+        ${parts.afterResult ?? ''}
         ${pictureFrame(parts.caption, parts.head)}
         ${parts.below ?? ''}
         ${shareSection()}

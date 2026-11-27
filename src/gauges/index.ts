@@ -6,9 +6,12 @@ function load(id: SceneId): Promise<GaugeLayout> {
         case 'power':
             return import('./power.ts').then((module) => module.powerLayout);
         case 'dca':
+        case 'stack':
             return import('./dca.ts').then((module) => module.dcaLayout);
         case 'address':
             return import('./address.ts').then((module) => module.addressLayout);
+        case 'fees':
+            return import('./fees.ts').then((module) => module.feesLayout);
     }
 }
 

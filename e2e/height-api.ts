@@ -40,25 +40,35 @@ export const FAKE_LINE = [
     { blockVSize: 997_994, nTx: 2110, feeRange: [2.1, 3, 4] },
     { blockVSize: 640_000, nTx: 1500, feeRange: [1.01, 1.5, 2] },
 ];
+/** Rates mempool.space recommends: a quiet mempool, 4 sat/vB for the next block down to 1 for no rush. */
+export const FAKE_FEES = { fastestFee: 4, halfHourFee: 3, hourFee: 2, economyFee: 1, minimumFee: 1 };
+
 export const FAKE_TXID = 'ab4a72238770e7711921162f8285759b0bb6365999235b12569de1b6f306dfc6';
 
-/** The waiting line, the recent list and one waiting transaction paying 2.5 sat/vB: the second projected block. */
+/**
+ * The waiting line, the recommended fee rates, the recent list and one waiting transaction paying 2.5 sat/vB: the
+ * second projected block.
+ */
 export async function fakeMempoolApi(page: Page): Promise<string[]> {
     const calls: string[] = [];
     const headers = { 'access-control-allow-origin': '*' };
-    await page.route(/^https:\/\/mempool\.space\/api\/(v1\/fees\/mempool-blocks|mempool\/recent|tx\/\w+)$/, (route) => {
-        const url = route.request().url();
-        calls.push(url);
-        if (url.endsWith('/mempool-blocks')) return route.fulfill({ json: FAKE_LINE, headers });
-        if (url.endsWith('/mempool/recent')) return route.fulfill({ json: [{ txid: FAKE_TXID }], headers });
-        if (url.endsWith(`/tx/${FAKE_TXID}`)) {
-            return route.fulfill({
-                json: { txid: FAKE_TXID, fee: 1000, weight: 1600, status: { confirmed: false } },
-                headers,
-            });
-        }
-        return route.fulfill({ status: 404, body: 'Transaction not found', headers });
-    });
+    await page.route(
+        /^https:\/\/mempool\.space\/api\/(v1\/fees\/(mempool-blocks|recommended)|mempool\/recent|tx\/\w+)$/,
+        (route) => {
+            const url = route.request().url();
+            calls.push(url);
+            if (url.endsWith('/mempool-blocks')) return route.fulfill({ json: FAKE_LINE, headers });
+            if (url.endsWith('/recommended')) return route.fulfill({ json: FAKE_FEES, headers });
+            if (url.endsWith('/mempool/recent')) return route.fulfill({ json: [{ txid: FAKE_TXID }], headers });
+            if (url.endsWith(`/tx/${FAKE_TXID}`)) {
+                return route.fulfill({
+                    json: { txid: FAKE_TXID, fee: 1000, weight: 1600, status: { confirmed: false } },
+                    headers,
+                });
+            }
+            return route.fulfill({ status: 404, body: 'Transaction not found', headers });
+        },
+    );
     return calls;
 }
 

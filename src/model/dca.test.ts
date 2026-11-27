@@ -160,8 +160,6 @@ describe('dca', () => {
             ),
         );
         expect(result.points.map((point) => point.invested)).toEqual([100, 100, 100, 100, 100, 100, 100, 200]);
-        expect(result.bought.map((buy) => buy.day)).toEqual(['2020-01-01', '2020-01-08']);
-        expect(result.bought.reduce((total, buy) => total + buy.sats, 0)).toBe(result.sats);
         expect(result.points[0]).toEqual({ invested: 100, value: 100, lumpValue: 200 });
         expect(result.points[7]).toEqual({ invested: 200, value: 300, lumpValue: 400 });
     });

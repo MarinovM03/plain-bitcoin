@@ -12,13 +12,15 @@ import {
     composeText,
     convertText,
     dcaText,
-    homePostcard,
+    feesText,
     leftPostcard,
     maskAddress,
     minerPostcard,
     postcardFileName,
     powerText,
     priceLabel,
+    stackText,
+    todayPostcard,
 } from './words.ts';
 
 const BASE: PowerResult = {
@@ -93,6 +95,42 @@ describe('powerText', () => {
     });
 });
 
+describe('feesText', () => {
+    const costs = [
+        { speed: 'next', rate: 4, sats: 564, money: 0.4512 },
+        { speed: 'halfHour', rate: 3, sats: 423, money: 0.3384 },
+        { speed: 'hour', rate: 2.5, sats: 353, money: 0.2824 },
+        { speed: 'noRush', rate: 0.1, sats: 15, money: 0.012 },
+    ] as const;
+
+    it('leads with the next block in dollars and says what waiting costs, on the page and the postcard', () => {
+        const text = feesText({ type: 'segwit', vbytes: 141, costs: [...costs], height: 900_000, readAt: 0 });
+        expect(text?.figure).toBe('$0.45');
+        expect(text?.headline).toBe('A SegWit payment costs about 564 sats ($0.45) to make the next block.');
+        expect(text?.detail).toBe('At 4 sat/vB for about 141 virtual bytes. No rush: about 15 sats ($0.01).');
+        expect(text?.rows.map((row) => row.line)).toEqual([
+            '4 sat/vB · $0.45 · 564 sats',
+            '3 sat/vB · $0.34 · 423 sats',
+            '2.5 sat/vB · $0.28 · 353 sats',
+            '0.1 sat/vB · $0.01 · 15 sats',
+        ]);
+        expect(text?.postcard.number).toBe('$0.45');
+        expect(text?.postcard.signature).toMatchObject({ kind: 'fees' });
+        expect(text?.postcard.line).toContain('a SegWit payment costs about 564 sats ($0.45)');
+    });
+
+    it('falls back to sats with no price', () => {
+        const unpriced = costs.map((cost) => ({ ...cost, money: null }));
+        const text = feesText({ type: 'legacy', vbytes: 226, costs: unpriced, height: 1, readAt: 0 });
+        expect(text?.figure).toBe('564 sats');
+        expect(text?.headline).toBe('A Legacy payment costs about 564 sats to make the next block.');
+    });
+
+    it('says nothing without costs', () => {
+        expect(feesText({ type: 'segwit', vbytes: 141, costs: [], height: 1, readAt: 0 })).toBeNull();
+    });
+});
+
 describe('siteAddress', () => {
     it('drops the scheme and trailing slash', () => {
         expect(siteAddress('https://plainbitcoin.org/')).toBe('plainbitcoin.org');
@@ -121,11 +159,19 @@ describe('leftPostcard', () => {
         expect(card.source).not.toContain('mempool');
     });
 
-    it('gives home its own postcard: the block height as the number, and the 21M issued share', () => {
-        const card = homePostcard({ supply: supplyAt(973_854), api: 'mempool.space', checkedAt: 0 });
-        expect(card.number).toBe('973,854');
-        expect(card.line).toBe('20,105,796 of 21,000,000 BTC issued so far.');
+    it("prints the home strip as today's card, leaving out the fee until it has loaded", () => {
+        const readAt = Date.UTC(2026, 10, 22, 14, 2);
+        const card = todayPostcard({ height: 973_854, usd: 97_123.4, fee: '$0.09', readAt });
+        expect(card.kicker).toBe('Bitcoin today · 22 Nov 2026');
+        expect(card.number).toBe('1 BTC = $97,123');
+        expect(card.line).toBe(
+            'Block 973,854. A payment in the next block costs about $0.09. 76,146 blocks to the halving. 894,203 BTC left to mine.',
+        );
+        expect(card.source).toBe('Height, fees and price: mempool.space · 22 Nov 2026, 14:02 UTC');
         expect(card.route).toBe('');
+        expect(todayPostcard({ height: 973_854, usd: 97_123.4, fee: null, readAt }).line).toBe(
+            'Block 973,854. 76,146 blocks to the halving. 894,203 BTC left to mine.',
+        );
     });
 });
 
@@ -211,7 +257,6 @@ const DCA_RESULT: DcaResult = {
     },
     lumpSum: { sats: 333_000_000, price: 5_360.1, valueNow: 194_680 },
     points: [],
-    bought: [],
 };
 
 describe('dcaText', () => {
@@ -322,5 +367,53 @@ describe('minerPostcard', () => {
     it('says when the header was the saved one', () => {
         const card = minerPostcard({ height: 1, tries: 1, best: 0, needed: 78, readAt: null, savedOn: '17 Nov' });
         expect(card.source).toContain('saved 17 Nov');
+    });
+});
+
+describe('stackText', () => {
+    const QUOTE: PriceQuote = {
+        value: { usd: 100_000, gbp: 80_000, eur: null },
+        source: 'mempool.space',
+        asOf: Date.UTC(2026, 10, 22, 14, 2),
+        stale: false,
+    };
+    const mark = (at: number, usd: number) => ({ at, usd, gbp: usd * 0.8 });
+    const reading = { sats: 1_000_000, unit: 'btc' as const, fiat: 'USD' as const, quote: QUOTE, closesTo: null };
+
+    it('says what the coins are worth now, and invites a keep when nothing is kept', () => {
+        const text = stackText({ ...reading, series: null, holding: null });
+        expect(text.figure).toBe('$1,000.00');
+        expect(text.headline).toBe('0.01 BTC is worth $1,000.00 now.');
+        expect(text.detail).toMatch(/^Keep it on this device/);
+        expect(text.rows).toBeNull();
+        expect(text.postcard.line).toBe('0.01 BTC is worth $1,000.00 today.');
+    });
+
+    it('measures the move from the last visit once there is one, and from the keep day before that', () => {
+        const kept = { sats: 1_000_000, fiat: 'USD' as const, savedAt: Date.UTC(2026, 10, 1), previous: null };
+        const first = stackText({ ...reading, series: null, holding: { ...kept, visit: mark(kept.savedAt, 80_000) } });
+        expect(first.detail).toBe('That is up $200.00 (25%) since you kept it on 1 Nov 2026.');
+        const back = stackText({
+            ...reading,
+            unit: 'sats',
+            series: null,
+            holding: { ...kept, visit: mark(QUOTE.asOf, 100_000), previous: mark(Date.UTC(2026, 10, 20), 102_000) },
+        });
+        expect(back.headline).toBe('1,000,000 sats is worth $1,000.00 now.');
+        expect(back.detail).toBe('That is down $20.00 (2%) since your last visit on 20 Nov 2026.');
+    });
+
+    it('reads a year ago, the highest and the lowest close off the same line the chart draws', () => {
+        const day = (n: number) => Date.UTC(2025, 10, 22) + n * 86_400_000;
+        const series = { t: [day(0), day(1), day(2), QUOTE.asOf], value: [600, 1_200, 500, 1_000] };
+        const text = stackText({ ...reading, series, closesTo: '21 Nov 2026', holding: null });
+        expect(text.rows).toEqual({
+            yearAgo: '$600.00 on 22 Nov 2025',
+            high: '$1,200.00 on 23 Nov 2025',
+            low: '$500.00 on 24 Nov 2025',
+        });
+        expect(text.chart?.value).toEqual(series.value);
+        expect(text.postcard.line).toBe('0.01 BTC is worth $1,000.00 today. A year ago it was worth $600.00.');
+        expect(text.postcard.signature.kind).toBe('lines');
     });
 });

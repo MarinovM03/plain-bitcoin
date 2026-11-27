@@ -17,7 +17,7 @@ export interface DcaFrame {
 
 /** One domain for the lines and the axes: first mark to the as-of day, zero to the highest value of any series. */
 export function dcaFrame(data: SceneData): DcaFrame | null {
-    if (data.id !== 'dca') return null;
+    if (data.id !== 'dca' && data.id !== 'stack') return null;
     // A series may be left out (a home preview has no lump line); every series drawn has one mark per t.
     const drawn = [data.value, data.invested, data.lump].filter((values) => values.length > 0);
     const length = drawn.length > 0 ? Math.min(data.t.length, ...drawn.map((values) => values.length)) : 0;
@@ -81,7 +81,7 @@ export function dcaLayout(data: SceneData, raw: Viewport): Gauge {
     const frame = dcaFrame(data);
     const { mini } = view;
     const size = labelSize(view);
-    if (!frame || data.id !== 'dca') {
+    if (!frame || (data.id !== 'dca' && data.id !== 'stack')) {
         return gauge(view, {
             marks: SERIES.map((key) => polyline(key, [], LINE_CLASS[key])),
             rebuild: 'dca:empty',

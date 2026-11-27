@@ -41,9 +41,11 @@ const MOUNTS: Record<ToolId, () => Promise<Mount>> = {
     left: () => import('./tools/left/index.ts').then((module) => module.mountLeft),
     halving: () => import('./tools/halving/index.ts').then((module) => module.mountHalving),
     tx: () => import('./tools/tx/index.ts').then((module) => module.mountTx),
+    fees: () => import('./tools/fees/index.ts').then((module) => module.mountFees),
     power: () => import('./tools/power/index.ts').then((module) => module.mountPower),
     convert: () => import('./tools/convert/index.ts').then((module) => module.mountConvert),
     dca: () => import('./tools/dca/index.ts').then((module) => module.mountDca),
+    stack: () => import('./tools/stack/index.ts').then((module) => module.mountStack),
     address: () => import('./tools/address/index.ts').then((module) => module.mountAddress),
 };
 
@@ -82,7 +84,7 @@ function show({ route, initial, notFound }: RouteChange, view: number): void {
     status.setRoute(route);
     bindFields(main);
 
-    if (route === 'home') cleanups.push(mountHome(main));
+    if (route === 'home') cleanups.push(mountHome(main, SITE));
     if (route === 'left') cleanups.push(mountCounter(main, announce));
     if (route !== 'home') {
         // A load cut short (the page left, or the network gone) leaves the prerendered page as it is.

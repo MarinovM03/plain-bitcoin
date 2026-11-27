@@ -1,6 +1,17 @@
 import type { DcaMarks } from '../gauges/types.ts';
 
-export type PostcardTool = 'home' | 'miner' | 'left' | 'halving' | 'tx' | 'power' | 'convert' | 'dca' | 'address';
+export type PostcardTool =
+    | 'home'
+    | 'miner'
+    | 'left'
+    | 'halving'
+    | 'tx'
+    | 'fees'
+    | 'power'
+    | 'convert'
+    | 'dca'
+    | 'stack'
+    | 'address';
 
 export type PostcardFormat = 'wide' | 'square';
 
@@ -14,6 +25,8 @@ export type Signature =
     | { kind: 'well'; best: number; needed: number }
     /** `slab` 0 means confirmed; null means it pays less than every projected block. */
     | { kind: 'queue'; floors: number[]; slab: number | null }
+    /** The same payment at every wait, nearest first. */
+    | { kind: 'fees'; rows: { name: string; value: string; sats: number }[] }
     | { kind: 'blank' };
 
 /** One printed answer. Every field is text the page already shows, or data it already drew. */

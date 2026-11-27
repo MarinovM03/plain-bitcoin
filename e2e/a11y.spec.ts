@@ -1,12 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 import { TOOL_IDS } from '../src/tools/index.ts';
-import { FOOTER, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
+import { FOOTER, HOME, SITE_NAME, TOOLS } from '../src/ui/copy.ts';
 import { fakeHeaderApi, fakeHeightApi } from './height-api.ts';
 import { fakePriceApi } from './price-api.ts';
 
 const ROUTES = ['', ...TOOL_IDS] as const;
-const TILE_ORDER = ['miner', 'left', 'halving', 'tx', 'convert', 'power', 'dca', 'address'] as const;
+const TILE_ORDER = ['miner', 'left', 'halving', 'tx', 'fees', 'convert', 'power', 'dca', 'address'] as const;
+const NOW_ORDER = ['block', 'price', 'fees', 'halving', 'left', 'stack'] as const;
 const TAPROOT = 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0';
 const SIZES = [
     [360, 740],
@@ -82,14 +83,23 @@ test('the keyboard reaches every tool from home in reading order and lands on it
 }) => {
     test.skip(isMobile, 'Keyboard path is checked on desktop');
     await open(page, '');
+    await expect(page.locator('.now__print')).toBeEnabled();
     const order: string[] = [];
-    const expected = [SITE_NAME, 'mempool.space', `${FOOTER.handle} ↗`, ...TILE_ORDER.map((id) => TOOLS[id].name)];
+    const expected = [
+        SITE_NAME,
+        'mempool.space',
+        `${FOOTER.handle} ↗`,
+        HOME.today,
+        ...NOW_ORDER.map((key) => HOME.now[key].label),
+        ...TILE_ORDER.map((id) => TOOLS[id].name),
+    ];
     for (let step = 0; step < expected.length; step++) {
         await page.keyboard.press('Tab');
         order.push(
             await page.evaluate(() => {
                 const active = document.activeElement;
-                const text = active?.querySelector('.tile__name')?.textContent ?? active?.textContent ?? '';
+                const text =
+                    active?.querySelector('.tile__name, .now__label')?.textContent ?? active?.textContent ?? '';
                 return text.trim().replace(/ \d\d:\d\d UTC$/, '');
             }),
         );
