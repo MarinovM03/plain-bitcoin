@@ -82,7 +82,7 @@ function material(): ShaderMaterial {
             uNew: { value: WHITE },
             uPartial: { value: 0 },
             uTop: { value: -1 },
-            uEmpty: { value: new Color('#3b4049') },
+            uEmpty: { value: new Color('#9c4a06') },
         },
     });
 }
