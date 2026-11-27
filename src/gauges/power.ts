@@ -72,7 +72,8 @@ export function powerLayout(data: SceneData, raw: Viewport): Gauge {
     }
     return gauge(view, {
         marks,
-        rebuild: `power:${log ? 'log' : 'linear'}:${fills[0] > 0 ? 'on' : 'off'}`,
+        // Both columns scale with the amount, so a new amount keeps their shape; it regrows them instead.
+        rebuild: `power:${log ? 'log' : 'linear'}:${fills[0] > 0 ? 'on' : 'off'}:${px(power.cash)}`,
         build: 'grow',
         origin: [0, base],
         className: 'gauge-power',
