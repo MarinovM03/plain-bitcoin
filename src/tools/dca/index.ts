@@ -50,6 +50,8 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     const source = find(root, '#tool-source');
     const panel = find(root, '#dca-detail');
     const notes = find(root, '#dca-notes');
+    const lumpToggle = find<HTMLInputElement>(root, '#dca-compare');
+    const lumpKey = find(root, '.picture__key-item--lump');
 
     const picture = mountPicture(root);
     const site = siteAddress(siteUrl);
@@ -68,10 +70,10 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
     });
 
     const currency = (): Fiat =>
-        form.querySelector<HTMLInputElement>('input[name="dca-currency"]:checked')?.value === 'GBP' ? 'GBP' : 'USD';
+        root.querySelector<HTMLInputElement>('input[name="dca-currency"]:checked')?.value === 'GBP' ? 'GBP' : 'USD';
 
     const frequency = (): Frequency => {
-        const value = root.querySelector<HTMLInputElement>('input[name="dca-often"]:checked')?.value;
+        const value = root.querySelector<HTMLSelectElement>('#dca-often')?.value;
         return FREQUENCIES.find((option) => option === value) ?? 'weekly';
     };
 
@@ -173,7 +175,10 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             showMessage(DCA.tooBig);
             return;
         }
-        const marks = dcaMarks(outcome.result);
+        const lumpOn = lumpToggle.checked;
+        lumpKey.hidden = !lumpOn;
+        const full = dcaMarks(outcome.result);
+        const marks = lumpOn ? full : { ...full, lump: [] };
         text = dcaText(outcome.result, fiat, marks);
         label.textContent = `${TOOL_PAGE.resultLabel} · ${text.asOf}`;
         figure.textContent = text.headline;
@@ -220,11 +225,12 @@ export function mountDca(root: HTMLElement, siteUrl: string): () => void {
             });
     }
 
-    // How often, the start presets and the fee sit in a second form below the answer; both feed the same answer.
+    // The start presets and the fee sit in a second form below the answer; both forms feed the same answer.
     for (const inputs of [form, find<HTMLFormElement>(root, '.tool__more')]) {
         inputs.addEventListener('input', update);
         inputs.addEventListener('change', update);
     }
+    lumpToggle.addEventListener('change', update);
     for (const button of presetButtons) {
         button.addEventListener('click', () => {
             const series = loaded.get(currency());

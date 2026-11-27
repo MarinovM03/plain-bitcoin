@@ -4,7 +4,7 @@ Plain Bitcoin is a set of small Bitcoin machines that run on the real chain, rig
 
 ## Bitcoin right now
 
-The home page opens with five live numbers, each a link into the machine it comes from: the newest block and how long ago it was found, the price, what a usual payment costs to send in the next block, the blocks to the next halving and the bitcoin still to be mined. A sixth cell is your own stack, if you chose to keep it on this device, with how far it moved since your last visit. Share today's card prints the strip as one postcard, from live readings only. Below the strip every machine has a tile.
+The home page opens with five live numbers, each a link into the machine it comes from: the newest block and how long ago it was found, the price, what a usual payment costs to send in the next block, the blocks to the next halving and the bitcoin still to be mined. A sixth cell is your own stack, if you chose to keep it on this device, with how far it moved since your last visit. Share today's card prints the strip as one postcard, from live readings only. Below the strip every machine has a tile, in two groups: Right now (what the chain is doing) and Your bitcoin. The Machines button in the top bar opens the same two groups from any page.
 
 ## The machines
 
@@ -17,11 +17,11 @@ The home page opens with five live numbers, each a link into the machine it come
 | Send now?            | What a payment costs to send right now, for every wait, in sats and dollars | `/fees`    |
 | Inflation melt       | What old dollars or pounds buy today, next to the same money in bitcoin     | `/power`   |
 | Sats converter       | Sats, bitcoin, dollars, euros and pounds, both ways                         | `/convert` |
-| Stack weekly         | What buying a little every week since a date would be worth today           | `/dca`     |
+| Steady stacking      | What buying a little every week or month since a date would be worth today  | `/dca`     |
 | My stack             | What the bitcoin you hold is worth now, and since your last visit           | `/stack`   |
 | Address check        | What kind of address it is, whether it is typed right, and its balance      | `/address` |
 
-The machines you play with are drawn in 3D from real data: the miner's well fills with your own hashes, the 21M block is lit up to the coins issued so far, the halving rings count down, the waiting line shows the next blocks and the ones just mined, and the converter rolls its drums as you type. The machines you read have a large flat chart instead: what each wait costs, cash next to bitcoin, the plan's worth day by day, the address in cells. Every page has its plain name, the inputs, a big answer that updates as you type, and its source and as-of time. Old `#/` links still open their page.
+The machines you play with are drawn in 3D from real data: the miner's well fills with your own hashes, the 21M block is lit up to the coins issued so far, the halving rings count down, the waiting line shows the next blocks and the ones just mined, and the converter rolls its drums as you type. The machines you read have a large flat chart instead: what each wait costs, cash next to bitcoin, the plan's worth day by day, the address in cells. Every page has its plain name, the inputs, a big answer that updates as you type, a short How this works panel that also says what stays private, and its source and as-of time. Old `#/` links still open their page.
 
 One static site. No backend, no accounts, no cookies. The one thing it can keep is My stack, in this browser's local storage, and only after you tap Keep on this device. The site never asks for keys, seeds or signatures.
 
@@ -47,7 +47,7 @@ Postcards are drawn in your browser on a canvas with the site's own fonts. Nothi
 | One transaction                | Only when you tap Follow or Pick a live one                                                                                                                                                                         | mempool.space                                  |
 | One address balance            | Only when you tap Look up on the address page, after a note that names the service                                                                                                                                  | mempool.space                                  |
 
-The status line shares the height and price requests with the page; there is one of each, never two. On Inflation melt, Stack weekly and Address check it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Inflation melt and Stack weekly work from bundled files and make no requests. Nothing you type is logged or put in the URL, and nothing is stored except the amount on My stack after you tap Keep on this device: it stays in local storage in this browser, is never sent, and Forget it removes it. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
+The status line shares the height and price requests with the page; there is one of each, never two. On Inflation melt, Steady stacking and Address check it fetches nothing: it shows the last value from this visit with its time, or the estimated height and the bundled last close, labelled as such. Nothing else is sent. Inflation melt and Steady stacking work from bundled files and make no requests. Nothing you type is logged or put in the URL, and nothing is stored except the amount on My stack after you tap Keep on this device: it stays in local storage in this browser, is never sent, and Forget it removes it. No analytics, trackers, third-party scripts, fonts or CDNs. The Content Security Policy allows connections to exactly those three origins.
 
 If a seed phrase, private key (WIF), extended private key or a descriptor holding one is pasted into the address field, the page clears the field at once and says why. It looks through numbering, labels, punctuation, other wordlists and invisible characters, and nothing about it is sent or kept. Extended public keys are refused too, because they reveal a whole wallet.
 
@@ -129,7 +129,7 @@ To check a build locally first: `VITE_SITE_URL=https://plainbitcoin.org npm run 
 
 Run these on real phones before each launch. The automated tests cover the same ground in emulators, but not the share sheet, real keypads or Safari's own behaviour.
 
-- **Portrait**: on every page the name, the first input and the answer are on the first screen at 360 px wide, with no sideways scroll; the chart on Stack weekly is fully visible.
+- **Portrait**: on every page the name, the first input and the answer are on the first screen at 360 px wide, with no sideways scroll; the chart on Steady stacking is fully visible.
 - **Keyboard up**: typing in a field keeps the answer visible above the keyboard.
 - **Landscape**: calculator on the left, picture on the right, nothing pinned.
 - **One-handed reach**: amount fields, presets, Share postcard, Paste and Look up are reachable with a thumb.
@@ -146,7 +146,6 @@ Run these on real phones before each launch. The automated tests cover the same 
 
 ```
 src/app      path router, with old #/ links redirected
-src/chain    a block hash as bits, for the barcode under the top bar
 src/hero     one canvas, one renderer, one scene per machine (the only code that may use WebGL or three.js)
 src/gauges   each tool's flat SVG picture, drawn from the same numbers as its answer
 src/postcard postcard words, layout, canvas renderer, share tray and share bar

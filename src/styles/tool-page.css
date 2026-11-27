@@ -114,6 +114,10 @@
     gap: 0.4375rem;
 }
 
+.picture__key-item[hidden] {
+    display: none;
+}
+
 .picture__key-item::before {
     content: "";
     width: 1.125rem;
@@ -260,4 +264,22 @@
     .picture__caption {
         font-size: var(--step-small);
     }
+}
+
+.key-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--tap);
+    color: var(--ink-dim);
+    font-size: var(--step-tiny);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.key-toggle__input {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    accent-color: var(--btc);
 }
