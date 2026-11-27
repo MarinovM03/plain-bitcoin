@@ -51,8 +51,6 @@ export interface DcaResult {
     fall: { peak: DayValue; trough: DayValue } | null;
     lumpSum: { sats: number; price: number; valueNow: number };
     points: DcaPoint[];
-    /** Every buy in order: its day and the sats it brought in after fees. */
-    bought: { day: string; sats: number }[];
 }
 
 export type DcaOutcome =
@@ -111,7 +109,6 @@ export function dca(input: DcaInput, data: DailyCloses): DcaOutcome {
     const keep = 1 - input.feePercent / 100;
     const schedule = buyDays(input.frequency, first, dataStart + lastIndex);
     const points: DcaPoint[] = [];
-    const bought: { day: string; sats: number }[] = [];
     let sats = 0;
     let buys = 0;
     let next = 0;
@@ -122,9 +119,7 @@ export function dca(input: DcaInput, data: DailyCloses): DcaOutcome {
     for (let day = first; day <= dataStart + lastIndex; day += 1) {
         const price = close(day);
         if (schedule[next] === day) {
-            const got = satsFor(input.amount * keep, price);
-            sats += got;
-            bought.push({ day: dayString(day), sats: got });
+            sats += satsFor(input.amount * keep, price);
             buys += 1;
             next += 1;
         }
@@ -168,7 +163,6 @@ export function dca(input: DcaInput, data: DailyCloses): DcaOutcome {
             fall,
             lumpSum: { sats: lumpSats, price: startPrice, valueNow: (lumpSats * priceNow) / SATS_PER_BTC },
             points,
-            bought,
         },
     };
 }

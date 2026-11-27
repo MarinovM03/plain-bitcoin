@@ -77,7 +77,7 @@ export function addressLayout(data: SceneData, raw: Viewport): Gauge {
         if (cell > best.cell) best = { perRow, cell };
     }
     const { perRow } = best;
-    const cell = Math.min(best.cell, 34);
+    const cell = Math.min(best.cell, 56);
     const rows = Math.ceil(count / perRow);
     const height = cell * CELL_RATIO;
     const gridW = (perRow + (Math.ceil(perRow / 4) - 1) * 0.5) * cell;

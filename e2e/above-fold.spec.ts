@@ -36,7 +36,7 @@ async function ready(page: Page, id: ToolId): Promise<void> {
     if (id === 'address') await page.locator('#address-input').fill('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4');
     const answer = id === 'left' ? '#left-figure' : '#tool-result-figure';
     await expect(page.locator(answer)).toHaveText(/\d|[A-Z][a-z]/);
-    if (id === 'power' || id === 'dca' || id === 'address')
+    if (id === 'power' || id === 'dca' || id === 'address' || id === 'fees' || id === 'stack')
         await expect(page.locator('#picture-plot > svg.gauge-svg')).toHaveCount(1);
 }
 
@@ -101,7 +101,7 @@ test('on every viewport the plain name, the first input and the answer share the
 test('typing on a phone keeps the answer on screen', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'Checked with a touch screen');
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const id of ['power', 'convert', 'dca', 'address'] as const) {
+    for (const id of ['power', 'convert', 'dca', 'stack', 'address'] as const) {
         await page.goto(`/${id}`);
         await ready(page, id);
         await page

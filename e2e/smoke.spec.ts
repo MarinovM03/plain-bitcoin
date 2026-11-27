@@ -46,7 +46,7 @@ test('home shows the shell, the headline and every tool as a plain row, in order
     await page.locator('[data-machine="miner"]').scrollIntoViewIfNeeded();
     await expect(page.locator('[data-fact="miner"]')).toHaveAttribute('data-roll', /^\d[\d,]*$/);
     await expect(page.locator('[data-fact="address"]')).toHaveText(HOME.facts.address.figure);
-    await expect(page.locator('.tile__unit')).toHaveCount(TOOL_IDS.length);
+    await expect(page.locator('.tile__unit')).toHaveCount(TOOL_IDS.length - 1);
     await expect(page.locator('.tile__name').first()).toHaveText(TOOLS.miner.name);
     await expect(page.getByText(FOOTER.privacy)).toBeVisible();
 
@@ -79,7 +79,9 @@ for (const id of TOOL_IDS) {
             if (id !== 'address' && id !== 'miner' && id !== 'tx') await expect(button).toBeEnabled();
             else await expect(button).toBeDisabled();
         }
-        await expect(page.locator('#picture-plot')).toHaveCount(['power', 'dca', 'address'].includes(id) ? 1 : 0);
+        await expect(page.locator('#picture-plot')).toHaveCount(
+            ['power', 'dca', 'address', 'fees', 'stack'].includes(id) ? 1 : 0,
+        );
         const answer = id === 'miner' || id === 'halving' || id === 'tx' ? '.miner-answer__figure' : '.result__figure';
         await expect(page.locator(answer)).toBeVisible();
 

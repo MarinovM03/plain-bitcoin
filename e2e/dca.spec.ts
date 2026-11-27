@@ -17,12 +17,12 @@ async function openDca(page: Page) {
     return { problems, external };
 }
 
-const money = /£[\d,]+/.source;
+const money = /\$[\d,]+/.source;
 
-test('answers £50 a week since January 2020 from bundled closes only, with the lump sum', async ({ page }) => {
+test('answers $50 a week since January 2020 from bundled closes only, with the lump sum', async ({ page }) => {
     const { problems, external } = await openDca(page);
     await expect(page.locator('#tool-result')).toHaveText(
-        new RegExp(`^£50 a week since Jan 2020 is worth ${money} today \\(one lump sum: ${money}\\)\\.$`),
+        new RegExp(`^\\$50 a week since Jan 2020 is worth ${money} today \\(one lump sum: ${money}\\)\\.$`),
     );
     await expect(page.locator('#tool-result-detail')).toHaveText(
         new RegExp(`^${money} put in over [\\d,]+ buys, buying [\\d.]+ BTC\\.$`),
@@ -39,7 +39,7 @@ test('answers £50 a week since January 2020 from bundled closes only, with the 
         (await page.locator('#tool-result-figure').textContent()) ?? '',
     );
     await expect(page.locator('#tool-source')).toContainText('Coin Metrics reference price, daily closes to');
-    await expect(page.locator('#tool-result-status')).toHaveText(/^£50 a week since Jan 2020/);
+    await expect(page.locator('#tool-result-status')).toHaveText(/^\$50 a week since Jan 2020/);
     expect(external).toEqual([]);
     expect(realProblems(problems)).toEqual([]);
 });
@@ -51,10 +51,10 @@ test('presets, cadence and currency recompute, and the start month is kept', asy
     const month = await page.locator('#dca-start-month').inputValue();
     const year = await page.locator('#dca-start-year').inputValue();
     await page.locator('label', { hasText: DCA.frequencies.monthly }).click();
-    await expect(page.locator('#tool-result')).toHaveText(/^£50 a month since /);
-    await expect(page.locator('#dca-buys')).toHaveText(/^6[01] buys, /);
-    await page.locator('label', { hasText: '$ USD' }).click();
     await expect(page.locator('#tool-result')).toHaveText(/^\$50 a month since /);
+    await expect(page.locator('#dca-buys')).toHaveText(/^6[01] buys, /);
+    await page.locator('label', { hasText: '£ GBP' }).click();
+    await expect(page.locator('#tool-result')).toHaveText(/^£50 a month since /);
     await expect(page.locator('#dca-start-month')).toHaveValue(month);
     await expect(page.locator('#dca-start-year')).toHaveValue(year);
 });
@@ -63,7 +63,7 @@ test('a fee comes off every buy, and an impossible fee says so', async ({ page }
     await openDca(page);
     const before = await page.locator('#dca-bought').textContent();
     await page.getByLabel(DCA.fee).fill('1.5');
-    await expect(page.locator('#dca-notes')).toContainText(/^Includes a 1\.5% fee on each buy, £[\d,]+ in total\./);
+    await expect(page.locator('#dca-notes')).toContainText(/^Includes a 1\.5% fee on each buy, \$[\d,]+ in total\./);
     expect(await page.locator('#dca-bought').textContent()).not.toBe(before);
     await page.getByLabel(DCA.fee).fill('100');
     await expect(page.locator('#tool-result')).toHaveText(DCA.badFee);
@@ -80,7 +80,7 @@ test('an amount that would buy more bitcoin than exists says so, and clears the 
     await expect(page.locator('#tool-result-figure')).toHaveText('—');
     await expect(page.locator('#picture-plot .dca-chart')).toHaveClass(/dca-chart--empty/);
     await page.locator('#dca-amount').fill('50');
-    await expect(page.locator('#tool-result')).toHaveText(/^£50 a week since Jan 2020/);
+    await expect(page.locator('#tool-result')).toHaveText(/^\$50 a week since Jan 2020/);
     expect(realProblems(problems)).toEqual([]);
 });
 
@@ -106,6 +106,6 @@ test('recomputes within a frame', async ({ page }) => {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         return performance.now() - start;
     });
-    await expect(page.locator('#tool-result')).toHaveText(/^£75 a week since /);
+    await expect(page.locator('#tool-result')).toHaveText(/^\$75 a week since /);
     expect(ms).toBeLessThan(16);
 });

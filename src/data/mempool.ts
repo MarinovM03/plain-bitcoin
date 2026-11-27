@@ -1,3 +1,4 @@
+import { type FeeRates, parseFees } from '../model/fees.ts';
 import { isTxid, parseLine, parseRecent, parseTx, type TxFacts, type WaitingLine } from '../model/tx.ts';
 import type { Tip } from './height.ts';
 
@@ -32,6 +33,13 @@ export async function fetchLine(fetchImpl: Fetch): Promise<WaitingLine> {
     const line = parseLine(await get(fetchImpl, '/api/v1/fees/mempool-blocks'));
     if (line.floors.length === 0) throw new Error('Empty waiting line');
     return line;
+}
+
+/** The fee rates mempool.space recommends right now for the next block, about half an hour, an hour and no rush. */
+export async function fetchFees(fetchImpl: Fetch): Promise<FeeRates> {
+    const rates = parseFees(await get(fetchImpl, '/api/v1/fees/recommended'));
+    if (!rates) throw new Error('Malformed fee rates');
+    return rates;
 }
 
 /** A transaction that has just entered the waiting line, for someone with none of their own to follow. */

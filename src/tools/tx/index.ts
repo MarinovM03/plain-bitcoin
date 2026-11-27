@@ -7,6 +7,7 @@ import { siteAddress } from '../../postcard/site.ts';
 import { txPostcard } from '../../postcard/words.ts';
 import { TX } from '../../ui/copy.ts';
 import { rollText } from '../../ui/roll.ts';
+import { TX_ZOOM_STEPS } from '../../ui/tx-view.ts';
 import { find } from '../../util/dom.ts';
 import { formatUtcClock, formatWhole } from '../../util/format.ts';
 
@@ -40,6 +41,8 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
     const list = find(root, '#tx-line');
     const source = find(root, '#tool-source');
     const status = find(root, '#tx-status');
+    const zoom = find<HTMLInputElement>(root, '#tx-zoom');
+    const zoomLine = find(root, '#tx-zoom-line');
 
     let line: WaitingLine | null = null;
     let lineAt = 0;
@@ -47,6 +50,7 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
     let txAt = 0;
     let asking = 0;
     let disposed = false;
+    let held = 0;
 
     const view = attach(
         find(root, '[data-machine="queue"]'),
@@ -94,8 +98,20 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
             confirmedDepth: tx?.blockHeight == null ? null : heights.tip.height - tx.blockHeight,
             mined: minedFills(heights.tip),
             height: heights.tip.height,
+            zoom: held,
         });
     }
+
+    function sayZoom(): void {
+        zoomLine.textContent = held === 0 ? TX.zoomAll : TX.zoomClose(tx !== null);
+    }
+
+    zoom.addEventListener('input', () => {
+        held = Number(zoom.value) / TX_ZOOM_STEPS;
+        zoom.style.setProperty('--at', String(held));
+        sayZoom();
+        push();
+    });
 
     function renderLine(): void {
         if (!line) return;
@@ -156,6 +172,7 @@ export function mountTx(root: HTMLElement, siteUrl: string): () => void {
             if (disposed || ask !== asking) return;
             tx = next;
             txAt = Date.now();
+            sayZoom();
             renderTx();
             renderLine();
             push();

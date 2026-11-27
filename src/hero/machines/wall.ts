@@ -55,16 +55,18 @@ void main() {
     vec2 edge = fwidth(face);
     float pixel = max(edge.x, edge.y);
     vec2 border = smoothstep(vec2(0.0), edge * 1.2, inside) * smoothstep(vec2(0.0), edge * 1.2, 1.0 - inside);
-    float gap = mix(border.x * border.y, 1.0, smoothstep(0.12, 0.45, pixel));
-    float shade = abs(n.y) > 0.5 ? 1.0 : abs(n.x) > 0.5 ? 0.62 : 0.78;
-    vec3 color = uLit * (0.6 + 0.4 * grain(cell)) * shade;
-    // The layer being mined is part of the same block, on the same grid: coins issued so far are bright, the
-    // places still to fill are dark.
+    // Once a cell is smaller than a few pixels its lines and grain would only shimmer, so the face goes smooth.
+    float far = smoothstep(0.08, 0.3, pixel);
+    float gap = mix(border.x * border.y, 1.0, far);
+    float tone = mix(0.92 + 0.08 * grain(cell), 1.0, far);
+    float shade = abs(n.y) > 0.5 ? 1.0 : abs(n.x) > 0.5 ? 0.74 : 0.86;
+    if (abs(n.y) < 0.5) shade *= 0.88 + 0.12 * clamp(vCell.y / uCells.y, 0.0, 1.0);
+    vec3 color = uLit * tone * shade;
     if (cell.y > uTop - 0.5) {
         float index = cell.z * uCells.x + cell.x;
-        color = index < uPartial ? uLit * (1.15 + 0.25 * grain(cell)) * shade + uNew * 0.06 : uEmpty * shade;
+        color = index < uPartial ? uLit * tone * shade + uNew * 0.03 : uEmpty * shade;
     }
-    gl_FragColor = vec4(color * (0.35 + 0.65 * gap), 1.0);
+    gl_FragColor = vec4(color * (0.5 + 0.5 * gap), 1.0);
     #include <colorspace_fragment>
 }
 `;
@@ -80,7 +82,7 @@ function material(): ShaderMaterial {
             uNew: { value: WHITE },
             uPartial: { value: 0 },
             uTop: { value: -1 },
-            uEmpty: { value: new Color('#3b4049') },
+            uEmpty: { value: new Color('#9c4a06') },
         },
     });
 }

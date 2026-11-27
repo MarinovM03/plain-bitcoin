@@ -30,14 +30,101 @@
     line-height: 1.45;
 }
 
-.intro__live {
+/* Bitcoin right now: the live numbers and the visitor's own stack on one opaque strip, each a door into its machine. */
+.now {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.now__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.now .now__share {
+    display: flex;
+    max-width: none;
+}
+
+.now__heading {
+    color: var(--ink-dim);
+    font-size: var(--step-small);
+    font-weight: 600;
+}
+
+.now__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--edge);
+    border-radius: 3px;
+    background: var(--edge);
+    list-style: none;
+}
+
+.now__item {
+    display: grid;
+    align-content: start;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 0.875rem 1rem 1rem;
+    background: var(--plate);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--duration) var(--ease);
+}
+
+.now__label {
     display: inline-flex;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.5rem;
+    color: var(--ink-dim);
+    font-size: var(--step-small);
+    font-weight: 600;
+}
+
+.now__figure {
     color: var(--ink);
     font-family: var(--font-mono);
-    font-size: var(--step-small);
+    font-size: clamp(1.375rem, 1.1rem + 1vw, 1.875rem);
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.now__figure[data-now="fees"],
+.now__figure[data-now="stack"] {
+    color: var(--btc);
+}
+
+.now__unit {
+    color: var(--ink-dim);
+    font-size: var(--step-tiny);
+    line-height: 1.35;
+}
+
+@media (hover: hover) {
+    .now__item:hover {
+        background: var(--well);
+    }
+}
+
+@media (min-width: 48rem) {
+    .now__list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 64rem) {
+    .now__list {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
 }
 
 .intro__pulse {
@@ -98,6 +185,11 @@
     pointer-events: none;
 }
 
+.tile__chart {
+    position: relative;
+    margin: 0.875rem 1rem 0.5rem;
+}
+
 .tile__badge {
     position: absolute;
     top: 0.75rem;
@@ -156,7 +248,7 @@
 }
 
 /* Before the scene draws, and wherever it never will, a still grid of cells keeps the window from looking empty. */
-:root:not([data-scene="live"]) .tile__scene,
+:root:not([data-scene="live"]) .tile__scene:not(.tile__chart),
 .tile__scene[data-scene="still"] {
     background:
         radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--btc) 22%, transparent), transparent 60%),

@@ -21,14 +21,14 @@ async function openPower(page: Page) {
 
 test('answers the default question at once, from bundled data only', async ({ page }) => {
     const { requests, problems } = await openPower(page);
-    await expect(page.locator('#tool-result')).toHaveText(/^£1,000 in January 2015 is worth £[\d,]+ today\.$/);
+    await expect(page.locator('#tool-result')).toHaveText(/^\$1,000 in January 2015 is worth \$[\d,]+ today\.$/);
     await expect(page.locator('#tool-result-detail')).toHaveText(
-        /^As bitcoin, it would be £[\d,]+ today \([\d.]+ BTC\)\.$/,
+        /^As bitcoin, it would be \$[\d,]+ today \([\d.]+ BTC\)\.$/,
     );
     await expect(page.locator('#tool-result-label')).toHaveText(/close, \w+ \d{4}$/);
-    await expect(page.locator('#tool-source')).toContainText('Office for National Statistics');
+    await expect(page.locator('#tool-source')).toContainText('US Bureau of Labor Statistics');
     await expect(page.getByText(POWER.caution)).toHaveCount(1);
-    await expect(page.locator('#tool-result-status')).toHaveText(/^£1,000 in January 2015/);
+    await expect(page.locator('#tool-result-status')).toHaveText(/^\$1,000 in January 2015/);
     expect(requests).toEqual([]);
     expect(realProblems(problems)).toEqual([]);
 });
@@ -38,8 +38,8 @@ test('switching currency keeps the start month', async ({ page }) => {
     await page.locator('[data-preset="fiveYears"]').click();
     const month = await page.locator('#power-when-month').inputValue();
     const year = await page.locator('#power-when-year').inputValue();
-    await page.locator('label', { hasText: '$ USD' }).click();
-    await expect(page.locator('#tool-result')).toHaveText(/^\$1,000 in /);
+    await page.locator('label', { hasText: '£ GBP' }).click();
+    await expect(page.locator('#tool-result')).toHaveText(/^£1,000 in /);
     await expect(page.locator('#power-when-month')).toHaveValue(month);
     await expect(page.locator('#power-when-year')).toHaveValue(year);
     await expect(page.locator('[data-preset="fiveYears"]')).toHaveAttribute('aria-pressed', 'true');
@@ -51,7 +51,7 @@ test('the worst month to start shows bitcoin worth less than the cash put in', a
     await expect(page.locator('[data-preset="worst"]')).toHaveAttribute('aria-pressed', 'true');
     const value = await page.locator('#power-btc-value').textContent();
     expect(Number(value?.replace(/[^\d.]/g, ''))).toBeLessThan(1000);
-    await expect(page.locator('#power-path')).toContainText('below £1,000');
+    await expect(page.locator('#power-path')).toContainText('below $1,000');
 });
 
 test('an empty amount or a CPI gap clears the answer and disables sharing', async ({ page }) => {
@@ -100,7 +100,7 @@ test('Share in the print tray hands the PNG and the compose text to Web Share wh
     expect(await shared.jsonValue()).toEqual({
         name: expect.stringMatching(postcardName('power')),
         type: 'image/png',
-        text: expect.stringMatching(/^£1,000 in January 2015 is worth .+ plainbitcoin\.org\/power via @PlainBTC$/),
+        text: expect.stringMatching(/^\$1,000 in January 2015 is worth .+ plainbitcoin\.org\/power via @PlainBTC$/),
     });
 });
 

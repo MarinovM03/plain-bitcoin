@@ -62,8 +62,101 @@
     margin: 0.75rem 0.75rem 0.5rem;
 }
 
+/* A titled picture is the chart the postcard carries: a title, a quiet tag that says so, and the key in words. */
+.picture--titled {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    border-color: color-mix(in srgb, var(--btc) 30%, var(--edge));
+}
+
+.picture__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem 0.875rem 0;
+}
+
+.picture__title {
+    font-family: var(--font-display);
+    font-size: var(--step-lead);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.picture__tag {
+    color: var(--btc);
+    font-size: var(--step-tiny);
+    font-weight: 600;
+}
+
+.picture--titled .picture__plot {
+    margin-top: 0.5rem;
+}
+
+.picture__key {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--ink);
+    font-size: var(--step-tiny);
+    font-weight: 600;
+}
+
+.picture__key-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+}
+
+.picture__key-item::before {
+    content: "";
+    width: 1.125rem;
+    border-top: 2.5px solid var(--btc);
+}
+
+.picture__key-item--invested::before {
+    border-top: 1.5px solid var(--ink);
+}
+
+.picture__key-item--lump::before {
+    border-top: 2px dashed var(--ink-cool);
+}
+
+/* On a phone the chart itself has to stay on the first screen, so its key moves under it. */
+@media (max-width: 40rem) {
+    .picture--titled .picture__plot {
+        order: 1;
+        margin-top: 0.75rem;
+    }
+
+    .picture--titled .picture__head {
+        order: 2;
+        padding-top: 0;
+        padding-bottom: 0.5rem;
+    }
+
+    .picture--titled .picture__foot {
+        order: 3;
+    }
+
+    .picture__title {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+
 .tool--dca .picture__plot {
-    min-height: 12.5rem;
+    min-height: 11rem;
 }
 
 .tool--address .picture__plot {

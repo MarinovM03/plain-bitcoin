@@ -15,11 +15,24 @@ export const DCA_ROWS = ['invested', 'bought', 'worth', 'average', 'buys', 'fall
 
 const SENTENCE_ROWS: ReadonlySet<string> = new Set(['buys', 'fall', 'lump']);
 
-export function renderDcaInputs(): SafeHtml {
+/** The amount, the money and when the buying started: the start decides the answer more than anything else. */
+export function renderDcaInputs(min: Month, max: Month): SafeHtml {
     return html`<div class="field-row">
     ${amountField({ id: 'dca-amount', label: FIELDS.eachBuy, decimals: 2, placeholder: FIELDS.examples.dca, value: '50' })}
-    ${segmentedControl({ name: 'dca-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'GBP' })}
+    ${segmentedControl({ name: 'dca-currency', legend: FIELDS.currency, choices: CURRENCY_CHOICES, selected: 'USD' })}
 </div>
+${monthField({ id: 'dca-start', legend: FIELDS.starting, min, max, value: DCA_DEFAULT_START })}`;
+}
+
+export function renderDcaMore(): SafeHtml {
+    const presets = DCA_PRESETS.map(
+        (preset) =>
+            html`<button class="chip" type="button" data-preset="${preset}" aria-pressed="false">${DCA.presets[preset]}</button>`,
+    );
+    return html`<fieldset class="presets">
+    <legend class="visually-hidden">${DCA.presetsLabel}</legend>
+    <div class="presets__list">${presets}</div>
+</fieldset>
 ${segmentedControl({
     name: 'dca-often',
     legend: FIELDS.howOften,
@@ -28,20 +41,16 @@ ${segmentedControl({
         value,
         label: DCA.frequencies[value],
     })),
-})}`;
+})}
+${amountField({ id: 'dca-fee', label: DCA.fee, decimals: 2, placeholder: '0' })}`;
 }
 
-export function renderDcaMore(min: Month, max: Month): SafeHtml {
-    const presets = DCA_PRESETS.map(
-        (preset) =>
-            html`<button class="chip" type="button" data-preset="${preset}" aria-pressed="false">${DCA.presets[preset]}</button>`,
+/** The chart's key, in words a first-time reader can follow, with the same strokes the lines use. */
+export function renderDcaKey(): SafeHtml {
+    const items = (['value', 'invested', 'lump'] as const).map(
+        (key) => html`<li class="picture__key-item picture__key-item--${key}">${DCA.key[key]}</li>`,
     );
-    return html`${monthField({ id: 'dca-start', legend: FIELDS.starting, min, max, value: DCA_DEFAULT_START })}
-<fieldset class="presets">
-    <legend class="visually-hidden">${DCA.presetsLabel}</legend>
-    <div class="presets__list">${presets}</div>
-</fieldset>
-${amountField({ id: 'dca-fee', label: DCA.fee, decimals: 2, placeholder: '0' })}`;
+    return html`<ul class="picture__key">${items}</ul>`;
 }
 
 export function renderDcaDetail(): SafeHtml {

@@ -7,6 +7,8 @@ import { renderMiner } from './miner-view.ts';
 import { renderHeader } from './shell.ts';
 import { renderToolPage } from './tool-page.ts';
 
+const TILE_IDS = TOOL_IDS.filter((id) => id !== 'stack');
+
 const BARE_LABELS = ['Left', 'Power', 'Convert', 'DCA', 'Address'];
 
 describe('html', () => {
@@ -45,12 +47,18 @@ describe('renderHome', () => {
         const markup = renderHome().value;
         const hrefs = [...markup.matchAll(/class="tile__link" href="([^"]+)"/g)].map((match) => match[1]);
         expect(hrefs[0]).toBe('/miner');
-        expect([...hrefs].sort()).toEqual(TOOL_IDS.map((id) => `/${id}`).sort());
-        for (const id of TOOL_IDS) {
+        expect([...hrefs].sort()).toEqual(TILE_IDS.map((id) => `/${id}`).sort());
+        for (const id of TILE_IDS) {
             expect(markup).toContain(escapeHtml(TOOLS[id].name));
             expect(markup).toContain(escapeHtml(TOOLS[id].description));
             expect(markup).toContain(`data-fact="${id}"`);
         }
+    });
+
+    it('opens My stack from the strip, where the saved stack shows, instead of a tile', () => {
+        const markup = renderHome().value;
+        expect(markup).toMatch(/<a class="now__item" href="\/stack">/);
+        expect(markup).not.toContain('data-fact="stack"');
     });
 
     it('opens with one headline and keeps every scene hidden from assistive tech and out of the tab order', () => {
@@ -59,7 +67,7 @@ describe('renderHome', () => {
         expect(markup.replace(/<[^>]+>/g, '')).toContain(HOME.headline);
         expect(HOME.headline.endsWith(HOME.headlineAccent)).toBe(true);
         const scenes = [...markup.matchAll(/<div class="tile__scene[^"]*"[^>]*>/g)].map(([tag]) => tag);
-        expect(scenes).toHaveLength(TOOL_IDS.length);
+        expect(scenes).toHaveLength(TILE_IDS.length);
         for (const tag of scenes) {
             expect(tag).toContain('aria-hidden="true"');
             expect(tag).not.toContain('tabindex');

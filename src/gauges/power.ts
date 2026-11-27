@@ -29,8 +29,8 @@ export function powerLayout(data: SceneData, raw: Viewport): Gauge {
     const top = mini ? h * 0.08 : size * 3.4;
     const base = mini ? h * 0.92 : h - size * 2.4;
     const span = Math.max(1, base - top);
-    const column = Math.min(mini ? w * 0.3 : 128, Math.max(28, w * 0.24));
-    const gap = Math.min(mini ? w * 0.14 : 96, Math.max(20, w * 0.12));
+    const column = Math.min(mini ? w * 0.3 : 200, Math.max(28, w * 0.24));
+    const gap = Math.min(mini ? w * 0.14 : 128, Math.max(20, w * 0.12));
     const left = (w - (column * 2 + gap)) / 2;
     const xs = [left, left + column + gap];
     const inks = ['g-fill--cool', 'g-fill--btc'];

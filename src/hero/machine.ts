@@ -1,4 +1,4 @@
-import type { PerspectiveCamera, Scene } from 'three';
+import { type PerspectiveCamera, type Scene, Vector3 } from 'three';
 
 export interface Frame {
     seconds: number;
@@ -43,6 +43,37 @@ export function fitDistance(radius: number, fovDegrees: number, aspect: number):
 export function fitBox(halfWidth: number, halfHeight: number, fovDegrees: number, aspect: number): number {
     const half = Math.tan((fovDegrees * Math.PI) / 360);
     return Math.max(halfHeight / half, halfWidth / (half * aspect));
+}
+
+const projected = new Vector3();
+
+/**
+ * How far back along `direction` from `aim` the camera must stand for every point to be in view, leaving `margin`
+ * of the half view free at the edges. Perspective is included, so the corners nearest the camera are never cut.
+ * The camera's aspect and projection must already be set.
+ */
+export function fitPoints(
+    camera: PerspectiveCamera,
+    points: readonly Vector3[],
+    aim: Vector3,
+    direction: Vector3,
+    margin = 0.92,
+): number {
+    let near = 0.1;
+    let far = 100;
+    for (let step = 0; step < 18; step += 1) {
+        const middle = (near + far) / 2;
+        camera.position.copy(aim).addScaledVector(direction, middle);
+        camera.lookAt(aim);
+        camera.updateMatrixWorld();
+        const inside = points.every((point) => {
+            projected.copy(point).project(camera);
+            return projected.z < 1 && Math.abs(projected.x) <= margin && Math.abs(projected.y) <= margin;
+        });
+        if (inside) far = middle;
+        else near = middle;
+    }
+    return far;
 }
 
 /** Moves `value` toward `target` at a rate that does not depend on the frame rate. */

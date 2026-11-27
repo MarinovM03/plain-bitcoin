@@ -10,9 +10,6 @@ const FACTORIES: Record<MachineId, () => Promise<MachineFactory<never>>> = {
     wall: () => import('./machines/wall.ts').then((module) => module.createWall),
     halving: () => import('./machines/halving.ts').then((module) => module.createHalving),
     queue: () => import('./machines/queue.ts').then((module) => module.createQueue),
-    melt: () => import('./machines/melt.ts').then((module) => module.createMelt),
-    stack: () => import('./machines/stack.ts').then((module) => module.createStack),
-    address: () => import('./machines/address.ts').then((module) => module.createAddress),
 };
 
 /** Lower pixel ratios, tried in turn while frames stay slow. */

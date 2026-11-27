@@ -48,30 +48,8 @@ export interface QueueInput {
     readonly mined: readonly number[];
     /** The newest block's height: when it grows the line slides across. */
     readonly height: number;
-}
-
-export interface MeltInput {
-    /** Share of its buying power the money still has, 0 to 1. */
-    readonly kept: number;
-    /** The sign printed on the notes. */
-    readonly symbol: '$' | '£';
-}
-
-/** One column per year of a buying plan: each coin is one buy, as a share of the biggest single buy. */
-export interface StackInput {
-    readonly columns: readonly { readonly year: string; readonly coins: readonly number[] }[];
-}
-
-export type AddressRole = 'hrp' | 'separator' | 'version' | 'program' | 'checksum' | 'prefix' | 'body' | 'unknown';
-
-/** An address's characters, the part each one is, and how the check came out. */
-export interface AddressInput {
-    readonly chars: string;
-    readonly roles: readonly AddressRole[];
-    readonly state: 'empty' | 'valid' | 'invalid';
-    /** The place of a likely typo, when the checker can tell. */
-    readonly suspect: number | null;
-    readonly checksumBad: boolean;
+    /** 0 shows the whole line; 1 comes close to the followed transaction, or to the next block. */
+    readonly zoom?: number;
 }
 
 export interface MachineInputs {
@@ -80,9 +58,6 @@ export interface MachineInputs {
     wall: WallInput;
     halving: HalvingInput;
     queue: QueueInput;
-    melt: MeltInput;
-    stack: StackInput;
-    address: AddressInput;
 }
 
 export type MachineId = keyof MachineInputs;

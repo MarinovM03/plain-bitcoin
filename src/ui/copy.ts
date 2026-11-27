@@ -45,10 +45,15 @@ export const OG_PAGES: Record<ToolId, { number: string; line: string; alt: strin
         line: 'Follow a transaction as it waits in line for a block.',
         alt: 'Plain Bitcoin postcard: Follow a transaction. Bars for the next blocks by lowest fee.',
     },
+    fees: {
+        number: 'Send now?',
+        line: 'What it costs to send bitcoin right now, in sats and dollars, for every wait.',
+        alt: 'Plain Bitcoin postcard: Send now? The cost of one payment for each wait.',
+    },
     power: {
         number: 'Inflation melt',
-        line: 'Watch old money burn away to inflation, and see what bitcoin did instead.',
-        alt: 'Plain Bitcoin postcard: Inflation melt. Cash in steel beside bitcoin in orange.',
+        line: 'Watch old cash shrink to inflation, and see what bitcoin did instead.',
+        alt: 'Plain Bitcoin postcard: Inflation melt. Cash in blue beside bitcoin in orange.',
     },
     convert: {
         number: '100,000,000 sats',
@@ -59,6 +64,11 @@ export const OG_PAGES: Record<ToolId, { number: string; line: string; alt: strin
         number: 'Stack weekly',
         line: 'What buying a little bitcoin every week since any date would be worth today.',
         alt: 'Plain Bitcoin postcard: Stack weekly. Lines for money put in and its value.',
+    },
+    stack: {
+        number: 'My stack',
+        line: 'What your bitcoin is worth now, and how far it moved since your last visit. Kept only on your device.',
+        alt: 'Plain Bitcoin postcard: My stack. What one amount of bitcoin is worth today.',
     },
     address: {
         number: 'Address check',
@@ -74,8 +84,6 @@ export const HOME = {
     promise: 'Small machines that run on the real Bitcoin chain.',
     galleryLabel: 'The machines',
     pending: '…',
-    live: (height: string, age: string) => `Block ${height}, found ${age} ago`,
-    liveUnknown: (height: string) => `Block ${height}`,
     fresh: 'New',
     hashed: 'real hashes tried on this page',
     hashedNone: 'Hashing in your browser',
@@ -83,19 +91,34 @@ export const HOME = {
         left: { unit: 'BTC still to mine' },
         halving: { unit: 'blocks to the next halving' },
         tx: { unit: 'sat/vB gets you into the next block' },
+        fees: { unit: 'to send a payment in the next block' },
         power: { amount: 100, year: 2010, unit: (amount: string, year: string) => `of ${amount} from ${year} is left` },
         convert: { unit: 'sats for one dollar' },
         dca: { amount: 50, unit: (amount: string) => `sats for ${amount} this week` },
         address: { figure: '0 bytes', unit: 'sent until you tap Look up' },
     },
     sats: (count: string) => `${count} sats`,
+    nowLabel: 'Bitcoin right now',
+    now: {
+        block: { label: 'Block', unit: (age: string) => `found ${age} ago`, unitUnknown: 'latest height' },
+        price: { label: 'Price', unit: 'for one bitcoin' },
+        fees: { label: 'Send now', unit: 'for a payment in the next block' },
+        halving: { label: 'Halving', unit: 'blocks to go' },
+        left: { label: 'Left to mine', unit: 'BTC' },
+        stack: { label: 'Your stack', unit: 'Keep yours on this device' },
+    },
+    stack: {
+        unset: 'Not set',
+        kept: (amount: string) => `${amount}, kept on this device`,
+        moved: (amount: string, move: string) => `${amount}, ${move} since your last visit`,
+    },
+    today: "Share today's card",
     factsSource: 'Height and price: mempool.space. Inflation melt: US CPI, Bureau of Labor Statistics.',
     cautionsHeading: 'Good to know',
     cautions: [
         "The price moves a lot. Past results don't tell you what happens next.",
         'Never share a seed phrase or private key. No honest tool asks for one.',
     ],
-    postcardLine: (issued: string) => `${issued} of 21,000,000 BTC issued so far.`,
 } as const;
 
 export const NAV = {
@@ -138,6 +161,11 @@ export const TOOLS: Record<ToolId, { name: string; description: string; privacy:
         privacy:
             'Reads the waiting line from mempool.space. A transaction id is only sent when you tap Follow or Pick one.',
     },
+    fees: {
+        name: 'Send now?',
+        description: 'What it costs to send bitcoin right now',
+        privacy: 'Reads fee rates and the price from mempool.space, a public API. Nothing you type is sent.',
+    },
     left: {
         name: 'Bitcoin left',
         description: 'How much is still to be mined',
@@ -158,6 +186,12 @@ export const TOOLS: Record<ToolId, { name: string; description: string; privacy:
         description: 'If you had bought a little every week',
         privacy: 'Worked out in your browser. Nothing you type is sent anywhere.',
     },
+    stack: {
+        name: 'My stack',
+        description: 'What your stack is worth, kept on this device',
+        privacy:
+            'Kept only in this browser, and only after you tap Keep. Never sent anywhere. The price comes from mempool.space.',
+    },
     address: {
         name: 'Address check',
         description: 'Is this Bitcoin address typed right?',
@@ -175,9 +209,19 @@ export const TOOL_PAGE = {
 
 export const PICTURE = {
     power: (log: boolean) =>
-        `Steel: kept as cash. Orange: put into bitcoin. Each column is filled to today's value${log ? ', on a log scale' : ''}.`,
+        `Blue: the money kept as cash. Orange: the same money put into bitcoin. Each column is its value today${log ? ', on a log scale' : ''}.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
-    dca: 'Orange: worth at each buy, ending today. White: money put in. Dashed steel: one lump sum on day one.',
+    dca: 'Each line runs from the first buy to today. The orange dot is your answer.',
+    fees: 'Each bar is the same payment at a different wait. Longer means it costs more.',
+    feesFlat: 'Each bar is the same payment at a different wait. Right now they cost the same: waiting saves nothing.',
+    feesEmpty: 'The cost of each wait draws here once the fee rates load.',
+    feesTitle: 'What each wait costs',
+    stack: 'The orange line is what these coins were worth at each daily close, ending at the price now.',
+    stackEmpty: 'The last year draws here once there is an amount.',
+    stackTitle: 'Your stack over the last year',
+    powerTitle: "Cash next to bitcoin, in today's money",
+    dcaTitle: 'What your plan is worth, day by day',
+    onCard: 'On your postcard',
     dcaEmpty: 'The chart draws once there is an answer.',
     address: 'Each cell is one character, coloured by its part once the checksum proves the type.',
     addressBad: 'Each cell is one character. The orange one cannot be part of this address.',
@@ -193,9 +237,6 @@ export const GAUGE = {
     },
     convert: {
         yours: 'Yours',
-    },
-    dca: {
-        short: { value: 'Worth', invested: 'Put in', lump: 'Lump sum' },
     },
     address: {
         stamp: (kind: string, valid: boolean) => `${kind}${valid ? ' · checksum valid' : ''}`,
@@ -252,8 +293,59 @@ function months(count: number): string {
     return `${count} ${count === 1 ? 'month' : 'months'}`;
 }
 
+export const FEES = {
+    type: 'Your wallet type',
+    types: { segwit: 'SegWit', taproot: 'Taproot', legacy: 'Legacy' },
+    inputs: 'Coins it spends',
+    outputs: 'Outputs',
+    speeds: { next: 'Next block', halfHour: 'About 30 minutes', hour: 'About an hour', noRush: 'No rush' },
+    headline: (type: string, sats: string, money: string) =>
+        `A ${type} payment costs about ${sats} sats (${money}) to make the next block.`,
+    headlineNoPrice: (type: string, sats: string) =>
+        `A ${type} payment costs about ${sats} sats to make the next block.`,
+    detail: (rate: string, vbytes: string, wait: string) =>
+        `At ${rate} sat/vB for about ${vbytes} virtual bytes. ${wait}`,
+    wait: (sats: string, money: string) => `No rush: about ${sats} sats (${money}).`,
+    waitNoPrice: (sats: string) => `No rush: about ${sats} sats.`,
+    loading: 'Reading the fee rates from mempool.space…',
+    failed: "Couldn't reach mempool.space for the fee rates. Try again in a moment.",
+    tableHeading: 'Every wait',
+    columns: { wait: 'Wait', rate: 'sat/vB', sats: 'Sats', money: 'Dollars' },
+    howHeading: 'How it is worked out',
+    formula:
+        'Fee = fee rate × size. Size ≈ fixed part + 68 vB per SegWit coin spent (57.5 Taproot, 148 legacy) + 31 vB per SegWit output (43 Taproot, 34 legacy).',
+    outputsNote: 'Two outputs is the usual payment: one to the person you pay, one back to you as change.',
+    caution: 'These are estimates. Blocks come every 10 minutes on average, sometimes much later, and fees can jump.',
+    source: (clock: string, price: string) =>
+        `Fee rates: mempool.space, read at ${clock}, every 30 seconds while this page is open. Price: ${price}.`,
+} as const;
+
+export const STACK = {
+    amount: 'What you hold',
+    unit: 'Counted in',
+    units: { btc: 'BTC', sats: 'sats' },
+    keep: 'Keep on this device',
+    forget: 'Forget it',
+    notKept: 'Nothing is kept unless you tap Keep. Then it stays in this browser and is never sent anywhere.',
+    kept: (day: string) => `Kept on this device since ${day}. Changes save as you type.`,
+    keepFailed: "This browser won't let the site keep it. Private windows often block it.",
+    forgotten: 'Forgotten. Nothing is kept on this device now.',
+    empty: 'Type how much bitcoin you hold.',
+    headline: (amount: string, worth: string) => `${amount} is worth ${worth} now.`,
+    up: (money: string, percent: string) => `up ${money} (${percent})`,
+    down: (money: string, percent: string) => `down ${money} (${percent})`,
+    flat: 'no change',
+    sinceVisit: (move: string, day: string) => `That is ${move} since your last visit on ${day}.`,
+    sinceSaved: (move: string, day: string) => `That is ${move} since you kept it on ${day}.`,
+    notKeptDetail: 'Keep it on this device and your next visit shows how far it moved.',
+    numbersHeading: 'The last year',
+    rows: { yearAgo: 'A year ago', high: 'Highest close', low: 'Lowest close' },
+    rowValue: (money: string, day: string) => `${money} on ${day}`,
+    source: (price: string, day: string) => `Price: ${price}. The year: Coin Metrics daily closes to ${day}.`,
+} as const;
+
 export const POWER = {
-    drag: 'Drag back through the years and watch the note burn',
+    drag: 'Drag back through the years',
     presetsLabel: 'Try a start',
     presets: { y2015: '2015', fiveYears: 'Five years ago', oneYear: 'A year ago', worst: 'The worst month to start' },
     empty: 'Type an amount to see the answer.',
@@ -367,7 +459,12 @@ export const DCA = {
     chartLabel: 'Worth over time',
     chartAlt: (worth: string, invested: string, lump: string) =>
         `Line chart. Buying a little at a time ends worth ${worth} for ${invested} put in; one lump sum ends worth ${lump}.`,
-    legend: { value: 'A little at a time', invested: 'Put in', lump: 'One lump sum' },
+    key: {
+        value: 'What your bitcoin is worth',
+        invested: 'Cash you put in',
+        lump: 'The same cash, all on day one',
+    },
+    cardKey: { value: 'your bitcoin', invested: 'cash put in', lump: 'all on day one' },
     formula: "Each buy = amount ÷ that day's close. Worth = bitcoin held × close.",
     sourceLabel: 'Bitcoin: ',
     source: 'Coin Metrics reference price',
@@ -558,68 +655,7 @@ export const LEFT_PAGE = {
     zoomAll: 'All 21,000,000 bitcoin, one cell each.',
     zoomCoins: 'Down at the layer being mined now. Each cell is one whole bitcoin.',
     explain:
-        'Every bitcoin there will ever be is one cell of this block, stacked in 250 layers of 84,000. Issued coins are orange and fill it from the bottom. On the top layer, the one being mined now, the grey cells are the coins of that layer still to come; the empty frame above is every layer after it.',
-} as const;
-
-export const POSTCARD = {
-    estimated: ' est.',
-    halving: {
-        kicker: (height: string) => `Halving clock · block ${height}`,
-        number: (blocks: string) => `${blocks} blocks`,
-        line: (blocks: string, from: string, to: string, date: string) =>
-            `${blocks} blocks to the next halving. The reward drops from ${from} to ${to} around ${date}.`,
-        source: (height: string, stamp: string) =>
-            `Block ${height} via mempool.space · ${stamp} · date estimated from recent block times`,
-        estimate: (height: string) => `Block ${height}, estimated at one block every 10 minutes`,
-    },
-    tx: {
-        kicker: (txid: string) => `Follow a transaction · ${txid}`,
-        number: (rate: string) => `${rate} sat/vB`,
-        waiting: (rate: string, place: string) => `My transaction pays ${rate} sats per byte. ${place}`,
-        confirmed: (height: string, count: string) =>
-            `My transaction made it into block ${height}. ${count} confirmations.`,
-        source: (stamp: string) => `Transaction and waiting line: mempool.space · ${stamp}`,
-    },
-    miner: {
-        kicker: (height: string) => `Be a miner · block ${height}`,
-        number: (best: string) => `${best} zero bits`,
-        line: (tries: string, height: string, best: string, needed: string) =>
-            `I hashed block ${height} ${tries} times on my own device. Best: ${best} zero bits. A real block needs ${needed}.`,
-        source: (stamp: string) => `Header: mempool.space, ${stamp} · every hash worked out in the browser`,
-        sourceSaved: (day: string) => `Header: mempool.space, saved ${day} · every hash worked out in the browser`,
-    },
-    home: { kicker: 'Plain Bitcoin · block height' },
-    left: {
-        kicker: (height: string) => `${TOOLS.left.name} · block ${height}`,
-        line: (left: string) => `${left} BTC are still to be mined.`,
-        source: (height: string, api: string, stamp: string) =>
-            `Block ${height} · height via ${api} · ${stamp} · supply from the issuance schedule`,
-        estimate: (height: string) =>
-            `Block ${height} · estimated at one block every 10 minutes · supply from the issuance schedule`,
-    },
-    power: {
-        kicker: (month: string) => `${TOOLS.power.name} · close ${month}`,
-        line: (headline: string, bitcoin: string) => `${headline} As bitcoin, ${bitcoin}.`,
-        source: (cpi: string, cpiMonth: string, closeMonth: string) =>
-            `CPI: ${cpi} to ${cpiMonth} · Bitcoin: Coin Metrics close, ${closeMonth} · calculated in your browser`,
-    },
-    convert: {
-        kicker: (amount: string) => `${TOOLS.convert.name} · ${amount}`,
-        source: (price: string) => `Price: ${price} · 1 BTC = 100,000,000 sats`,
-    },
-    dca: {
-        kicker: (day: string) => `${TOOLS.dca.name} · to ${day}`,
-        line: (amount: string, every: string, since: string, worth: string, lump: string) =>
-            `${amount} ${every} since ${since} is worth ${worth} today. One lump sum: ${lump}.`,
-        source: (day: string, fees: string) =>
-            `Bitcoin: Coin Metrics daily closes to ${day} · ${fees} · calculated in your browser`,
-        fees: (percent: string) => `${percent} fee per buy`,
-        noFees: 'fees not included',
-    },
-    address: {
-        kicker: (encoding: string) => `${TOOLS.address.name} · ${encoding}`,
-        line: (type: string, network: string) => `This is a ${type} address, typed right. ${network}.`,
-    },
+        'Every bitcoin there will ever be is one cell of this block, stacked in 250 layers of 84,000. Issued coins are orange and fill it from the bottom. On the top layer, the one being mined now, the darker orange cells are the coins of that layer still to come; the empty frame above is every layer after it.',
 } as const;
 
 export const ROUTE = {
@@ -765,12 +801,16 @@ export const TX = {
     confirmed: (height: string, count: string) => `Confirmed in block ${height}. ${count} confirmations so far.`,
     confirmedOne: (height: string) => `Confirmed in block ${height}, just now.`,
     detail: (fee: string, vsize: string) => `It pays ${fee} sats for ${vsize} virtual bytes.`,
+    zoom: 'Zoom from the whole line to your block',
+    zoomAll: 'The next blocks on the left, the newest mined blocks on the right.',
+    zoomClose: (tx: boolean) =>
+        tx ? 'Close up on the block your transaction is in.' : 'Close up on the next block to be mined.',
     lineHeading: 'The next blocks',
     lineLabel: (index: string, floor: string, count: string) =>
         `Block +${index}: from ${floor} sat/vB, ${count} transactions`,
     linePending: 'Reading the waiting line…',
     explain:
-        'Miners fill each block with the transactions that pay the most per byte. Each slab of the scene is one block the waiting line would fill right now; the nearest goes first. Your transaction is the bright bead, placed by its fee rate.',
+        'Miners fill each block with the transactions that pay the most per byte. Left of the orange line, each glass block is one the waiting line would fill right now, the nearest first, each dot about 25 transactions. Right of it are the real blocks just mined. Your transaction is the bright bead, placed by its fee rate.',
     source: (clock: string) =>
         `Waiting line from mempool.space, read at ${clock}. Updated every 30 seconds while this page is open.`,
 } as const;

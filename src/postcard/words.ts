@@ -3,11 +3,23 @@ import type { DcaMarks } from '../gauges/types.ts';
 import type { Address } from '../model/address.ts';
 import { btcText, type Conversion, type FiatUnit, type Unit } from '../model/convert.ts';
 import type { DcaResult } from '../model/dca.ts';
+import type { FeeCost, PaymentType } from '../model/fees.ts';
 import type { HalvingClock } from '../model/halving.ts';
+import {
+    baseline,
+    type Change,
+    change,
+    type Holding,
+    type HoldingFiat,
+    priceIn,
+    type ValueSeries,
+    worth,
+} from '../model/holding.ts';
 import type { PowerResult } from '../model/power.ts';
 import { MAX_SUPPLY, SATS_PER_BTC, type Supply, supplyAt } from '../model/supply.ts';
 import { maskTxid } from '../model/tx.ts';
-import { ADDRESS, CONVERT, DCA, HOME, POSTCARD, POWER, SHARE } from '../ui/copy.ts';
+import { ADDRESS, CONVERT, DCA, FEES, POWER, SHARE, STACK } from '../ui/copy.ts';
+import { POSTCARD } from '../ui/copy-postcard.ts';
 import {
     type Fiat,
     formatAmount,
@@ -259,16 +271,29 @@ export function leftPostcard({ supply, api, checkedAt }: LeftReading): Postcard 
     });
 }
 
-export function homePostcard(reading: LeftReading): Postcard {
-    const { supply, api, checkedAt } = reading;
-    const height = `${formatWhole(supply.height)}${api ? '' : POSTCARD.estimated}`;
+export interface TodayReading {
+    height: number;
+    usd: number;
+    /** What a usual payment costs for the next block, as the strip shows it, or null before the fee rates load. */
+    fee: string | null;
+    readAt: number;
+}
+
+/** The home strip as one postcard, made to post once a day. Only ever printed from live readings. */
+export function todayPostcard({ height, usd, fee, readAt }: TodayReading): Postcard {
+    const supply = supplyAt(height);
     return card({
         tool: 'home',
         route: '',
-        kicker: POSTCARD.home.kicker,
-        number: height,
-        line: HOME.postcardLine(formatWhole(Math.floor(supply.issued / SATS_PER_BTC))),
-        source: api ? POSTCARD.left.source(height, api, formatUtcStamp(checkedAt)) : POSTCARD.left.estimate(height),
+        kicker: POSTCARD.today.kicker(formatShortDay(readAt)),
+        number: POSTCARD.today.number(formatMoney(usd, 'USD')),
+        line: POSTCARD.today.line(
+            formatWhole(height),
+            fee,
+            formatWhole(supply.blocksToHalving),
+            formatWhole(Math.floor(supply.left / SATS_PER_BTC)),
+        ),
+        source: POSTCARD.today.source(formatUtcStamp(readAt)),
         signature: { kind: 'supply', issued: supply.issued, max: MAX_SUPPLY },
     });
 }
@@ -356,6 +381,153 @@ export function txPostcard(reading: TxReading): Postcard {
             slab: reading.confirmedIn === null ? reading.slab : 0,
         },
     });
+}
+
+export interface FeesReading {
+    type: PaymentType;
+    vbytes: number;
+    costs: readonly FeeCost[];
+    height: number;
+    readAt: number;
+}
+
+export interface FeesText {
+    figure: string;
+    headline: string;
+    detail: string;
+    /** One line per wait for the table: rate, sats and money. */
+    rows: { name: string; value: string; sats: number; line: string }[];
+    postcard: Postcard;
+}
+
+function rateText(rate: number): string {
+    return rate.toLocaleString('en-GB', { maximumFractionDigits: rate < 10 ? 2 : 0 });
+}
+
+export function feesText(reading: FeesReading): FeesText | null {
+    const next = reading.costs[0];
+    const last = reading.costs.at(-1);
+    if (!next || !last) return null;
+    const type = FEES.types[reading.type];
+    const money = (cost: FeeCost) => (cost.money === null ? null : formatFiatPrecise(cost.money, 'USD'));
+    const sats = (cost: FeeCost) => formatWhole(cost.sats);
+    const nextMoney = money(next);
+    const lastMoney = money(last);
+    const rows = reading.costs.map((cost) => {
+        const priced = money(cost);
+        const value = priced === null ? `${sats(cost)} sats` : `${priced} · ${sats(cost)} sats`;
+        return {
+            name: FEES.speeds[cost.speed],
+            value,
+            sats: cost.sats,
+            line: `${rateText(cost.rate)} sat/vB · ${value}`,
+        };
+    });
+    const wait = lastMoney === null ? FEES.waitNoPrice(sats(last)) : FEES.wait(sats(last), lastMoney);
+    return {
+        figure: nextMoney ?? `${sats(next)} sats`,
+        headline:
+            nextMoney === null ? FEES.headlineNoPrice(type, sats(next)) : FEES.headline(type, sats(next), nextMoney),
+        detail: FEES.detail(rateText(next.rate), formatWhole(reading.vbytes), wait),
+        rows,
+        postcard: card({
+            tool: 'fees',
+            route: 'fees',
+            kicker: POSTCARD.fees.kicker(formatWhole(reading.height)),
+            number: nextMoney ?? `${sats(next)} sats`,
+            line: POSTCARD.fees.line(type, sats(next), nextMoney ?? `${sats(next)} sats`),
+            source: POSTCARD.fees.source(formatUtcStamp(reading.readAt)),
+            signature: { kind: 'fees', rows: rows.map(({ name, value, sats: cost }) => ({ name, value, sats: cost })) },
+        }),
+    };
+}
+
+export interface StackReading {
+    sats: number;
+    unit: 'btc' | 'sats';
+    fiat: HoldingFiat;
+    quote: PriceQuote;
+    /** The last year of daily closes as worth, ending at the price now; null until the history loads. */
+    series: ValueSeries | null;
+    closesTo: string | null;
+    holding: Holding | null;
+}
+
+export interface StackText {
+    figure: string;
+    headline: string;
+    detail: string;
+    rows: Record<keyof typeof STACK.rows, string> | null;
+    chart: DcaMarks | null;
+    chartAlt: string;
+    postcard: Postcard;
+}
+
+function percentText(fraction: number): string {
+    return `${Math.abs(fraction * 100).toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`;
+}
+
+/** A move in words: up or down, the money and the share. Under a cent is no change. */
+export function moveText(move: Change, fiat: HoldingFiat): string {
+    if (Math.abs(move.money) < 0.005) return STACK.flat;
+    const money = formatFiatPrecise(Math.abs(move.money), fiat);
+    return move.money > 0 ? STACK.up(money, percentText(move.fraction)) : STACK.down(money, percentText(move.fraction));
+}
+
+function sinceText(reading: StackReading, price: number): string {
+    const { holding } = reading;
+    if (!holding) return STACK.notKeptDetail;
+    const from = baseline(holding);
+    const move = moveText(change(reading.sats, priceIn(from.mark, reading.fiat), price), reading.fiat);
+    const day = formatShortDay(from.mark.at);
+    return from.since === 'visit' ? STACK.sinceVisit(move, day) : STACK.sinceSaved(move, day);
+}
+
+export function stackText(reading: StackReading): StackText {
+    const { sats, fiat, quote, series } = reading;
+    const price = fiat === 'GBP' ? quote.value.gbp : quote.value.usd;
+    const amount = reading.unit === 'sats' ? formatSats(sats) : formatBtcExact(sats);
+    const worthNow = formatFiatPrecise(worth(sats, price), fiat);
+    const headline = STACK.headline(amount, worthNow);
+    const points = series?.value.length ?? 0;
+    let rows: StackText['rows'] = null;
+    let yearAgo: string | null = null;
+    if (series && points > 1) {
+        const money = (i: number) => formatFiatPrecise(series.value[i] ?? 0, fiat);
+        const day = (i: number) => formatShortDay(series.t[i] ?? 0);
+        let high = 0;
+        let low = 0;
+        for (let i = 0; i < points - 1; i += 1) {
+            if ((series.value[i] ?? 0) > (series.value[high] ?? 0)) high = i;
+            if ((series.value[i] ?? 0) < (series.value[low] ?? 0)) low = i;
+        }
+        yearAgo = money(0);
+        rows = {
+            yearAgo: STACK.rowValue(yearAgo, day(0)),
+            high: STACK.rowValue(money(high), day(high)),
+            low: STACK.rowValue(money(low), day(low)),
+        };
+    }
+    const chart = series && points > 1 ? { t: series.t, value: series.value, invested: [], lump: [] } : null;
+    const chartAlt = yearAgo ? `${amount}: ${yearAgo} a year ago, ${worthNow} now.` : headline;
+    const asOf = reading.closesTo ?? formatShortDay(quote.asOf);
+    return {
+        figure: worthNow,
+        headline,
+        detail: sinceText(reading, price),
+        rows,
+        chart,
+        chartAlt,
+        postcard: card({
+            tool: 'stack',
+            route: 'stack',
+            kicker: POSTCARD.stack.kicker(formatShortDay(quote.asOf)),
+            number: worthNow,
+            line: POSTCARD.stack.line(amount, worthNow, yearAgo),
+            source: POSTCARD.stack.source(priceLabel(quote), asOf),
+            signature: chart ? { kind: 'lines', ...chart } : { kind: 'cells', sats },
+        }),
+    };
 }
 
 export interface AddressText {

@@ -36,12 +36,6 @@
         var(--void);
 }
 
-/* A calculator keeps its inputs and answer first on a phone; its scene follows the answer as a band. */
-.tool.machine .machine__stage {
-    height: 30svh;
-    min-height: 11rem;
-}
-
 .tool .machine__body {
     gap: 0.75rem;
 }
@@ -362,19 +356,7 @@
 }
 
 .tx-form__input {
-    width: 100%;
-    min-height: var(--tap);
-    padding: 0.625rem 0.75rem;
-    border: 1px solid var(--edge);
-    border-radius: var(--radius-control);
-    background: var(--well);
-    color: var(--ink);
-    font: 500 0.875rem / 1.4 var(--font-mono);
-}
-
-.tx-form__input:focus-visible {
-    border-color: var(--btc);
-    outline: none;
+    font-size: 0.875rem;
 }
 
 .tx-form__actions {
@@ -461,36 +443,54 @@
         padding-top: clamp(1.5rem, 4vh, 3rem);
     }
 
+    /*
+     * A calculator's picture takes the side a scene takes on the machines and holds still while the words scroll.
+     * Its rows have no gap, so the rows it spans past the last word stay empty instead of adding space.
+     */
     .tool.machine {
-        grid-template-columns: minmax(0, 36rem) minmax(0, 1fr);
-        row-gap: 0.75rem;
+        grid-template-columns: minmax(0, 34rem) minmax(0, 1fr);
+        row-gap: 0;
     }
 
-    .tool.machine .machine__body {
+    .tool.machine .machine__body,
+    .tool.machine .tool__screen {
         display: contents;
     }
 
-    .tool.machine .tool__screen,
+    .tool.machine .tool__screen > *,
     .tool.machine .tool__below {
         grid-column: 1;
+        margin-top: 1.125rem;
     }
 
-    .tool.machine .tool__screen {
+    .tool.machine .tool__head {
         margin-top: clamp(1rem, 3vh, 2rem);
+    }
+
+    .tool.machine .tool__below {
+        margin-top: 2rem;
+    }
+
+    .tool.machine .tool__screen > .picture {
+        position: sticky;
+        top: calc(var(--chrome, 3.5rem) + 1rem);
+        grid-column: 2;
+        grid-row: 1 / span 20;
+        align-self: start;
+        height: calc(100svh - var(--chrome, 3.5rem) - 2.5rem);
+        margin-top: clamp(1rem, 3vh, 2rem);
+    }
+
+    /* An address is a few rows of cells, the fees four bars and a stack one line: only as tall as they need. */
+    .tool.tool--address .tool__screen > .picture,
+    .tool.tool--fees .tool__screen > .picture,
+    .tool.tool--stack .tool__screen > .picture {
+        height: min(28rem, calc(100svh - var(--chrome, 3.5rem) - 2.5rem));
     }
 
     .machine--tx .machine__stage,
     .machine--halving .machine__stage {
         height: calc(100svh - var(--chrome, 3.5rem));
-    }
-
-    .tool.machine .machine__stage {
-        height: calc(100svh - var(--chrome, 3.5rem));
-    }
-
-    /* The plan's chart is the answer on this page, so it gets more room than the other pictures. */
-    .tool--dca .tool__screen > .picture {
-        height: 24rem;
     }
 }
 
@@ -532,13 +532,9 @@
         grid-column: 1;
     }
 
-    /* A short landscape screen gives its width to the calculator's own graph, as before the scenes. */
+    /* A short landscape screen gives half its width to the calculator's own graph. */
     .tool.machine {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .tool.machine .machine__stage {
-        display: none;
     }
 
     .tool.machine .tool__screen {

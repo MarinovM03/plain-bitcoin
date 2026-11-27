@@ -1,6 +1,7 @@
 import { barScale } from '../model/scale.ts';
 import { issuedBeforeEra, MAX_SUPPLY, SATS_PER_BTC } from '../model/supply.ts';
 import { TOKENS } from '../styles/tokens.ts';
+import { DCA } from '../ui/copy.ts';
 import { formatWhole } from '../util/format.ts';
 import { GRID_DOTS, satsScale } from '../util/sats-scale.ts';
 import { type Box, EXPORT_SCALE, font, layoutPostcard, type PostcardLayout, type TextBox } from './layout.ts';
@@ -167,9 +168,15 @@ function drawLines(context: Context, box: Box, signature: Extract<Signature, { k
     context.beginPath();
     context.arc(x(signature.t[length - 1] ?? t1), y(signature.value[length - 1] ?? 0), 7, 0, Math.PI * 2);
     context.fill();
-    small(context, 'worth', box.x, box.y + 14, TOKENS.btc);
-    small(context, 'put in', box.x + 78, box.y + 14, TOKENS.ink);
-    small(context, 'lump sum', box.x + 162, box.y + 14, TOKENS.inkCool);
+    let keyX = box.x;
+    for (const [key, colour] of [
+        ['value', TOKENS.btc],
+        ['invested', TOKENS.ink],
+        ['lump', TOKENS.inkCool],
+    ] as const) {
+        small(context, DCA.cardKey[key], keyX, box.y + 14, colour);
+        keyX += context.measureText(DCA.cardKey[key]).width + 28;
+    }
 }
 
 /** The address as the page draws it: its type, then one cell per character the postcard is allowed to show. */
@@ -249,6 +256,24 @@ function drawQueue(context: Context, box: Box, signature: Extract<Signature, { k
     small(context, `next blocks by lowest fee · mine: ${label}`, box.x, box.y + 14, TOKENS.btc);
 }
 
+/** The same payment at every wait: one bar each, the next block in orange, its cost written beside it. */
+function drawFees(context: Context, box: Box, signature: Extract<Signature, { kind: 'fees' }>): void {
+    const rows = signature.rows.slice(0, 4);
+    if (rows.length === 0) return;
+    const most = Math.max(1, ...rows.map((row) => row.sats));
+    const pitch = box.h / rows.length;
+    const bar = Math.min(30, pitch * 0.4);
+    rows.forEach((row, index) => {
+        const top = box.y + index * pitch + pitch - bar - 10;
+        context.fillStyle = TOKENS.well;
+        context.fillRect(box.x, top, box.w, bar);
+        context.fillStyle = index === 0 ? TOKENS.btc : TOKENS.inkCool;
+        context.fillRect(box.x, top, Math.max(4, (row.sats / most) * box.w), bar);
+        small(context, row.name, box.x, top - 10, index === 0 ? TOKENS.btc : TOKENS.inkDim);
+        small(context, row.value, box.x + box.w, top - 10, TOKENS.ink, 'right');
+    });
+}
+
 function drawSignature(context: Context, box: Box, signature: Signature): void {
     context.save();
     context.beginPath();
@@ -275,6 +300,9 @@ function drawSignature(context: Context, box: Box, signature: Signature): void {
             break;
         case 'queue':
             drawQueue(context, box, signature);
+            break;
+        case 'fees':
+            drawFees(context, box, signature);
             break;
         case 'blank':
             break;

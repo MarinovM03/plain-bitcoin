@@ -1,0 +1,14 @@
+.keep {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.keep__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.keep .note-line {
+    max-width: 34rem;
+}
