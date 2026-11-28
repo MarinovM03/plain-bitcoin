@@ -36,6 +36,7 @@ export function renderHeader(): SafeHtml {
         ${renderStatus()}
         ${followLink('topbar__follow', FOOTER.handle)}
     </div>
+    <span id="block-timer" class="topbar__timer" aria-hidden="true"></span>
     ${renderMenu()}
 </header>`;
 }
@@ -60,7 +61,7 @@ export function renderFooter(): SafeHtml {
             <p class="footer__name">${SITE_NAME}</p>
             <p class="footer__promise">${HOME.promise}</p>
             <p class="footer__privacy">${FOOTER.privacy}</p>
-            <p class="footer__motion">${FOOTER.motion}</p>
+            <p class="footer__motion">${FOOTER.motion} ${FOOTER.timer}</p>
             ${followLink('footer__follow', FOOTER.follow)}
         </div>
         <nav class="footer__tools" aria-label="${FOOTER.toolsLabel}">

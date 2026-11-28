@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LAST_CLOSE, type PriceQuote } from '../data/price.ts';
-import { blockAge, statusView } from './status.ts';
+import { blockAge, blockProgress, statusView } from './status.ts';
 
 const NOW = Date.UTC(2026, 9, 30, 19, 26);
 const LIVE: PriceQuote = {
@@ -54,5 +54,14 @@ describe('blockAge', () => {
     it('says when the block time is unknown instead of guessing', () => {
         expect(blockAge({ source: 'live', time: null }, NOW)).toBe('block time unknown');
         expect(blockAge({ source: 'live', time: NOW / 1000 - 20 }, NOW)).toBe('<1 min since last block');
+    });
+});
+
+describe('blockProgress', () => {
+    it('fills over the ten-minute average, stays full after it and is empty when the time is unknown', () => {
+        expect(blockProgress({ time: null }, NOW)).toBe(0);
+        expect(blockProgress({ time: NOW / 1000 - 300 }, NOW)).toBe(0.5);
+        expect(blockProgress({ time: NOW / 1000 - 2400 }, NOW)).toBe(1);
+        expect(blockProgress({ time: NOW / 1000 + 30 }, NOW)).toBe(0);
     });
 });
