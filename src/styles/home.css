@@ -194,15 +194,18 @@
         translate calc(var(--duration) * 2) var(--ease);
 }
 
+/* WebKit widens a growing flex item to keep its aspect ratio; the cap keeps it inside the tile. */
 .tile__scene {
     flex: 1 1 auto;
     min-height: 0;
+    max-width: 100%;
     aspect-ratio: 16 / 10;
     pointer-events: none;
 }
 
 .tile__chart {
     position: relative;
+    max-width: calc(100% - 2rem);
     margin: 0.875rem 1rem 0.5rem;
 }
 
