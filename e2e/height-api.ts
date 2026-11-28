@@ -75,6 +75,7 @@ export async function fakeMempoolApi(page: Page): Promise<string[]> {
 export async function fakeHeightApi(page: Page, height = FAKE_HEIGHT): Promise<FakeChain> {
     const chain: FakeChain = { height, calls: [] };
     await fakeMempoolApi(page);
+    await fakeHeaderApi(page);
     await page.route(/^https:\/\/(mempool\.space|blockstream\.info)\/api\/blocks\//, (route) => {
         const url = route.request().url();
         chain.calls.push(url);
