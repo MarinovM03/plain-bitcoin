@@ -5,7 +5,7 @@ import { barScale, sparkline } from '../../model/scale.ts';
 import { bindShareBar } from '../../postcard/bar.ts';
 import { siteAddress } from '../../postcard/site.ts';
 import { type PowerText, powerText } from '../../postcard/words.ts';
-import { PICTURE, POWER, TOOL_PAGE } from '../../ui/copy.ts';
+import { GAUGE, PICTURE, POWER, TOOL_PAGE } from '../../ui/copy.ts';
 import { readMonthField, setMonthField } from '../../ui/field-behaviour.ts';
 import { EMPTY_FIGURE } from '../../ui/output.ts';
 import { POWER_DEFAULT_START, type PowerPreset } from '../../ui/power-view.ts';
@@ -169,6 +169,7 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
         figure.textContent = text.headline;
         big.textContent = formatMoney(result.equivalentNow, fiat);
         detail.textContent = text.bitcoin;
+        const year = result.start.slice(0, 4);
         picture.set(
             {
                 id: 'power',
@@ -176,8 +177,13 @@ export function mountPower(root: HTMLElement, siteUrl: string): () => void {
                 bitcoin: result.btcValueNow,
                 cashLabel: text.cashValue,
                 bitcoinLabel: text.bitcoinValue,
+                needed: result.equivalentNow,
+                neededLabel: formatMoney(result.equivalentNow, fiat),
+                cashThen: GAUGE.power.thenValue(formatMoney(result.cashBuysNow, fiat)),
+                bitcoinThen: GAUGE.power.thenValue(formatMoney(result.btcRealNow, fiat)),
+                thenNote: GAUGE.power.thenNote(year),
             },
-            PICTURE.power(barScale([result.amount, result.btcValueNow]).log),
+            PICTURE.power(barScale([result.amount, result.btcValueNow, result.equivalentNow]).log, year),
         );
         renderBars(result, text);
         renderPath(result, text);

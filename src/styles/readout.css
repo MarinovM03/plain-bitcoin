@@ -43,6 +43,14 @@
     transition: transform 480ms var(--ease);
 }
 
+.g-ghost {
+    fill: color-mix(in srgb, var(--ink-cool) 10%, var(--well));
+    stroke: var(--ink-cool);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+}
+
 .g-rule {
     stroke: var(--ink-dim);
     stroke-width: 1;
