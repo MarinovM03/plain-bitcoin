@@ -345,6 +345,14 @@
     .intro__title {
         grid-row: span 2;
     }
+
+    /* The lead owns its whole cell and the gap beside it, so a drag-select that leaves its words lands in it, not back in the title. */
+    .intro__lead {
+        grid-row: span 2;
+        align-self: stretch;
+        margin-left: -3rem;
+        padding-left: 3rem;
+    }
 }
 
 .tile {
