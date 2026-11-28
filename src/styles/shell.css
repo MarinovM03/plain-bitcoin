@@ -136,7 +136,6 @@ main,
 .menu__inner {
     display: grid;
     gap: 1.25rem;
-    counter-reset: machine;
     width: 100%;
     max-width: calc(var(--measure-wide) + 2 * var(--gutter));
     margin-inline: auto;
@@ -158,21 +157,17 @@ main,
     list-style: none;
 }
 
-.menu__list > li {
-    counter-increment: machine;
-}
-
 .menu__link {
     display: grid;
-    grid-template-columns: 2.25rem minmax(0, 1fr) 1.25rem;
+    grid-template-columns: minmax(0, 1fr) 1.25rem;
     grid-template-areas:
-        "num name go"
-        "num line go";
+        "name go"
+        "line go";
     align-items: center;
     column-gap: 0.25rem;
     row-gap: 0.125rem;
     min-height: var(--tap);
-    padding: 0.625rem 0.875rem 0.625rem 0.75rem;
+    padding: 0.625rem 0.875rem 0.625rem 1rem;
     border: 1px solid var(--edge);
     border-radius: 6px;
     background: var(--plate);
@@ -183,17 +178,6 @@ main,
         background-color var(--duration) var(--ease),
         border-color var(--duration) var(--ease),
         box-shadow var(--duration) var(--ease);
-}
-
-.menu__link::before {
-    content: counter(machine, decimal-leading-zero);
-    grid-area: num;
-    align-self: start;
-    padding-top: 0.25rem;
-    color: var(--ink-dim);
-    font-family: var(--font-mono);
-    font-size: var(--step-small);
-    transition: color var(--duration) var(--ease);
 }
 
 .menu__link::after {
@@ -233,7 +217,6 @@ main,
     box-shadow: inset 3px 0 0 var(--btc);
 }
 
-.menu__link[aria-current="page"]::before,
 .menu__link[aria-current="page"] .menu__name {
     color: var(--btc);
 }
@@ -326,7 +309,6 @@ main,
         box-shadow: inset 3px 0 0 var(--btc);
     }
 
-    .menu__link:hover::before,
     .menu__link:hover .menu__name {
         color: var(--btc);
     }

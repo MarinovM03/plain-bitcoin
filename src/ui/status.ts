@@ -2,7 +2,7 @@ import { estimateTip, heightFeed, type Tip } from '../data/height.ts';
 import { LAST_CLOSE, LAST_CLOSE_SOURCE, PRICE_STALE_MS, type PriceQuote, priceFeed } from '../data/price.ts';
 import { afterFirstPaint, find } from '../util/dom.ts';
 import { formatMinutes, formatMoney, formatShortDay, formatUtcClock, formatWhole } from '../util/format.ts';
-import { STATUS } from './copy.ts';
+import { FOOTER, STATUS } from './copy.ts';
 import { html, type SafeHtml } from './html.ts';
 
 export const LIVE_ROUTES: ReadonlySet<string> = new Set([
@@ -78,7 +78,7 @@ export function renderStatus(now = Date.now()): SafeHtml {
     <p class="status__line">
         <span id="status-block" class="status__item status__figure status__block">${view.block}</span>
         <span class="status__item status__price"><span class="visually-hidden">${STATUS.price}</span><span id="status-usd" class="status__figure">${view.usd}</span></span>
-        <span id="status-age" class="status__item status__age">${view.age}</span>
+        <span id="status-age" class="status__item status__age" title="${FOOTER.timer}">${view.age}</span>
         <a id="status-source" class="status__item status__source" href="${view.sourceUrl}" rel="noopener noreferrer">${view.source}</a>
     </p>
 </div>`;

@@ -36,7 +36,7 @@ export function pictureFrame(caption: string, head?: { title: string; key?: Safe
 </div>`;
 }
 
-const INFO_MARK = html`<svg class="info__mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle class="info__ring" cx="12" cy="12" r="11"/><circle class="info__glyph" cx="12" cy="7.25" r="1.75"/><rect class="info__glyph" x="10.5" y="10.5" width="3" height="7.5" rx="1.5"/></svg>`;
+const INFO_MARK = html`<svg class="info__mark" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle class="info__ring" cx="11" cy="11" r="10"/><circle class="info__glyph" cx="11" cy="6.75" r="1.4"/><rect class="info__glyph" x="9.75" y="9.5" width="2.5" height="7.5" rx="1.25"/></svg>`;
 
 /** The same closed panel on every tool; its lines arrive with the page's own code. */
 export function infoPanel(id: ToolId): SafeHtml {

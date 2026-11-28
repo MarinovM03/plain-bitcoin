@@ -66,7 +66,7 @@ describe('power gauge', () => {
         expect(text(layout, 'then0')).toBe('= $769');
         expect(text(layout, 'then1')).toBe('= $1,538');
         expect(text(layout, 'year0')).toBe('in 2020 money');
-        expect(text(layout, 'needed')).toBe('Needed $1,300');
+        expect(text(layout, 'needed')).toBe('$1,300 to keep up');
         expect(mark(layout, 'value0')?.attrs.class).toContain('g-label--on-btc');
         const short = powerLayout({ ...data, cash: 250, needed: 300 }, VIEW);
         expect(short.marks.some((each) => each.key === 'needed')).toBe(false);

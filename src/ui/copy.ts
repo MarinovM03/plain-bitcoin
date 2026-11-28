@@ -214,7 +214,7 @@ export const TOOL_PAGE = {
 
 export const PICTURE = {
     power: (log: boolean, year: string) =>
-        `Blue: the money kept as cash. Orange: the same money put into bitcoin. Each column is its value today${log ? ', on a log scale' : ''}, and under it, what that buys in ${year} money. The dashed outline is what the cash would need to be today to buy what it did then.`,
+        `Blue: the money kept as cash. Orange: the same money put into bitcoin. Each column is its value today${log ? ', on a log scale' : ''}, and under it, what that buys in ${year} money. The dashed outline is what the cash would need to be today to keep up with prices.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
     dca: 'Each line runs from the first buy to today. The orange dot is your answer.',
     fees: 'Each bar is the same payment at a different wait. Longer means it costs more.',
@@ -241,7 +241,7 @@ export const GAUGE = {
         log: 'Log scale · ×10 a line',
         thenValue: (value: string) => `= ${value}`,
         thenNote: (year: string) => `in ${year} money`,
-        needed: (value: string) => `Needed ${value}`,
+        needed: (value: string) => `${value} to keep up`,
     },
     convert: {
         yours: 'Yours',

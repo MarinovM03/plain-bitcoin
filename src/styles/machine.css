@@ -169,28 +169,28 @@
 
 .info__mark {
     flex: none;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.375rem;
+    height: 1.375rem;
 }
 
 .info__ring {
-    fill: var(--btc);
+    fill: transparent;
     stroke: var(--btc);
-    stroke-width: 2;
+    stroke-width: 1.5;
     transition: fill var(--duration) var(--ease);
 }
 
 .info__glyph {
-    fill: var(--void);
+    fill: var(--btc);
     transition: fill var(--duration) var(--ease);
 }
 
 .info[open] .info__ring {
-    fill: var(--void);
+    fill: var(--btc);
 }
 
 .info[open] .info__glyph {
-    fill: var(--btc);
+    fill: var(--void);
 }
 
 .info__private {
@@ -218,12 +218,11 @@
 
 @media (hover: hover) {
     .info__toggle:hover .info__ring {
-        fill: color-mix(in srgb, var(--btc) 78%, var(--ink));
-        stroke: color-mix(in srgb, var(--btc) 78%, var(--ink));
+        fill: color-mix(in srgb, var(--btc) 22%, transparent);
     }
 
     .info[open] .info__toggle:hover .info__ring {
-        fill: color-mix(in srgb, var(--btc) 18%, var(--void));
+        fill: color-mix(in srgb, var(--btc) 78%, var(--ink));
     }
 }
 
