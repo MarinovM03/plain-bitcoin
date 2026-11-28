@@ -194,15 +194,18 @@
         translate calc(var(--duration) * 2) var(--ease);
 }
 
+/* WebKit widens a growing flex item to keep its aspect ratio; the cap keeps it inside the tile. */
 .tile__scene {
     flex: 1 1 auto;
     min-height: 0;
+    max-width: 100%;
     aspect-ratio: 16 / 10;
     pointer-events: none;
 }
 
 .tile__chart {
     position: relative;
+    max-width: calc(100% - 2rem);
     margin: 0.875rem 1rem 0.5rem;
 }
 
@@ -344,6 +347,14 @@
 
     .intro__title {
         grid-row: span 2;
+    }
+
+    /* The lead owns its whole cell and the gap beside it, so a drag-select that leaves its words lands in it, not back in the title. */
+    .intro__lead {
+        grid-row: span 2;
+        align-self: stretch;
+        margin-left: -3rem;
+        padding-left: 3rem;
     }
 }
 

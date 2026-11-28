@@ -19,6 +19,12 @@ export type SceneData =
           bitcoin: number;
           cashLabel?: string;
           bitcoinLabel?: string;
+          /** What the cash would have to be today to buy what it bought then. */
+          needed?: number;
+          neededLabel?: string;
+          cashThen?: string;
+          bitcoinThen?: string;
+          thenNote?: string;
       }
     | ({ id: 'dca' | 'stack'; fiat: Fiat; worth: string; alt: string } & DcaMarks)
     | { id: 'fees'; rows: readonly { name: string; value: string; sats: number }[] }

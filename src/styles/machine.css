@@ -217,8 +217,12 @@
 }
 
 @media (hover: hover) {
-    .info__toggle:hover .info__mark {
-        background: color-mix(in srgb, var(--btc) 20%, transparent);
+    .info__toggle:hover .info__ring {
+        fill: color-mix(in srgb, var(--btc) 22%, transparent);
+    }
+
+    .info[open] .info__toggle:hover .info__ring {
+        fill: color-mix(in srgb, var(--btc) 78%, var(--ink));
     }
 }
 

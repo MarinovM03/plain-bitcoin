@@ -213,8 +213,8 @@ export const TOOL_PAGE = {
 } as const;
 
 export const PICTURE = {
-    power: (log: boolean) =>
-        `Blue: the money kept as cash. Orange: the same money put into bitcoin. Each column is its value today${log ? ', on a log scale' : ''}.`,
+    power: (log: boolean, year: string) =>
+        `Blue: the money kept as cash. Orange: the same money put into bitcoin. Each column is its value today${log ? ', on a log scale' : ''}, and under it, what that buys in ${year} money. The dashed outline is what the cash would need to be today to keep up with prices.`,
     powerEmpty: 'Two columns compare cash and bitcoin once there is an answer.',
     dca: 'Each line runs from the first buy to today. The orange dot is your answer.',
     fees: 'Each bar is the same payment at a different wait. Longer means it costs more.',
@@ -239,6 +239,9 @@ export const GAUGE = {
         cash: 'Kept as cash',
         bitcoin: 'As bitcoin',
         log: 'Log scale · ×10 a line',
+        thenValue: (value: string) => `= ${value}`,
+        thenNote: (year: string) => `in ${year} money`,
+        needed: (value: string) => `${value} to keep up`,
     },
     convert: {
         yours: 'Yours',
@@ -673,6 +676,7 @@ export const ROUTE = {
 export const FOOTER = {
     privacy: 'Runs in your browser. No tracking. Never asks for keys or seeds.',
     motion: 'Every scene is drawn from real numbers: block headers, block height, prices and price indexes. Nothing moving on this site is made up.',
+    timer: 'The orange line under the top bar fills over the ten minutes a block takes on average and empties when a new one is found.',
     toolsLabel: 'All machines',
     follow: 'Follow @PlainBTC on X',
     handle: '@PlainBTC',

@@ -26,6 +26,7 @@ export const INFO: Record<ToolId, readonly string[]> = {
         'Miners fill each block with the transactions that pay the most per byte, so a transaction waits in line by its fee rate.',
         'This page reads the waiting line from mempool.space every 30 seconds while it is open.',
         'Paste a transaction id, or pick a live one, and see where it sits and roughly when it should be mined.',
+        'The orange line under the top bar is the same clock: it fills over the ten minutes a block takes on average and empties when one is found.',
         'A transaction id is public on the chain. Nothing else about you is sent.',
     ],
     fees: [

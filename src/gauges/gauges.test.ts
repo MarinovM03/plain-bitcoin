@@ -35,12 +35,42 @@ const text = (gauge: Gauge, key: string) => gauge.marks.find((mark) => mark.key 
 
 describe('power gauge', () => {
     it('fills two columns on the same scale as the bars, switching to log at ten times', () => {
-        expect(powerFills(1000, 2000)).toEqual({ fills: [0.5, 1], log: false, decade: 0 });
+        expect(powerFills(1000, 2000)).toEqual({ fills: [0.5, 1], ghost: 0, log: false, decade: 0 });
         const big = powerFills(1000, 435_560);
         expect(big.log).toBe(true);
         expect(big.fills[1]).toBe(1);
         expect(big.fills[0]).toBeGreaterThan(0);
-        expect(powerFills(0, 5)).toEqual({ fills: [0, 0], log: false, decade: 0 });
+        expect(powerFills(0, 5)).toEqual({ fills: [0, 0], ghost: 0, log: false, decade: 0 });
+    });
+
+    it('outlines what the cash would need to be today above the cash column, on the same scale', () => {
+        expect(powerFills(1000, 2000, 1300)).toEqual({ fills: [0.5, 1], ghost: 0.65, log: false, decade: 0 });
+        const lost = powerFills(1000, 900, 1300);
+        expect(lost.ghost).toBe(1);
+        expect(lost.fills[0]).toBeCloseTo(1000 / 1300);
+        const data = {
+            id: 'power',
+            cash: 1000,
+            bitcoin: 2000,
+            cashLabel: '$1,000',
+            needed: 1300,
+            neededLabel: '$1,300',
+            cashThen: '= $769',
+            bitcoinThen: '= $1,538',
+            thenNote: 'in 2020 money',
+        } as const;
+        const layout = powerLayout(data, VIEW);
+        sane(layout);
+        const mark = (gauge: Gauge, key: string) => gauge.marks.find((each) => each.key === key);
+        expect(mark(layout, 'ghost')?.attrs.style).toBe('transform: scaleY(0.65)');
+        expect(text(layout, 'then0')).toBe('= $769');
+        expect(text(layout, 'then1')).toBe('= $1,538');
+        expect(text(layout, 'year0')).toBe('in 2020 money');
+        expect(text(layout, 'needed')).toBe('$1,300 to keep up');
+        expect(mark(layout, 'value0')?.attrs.class).toContain('g-label--on-btc');
+        const short = powerLayout({ ...data, cash: 250, needed: 300 }, VIEW);
+        expect(short.marks.some((each) => each.key === 'needed')).toBe(false);
+        expect(mark(short, 'value0')?.attrs.class).toContain('g-label--cool');
     });
 
     it('labels each column with the answer text and moves the same column for a new value', () => {
